@@ -4,8 +4,9 @@ from dds.activity.models import BidsHistory, ListingHistory, UserAction
 from dds.consts import DECIMALS
 from dds.rates.api import calculate_amount
 from dds.settings import *
-from dds.store.api import (check_captcha, create_ipfs, token_search, 
-                           collection_search, get_dds_email_connection, validate_bid)
+from dds.store.api import (check_captcha, token_search, collection_search,
+                           get_dds_email_connection, validate_bid)
+from dds.store.services.ipfs import create_ipfs
 
 from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token
 from dds.store.serializers import TokenPatchSerializer
@@ -722,7 +723,6 @@ class GetView(APIView):
             return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
         if token.status == Status.BURNED:
             return Response({'error': 'burned'}, status=status.HTTP_404_NOT_FOUND)
-        media = get_media_if_exists(token, 'media')
         collection_avatar = get_media_if_exists(token.collection, 'avatar')
 
         bids = Bid.objects.filter(token=token).order_by('-amount')
@@ -800,7 +800,7 @@ class GetView(APIView):
             'name': token.name, 
             'standart': token.standart, 
             'tags': [tag.name for tag in token.tags.all()],
-            'media': media,
+            'media': token.media,
             'total_supply': token.total_supply,
             'available': available, 
             'price': (token.price / DECIMALS[token.currency] if token.price else None),
@@ -906,7 +906,6 @@ class GetView(APIView):
         else:
             print('serializer not valid')
 
-        media = get_media_if_exists(token, 'media')
         collection_avatar = get_media_if_exists(token.collection, 'avatar')
         token_owners = []
 
@@ -1021,7 +1020,7 @@ class GetView(APIView):
             'id': token.id,
             'name': token.name,
             'standart': token.standart,
-            'media': media,
+            'media': token.media,
             'total_supply': token.total_supply,
             'available': available,
             'price': token.price / DECIMALS[token.currency] if token.price else None,
@@ -1109,7 +1108,6 @@ class GetHotView(APIView):
         end = page * 50 if len(tokens) >= page * 50 else None
         
         for token in tokens[start:end]:
-            media = get_media_if_exists(token, 'media')
             collection_avatar = get_media_if_exists(token.collection, 'avatar')
 
             token_owners = []
@@ -1148,7 +1146,7 @@ class GetHotView(APIView):
                 'id': token.id, 
                 'name': token.name, 
                 'standart': token.standart,
-                'media': media, 
+                'media': token.media, 
                 'total_supply': token.total_supply,
                 'available': available, 
                 'price': (token.price / DECIMALS[token.currency] if token.price else None),
@@ -1197,9 +1195,7 @@ class GetHotCollectionsView(APIView):
             token_list = []
 
             for token in tokens:
-                token_media = get_media_if_exists(token, 'media')
-
-                token_list.append(token_media)
+                token_list.append(token.media)
 
             avatar = get_media_if_exists(collection.creator, 'avatar')
 
@@ -1248,8 +1244,6 @@ class GetCollectionView(APIView):
         cover = get_media_if_exists(collection, 'cover')
 
         for token in tokens[start: end]:
-            media = get_media_if_exists(token, 'media')
-
             token_owners = []
             if token.standart == 'ERC1155':
                 owners = token.owners.all()
@@ -1280,7 +1274,7 @@ class GetCollectionView(APIView):
                 'id': token.id, 
                 'name': token.name, 
                 'standart': token.standart, 
-                'media': media, 
+                'media': token.media, 
                 'total_supply': token.total_supply,
                 'available': available, 
                 'price': token.price / DECIMALS[token.currency] if token.price else None,
@@ -1761,7 +1755,6 @@ def get_hot_bids(request):
     token_list= []
     for bid in bids:
         token = bid.token
-        media = get_media_if_exists(token, 'media')
         collection_avatar = get_media_if_exists(token.collection, 'avatar')
         token_owners = []
         if token.standart == 'ERC1155':
@@ -1800,7 +1793,7 @@ def get_hot_bids(request):
             'id': token.id,
             'name': token.name,
             'standart': token.standart,
-            'media': media,
+            'media': token.media,
             'total_supply': token.total_supply,
             'available': available,
             'price': (token.price / DECIMALS[token.currency] if token.price else None),

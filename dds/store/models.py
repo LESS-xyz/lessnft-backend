@@ -35,6 +35,7 @@ from rest_framework.authtoken.models import Token as AuthToken
 from rest_framework.response import Response
 from rest_framework import status
 from dds.consts import DECIMALS
+from .services.ipfs import get_ipfs
 
 
 class Status(models.TextChoices):
@@ -123,7 +124,7 @@ def validate_nonzero(value):
 class Token(models.Model):
     name = models.CharField(max_length=200, unique=True)
     tx_hash = models.CharField(max_length=200, default='0xE4Bdc4D423FaC9549bdCcabD1b59071E4fe99BDa')
-    media = models.FileField(blank=True, upload_to=get_timestamp_path)
+    ipfs = models.CharField(max_length=200, null=True, default=True)
     standart = models.CharField(max_length=10, choices=[('ERC721', 'ERC721'), ('ERC1155', 'ERC1155')])
     total_supply = models.PositiveIntegerField(validators=[validate_nonzero])
     price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
@@ -143,6 +144,12 @@ class Token(models.Model):
     status = models.CharField(max_length=50, choices=Status.choices)
     updated_at = models.DateTimeField(auto_now_add=True)
     tags = models.ManyToManyField('Tags', blank=True, null=True)
+
+    @property
+    def media(self):
+        if not self.ipfs:
+            return None
+        return "https://ipfs.io/ipfs/{ipfs}".format(ipfs=self.ipfs)
 
     def __str__(self):
         return self.name
@@ -211,8 +218,10 @@ class Token(models.Model):
             ownership.save()
 
         self.full_clean()
+        ipfs = get_ipfs(self)
+        if ipfs:
+            self.ipfs = ipfs["media"] 
         self.save()
-        self.media.save(request.FILES.get('media').name, request.FILES.get('media'))
 
     def transfer(self, new_owner):
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))

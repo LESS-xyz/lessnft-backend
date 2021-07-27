@@ -42,7 +42,7 @@ class UserAction(models.Model):
         ordering = ["-date"]
 
     def get_like(self):
-        media = ALLOWED_HOSTS[0] + self.token.media.url
+        media = self.token.media 
 
         if self.token.price:
             price = self.token.price / DECIMALS[self.token.currency]

@@ -196,7 +196,7 @@ class GetActivityView(APIView):
 
             item = {
                 'token_id': activ.token.id if activ.token else None,
-                'token_image': get_media_if_exists(activ.token, 'media') if activ.token else None,
+                'token_image': activ.token.media,
                 'token_name': activ.token.name if activ.token else None,
                 'method': activ.method,
                 'from_id': user_from.id if user_from else None,

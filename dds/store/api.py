@@ -25,16 +25,6 @@ from dds.rates.api import calculate_amount
 from dds.store.models import Token, Collection, Ownership
 from dds.utilities import get_media_if_exists
 
-def create_ipfs(request):
-    client = ipfshttpclient.connect('/dns/144.76.201.50/tcp/6001/http')
-    name = request.data.get('name')
-    description = request.data.get('description')
-    media = request.FILES.get('media')
-    attributes = request.data.get('details')
-    file_res = client.add(media)
-    ipfs_json = {"name": name, "description": description, "media": file_res['Hash'], "attributes": attributes}
-    res = client.add_json(ipfs_json)
-    return res
 
 def token_search(words, page):
     words = words.split(' ')

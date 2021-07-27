@@ -414,8 +414,7 @@ class GetUserCollections(APIView):
         for collection in collections:
             token_list = []
             for token in collection.token_set.all()[:6]:
-                token_media = get_media_if_exists(token, 'media')
-                token_list.append(token_media)
+                token_list.append(token.media)
 
             avatar = get_media_if_exists(collection, 'avatar')
             collection_list.append({
@@ -467,7 +466,7 @@ class GetFollowingView(APIView):
             for token in person.token_owner.all()[:5]:
                 token_info = {
                     'id': token.id,
-                    'media': get_media_if_exists(token, 'media')
+                    'media': token.media,
                 }
 
                 person_tokens.append(token_info)
@@ -514,7 +513,7 @@ class GetFollowersView(APIView):
             for token in person.token_owner.all()[:5]:
                 token_info = {
                     'id': token.id,
-                    'media': get_media_if_exists(token, 'media')
+                    'media': token.media,
                 }
 
                 person_tokens.append(token_info)
