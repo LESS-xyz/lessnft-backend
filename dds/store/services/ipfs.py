@@ -7,7 +7,7 @@ from dds.settings import (
 
 
 def create_ipfs(request):
-    client = ipfshttpclient.connect("/dns/127.0.0.1/tcp/5001/http")
+    client = ipfshttpclient.connect("/dns/144.76.201.50/tcp/6001/http")
     name = request.data.get("name")
     description = request.data.get("description")
     media = request.FILES.get("media")
