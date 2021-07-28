@@ -7,7 +7,7 @@ django.setup()
 
 from multiprocessing import Process
 from scaners import scaner
-from dds.settings import ERC721_FABRIC
+from contracts import ERC721_FABRIC
 from dds.store.models import Collection
 import time
 

@@ -23,6 +23,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from web3 import HTTPProvider, Web3
 
+from dds.settings import NETWORK_SETTINGS
+from contracts import (
+    EXCHANGE,
+    ERC721_FABRIC,
+    ERC1155_FABRIC,
+    WETH_CONTRACT
+)
+
 get_list_response = openapi.Response(
     description='Response with search results',
     schema=openapi.Schema(

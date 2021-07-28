@@ -4,15 +4,14 @@ from web3 import Web3, HTTPProvider
 from utils import get_last_block, save_last_block
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F
-from dds.settings_local import (
-                            EXCHANGE,
-                            NETWORK_SETTINGS,
-                            ERC721_FABRIC,
-                            ERC1155_FABRIC,
-                            ERC721_MAIN,
-                            ERC1155_MAIN,
-                            WETH_CONTRACT
-                        )
+from contracts import (
+    EXCHANGE,
+    ERC721_FABRIC,
+    ERC1155_FABRIC,
+    ERC721_MAIN,
+    ERC1155_MAIN,
+    WETH_CONTRACT
+)
 
 from local_settings import (
                         HOLDERS_CHECK_CHAIN_LENGTH,

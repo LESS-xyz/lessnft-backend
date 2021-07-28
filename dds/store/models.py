@@ -19,17 +19,22 @@ from dds.utilities import get_timestamp_path, sign_message, get_media_if_exists
 from dds.accounts.models import AdvUser
 from dds.consts import DECIMALS
 from dds.settings import (
-                        ERC721_MAIN,
-                        ERC1155_MAIN,
-                        NETWORK_SETTINGS,
-                        TOKEN_MINT_GAS_LIMIT,
-                        TOKEN_TRANSFER_GAS_LIMIT,
-                        TOKEN_BUY_GAS_LIMIT,
-                        PRIV_KEY,
-                        EXCHANGE,
-                        ERC20_ADDRESS,
-                        DEFAULT_AVATARS
-                    )
+    NETWORK_SETTINGS,
+    TOKEN_MINT_GAS_LIMIT,
+    TOKEN_TRANSFER_GAS_LIMIT,
+    TOKEN_BUY_GAS_LIMIT,
+    PRIV_KEY,
+    ERC20_ADDRESS,
+    DEFAULT_AVATARS
+)
+from contracts import (
+    EXCHANGE,
+    ERC721_FABRIC,
+    ERC1155_FABRIC,
+    ERC721_MAIN,
+    ERC1155_MAIN,
+    WETH_CONTRACT
+)
 from rest_framework import status
 from rest_framework.authtoken.models import Token as AuthToken
 from rest_framework.response import Response
