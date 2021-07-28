@@ -39,10 +39,6 @@ def token_search(words, page):
     end = page * 50 if len(tokens) >= page * 50 else None
 
     for token in tokens[start: end]:
-        try:
-            avatar = ALLOWED_HOSTS[0] + token.media.url
-        except ValueError:
-            avatar = ''
         token_owners = []
         if token.standart == 'ERC1155':
             owners = token.owners.all()
@@ -73,7 +69,7 @@ def token_search(words, page):
             'id': token.id,
             'name': token.name,
             'standart': token.standart,
-            'media': avatar,
+            'media': token.media,
             'total_supply': token.total_supply,
             'available': available,
             'price': token.price / DECIMALS[token.currency] if token.price else None,

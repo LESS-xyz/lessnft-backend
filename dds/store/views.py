@@ -280,7 +280,6 @@ class SaveView(APIView):
         token.save_in_db(request)
 
         # response with created token info
-        avatar = get_media_if_exists(token, 'media')
         collection_avatar = get_media_if_exists(token.collection, 'avatar')
         token_owners = []
         if token.standart == 'ERC1155':
@@ -310,7 +309,7 @@ class SaveView(APIView):
         response_data = {
                 'id': token.id, 
                 'name': token.name, 
-                'media': avatar, 
+                'media': token.media, 
                 'total_supply': token.total_supply,
                 'available': available,
                 'price': (token.price / DECIMALS[token.currency] if token.price else None), 
@@ -478,7 +477,6 @@ class GetOwnedView(APIView):
         end = page * 50 if len(tokens) >= page * 50 else None
 
         for token in tokens[start:end]:
-            media = get_media_if_exists(token, 'media')
             collection_avatar = get_media_if_exists(token.collection, 'avatar')
 
             token_owners = []
@@ -512,7 +510,7 @@ class GetOwnedView(APIView):
                 'id': token.id, 
                 'name': token.name, 
                 'standart': token.standart,
-                'media': media, 
+                'media': token.media, 
                 'total_supply': token.total_supply,
                 'available': available,
                 'price': token.price / DECIMALS[token.currency] if token.price else None,
@@ -560,7 +558,6 @@ class GetCreatedView(APIView):
         end = page * 50 if len(tokens) >= page * 50 else None
 
         for token in tokens[start:end]:
-            media = get_media_if_exists(token, 'media')
             collection_avatar = get_media_if_exists(token.collection, 'avatar')
 
             token_owners = []
@@ -594,7 +591,7 @@ class GetCreatedView(APIView):
                 'id': token.id, 
                 'name': token.name, 
                 'standart': token.standart, 
-                'media': media, 
+                'media': token.media, 
                 'total_supply': token.total_supply,
                 'available': available, 
                 'price': token.price / DECIMALS[token.currency] if token.price else None,
@@ -648,7 +645,6 @@ class GetLikedView(APIView):
         end = page * 50 if len(tokens) >= page * 50 else None
 
         for token in tokens[start:end]:
-            media = get_media_if_exists(token, 'media')
             collection_avatar = get_media_if_exists(token.collection, 'avatar')
 
             token_owners = []
@@ -681,7 +677,7 @@ class GetLikedView(APIView):
                 'id': token.id, 
                 'name': token.name, 
                 'standart': token.standart, 
-                'media': media, 
+                'media': token.media, 
                 'total_supply': token.total_supply,
                 'available': available, 
                 'price': token.price / DECIMALS[token.currency] if token.price else None,
