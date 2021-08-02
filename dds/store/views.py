@@ -1,11 +1,8 @@
 from dds.accounts.models import AdvUser, MasterUser
-from dds.accounts.api import user_search
 from dds.activity.models import BidsHistory, ListingHistory, UserAction
 from dds.consts import DECIMALS
-from dds.rates.api import calculate_amount
 from dds.settings import *
-from dds.store.api import (check_captcha, token_search, collection_search,
-                           get_dds_email_connection, validate_bid)
+from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid)
 from dds.store.services.ipfs import create_ipfs
 
 from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token
@@ -575,9 +572,6 @@ class GetView(APIView):
         else:
             print('serializer not valid')
 
-        collection_avatar = get_media_if_exists(token.collection, 'avatar')
-        token_owners = []
-
         #1155 specific ownership and token changes
         if token.standart == 'ERC1155':
             ownership = Ownership.objects.get(owner=user, token=token)
@@ -814,8 +808,7 @@ class BuyTokenView(APIView):
 
 @api_view(http_method_names=['GET'])
 def get_tags(request):
-    tag_list = []
-    [tag_list.append(tag.name) for tag in Tags.objects.all()]
+    tag_list = [tag.name for tag in Tags.objects.all()] 
     return Response({'tags': tag_list}, status=status.HTTP_200_OK)
 
 

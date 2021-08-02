@@ -3,7 +3,6 @@ import datetime
 from dds.consts import DECIMALS
 from dds.utilities import get_media_if_exists
 from django.db.models import Q
-from django.shortcuts import render
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status

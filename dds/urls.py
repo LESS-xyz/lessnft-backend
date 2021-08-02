@@ -3,7 +3,6 @@ from django.urls import path
 from django.urls import include
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
-from rest_framework import status
 from rest_framework import permissions
 from dds.settings import MEDIA_URL, MEDIA_ROOT, STATIC_ROOT, STATIC_URL
 from django.conf.urls.static import static

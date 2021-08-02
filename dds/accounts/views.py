@@ -17,7 +17,6 @@ from dds.store.serializers import UserCollectionSerializer
 from dds.utilities import get_media_if_exists
 
 from django.core.mail import send_mail 
-from django.contrib.auth import login, logout
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 
@@ -26,9 +25,7 @@ from drf_yasg.utils import swagger_auto_schema
 
 from rest_auth.registration.views import SocialLoginView
 
-from rest_framework import serializers, status
-from rest_framework.authtoken.models import Token as AuthToken
-from rest_framework.exceptions import PermissionDenied
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 

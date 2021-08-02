@@ -3,11 +3,8 @@ import random
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from dds.utilities import get_timestamp_path
-from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.dispatch import Signal
 
 from dds.settings import DEFAULT_AVATARS
 

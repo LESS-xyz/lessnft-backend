@@ -2,18 +2,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework.request import Request
 from rest_framework.views import APIView
 from django.core.exceptions import ObjectDoesNotExist
 
-from dds.store.models import Collection, Token, Ownership
+from dds.store.models import Collection, Token
 from dds.store.serializers import CollectionSerializer
 from dds.accounts.models import AdvUser
 from dds.accounts.serializers import UserSerializer
-from dds.accounts.api import follow_and_follower
-from dds.utilities import get_media_if_exists
-from dds.settings import ALLOWED_HOSTS
-from dds.consts import DECIMALS
 
 get_collection_response = openapi.Response(
     description='Response with created collection',

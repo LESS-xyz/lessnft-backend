@@ -5,10 +5,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 
-from web3 import Web3
-from ethereum.utils import ecrecover_to_pub, sha3
-from eth_utils.hexadecimal import encode_hex, decode_hex, add_0x_prefix
-from eth_account.messages import defunct_hash_message, encode_defunct
+from eth_utils.hexadecimal import add_0x_prefix
+from eth_account.messages import encode_defunct
 from eth_account import Account
 
 from dds.accounts.models import AdvUser

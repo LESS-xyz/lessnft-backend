@@ -1,7 +1,6 @@
 from django.db.models.signals import post_save
 from django.core.management.base import BaseCommand
 
-import ipfshttpclient
 from web3 import Web3, HTTPProvider
 
 from dds.settings_local import NETWORK_SETTINGS

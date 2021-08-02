@@ -1,18 +1,10 @@
-import decimal
 import random
-import uuid, secrets
+import secrets
 from decimal import *
-from collections import namedtuple
-from typing import List
 from django.db import models
-from django.contrib.postgres.fields import ArrayField
 from web3 import Web3, HTTPProvider
-from eth_account import Account
-from eth_abi import encode_single
 
 from django.db.models.signals import post_save
-from django.dispatch import receiver
-from django.dispatch import Signal
 from django.core.validators import MaxValueValidator, MinValueValidator
 from dds.consts import MAX_AMOUNT_LEN
 from dds.utilities import get_timestamp_path, sign_message, get_media_if_exists
@@ -23,17 +15,13 @@ from dds.settings import (
     TOKEN_MINT_GAS_LIMIT,
     TOKEN_TRANSFER_GAS_LIMIT,
     TOKEN_BUY_GAS_LIMIT,
-    PRIV_KEY,
     ERC20_ADDRESS,
     DEFAULT_AVATARS
 )
 from contracts import (
     EXCHANGE,
-    ERC721_FABRIC,
-    ERC1155_FABRIC,
     ERC721_MAIN,
-    ERC1155_MAIN,
-    WETH_CONTRACT
+    ERC1155_MAIN
 )
 from rest_framework import status
 from rest_framework.authtoken.models import Token as AuthToken

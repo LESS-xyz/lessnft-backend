@@ -1,8 +1,7 @@
 from datetime import datetime
 from os.path import splitext
-from eth_account import Account, messages
-from eth_account.messages import defunct_hash_message, encode_defunct
-from dds.settings import MEDIA_ROOT, PRIV_KEY
+from eth_account import Account
+from dds.settings import PRIV_KEY
 from web3 import Web3
 
 from dds.settings import ALLOWED_HOSTS

@@ -26,6 +26,4 @@ class RateRequest(APIView):
         responses={200: rates_response}
     )
     def get(self, request):
-        usd_price = get_usd_prices()
-        response_data = {currency: price for currency, price in usd_price.items()}
-        return Response(response_data, status=status.HTTP_200_OK)
+        return Response(get_usd_prices(), status=status.HTTP_200_OK)

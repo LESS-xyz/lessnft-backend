@@ -1,23 +1,18 @@
 import json
-import ipfshttpclient
 import requests
-import multiaddr
-from web3 import Web3, HTTPProvider
+from web3 import Web3
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import get_connection
 
 from dds.settings import (
     ALLOWED_HOSTS, 
     SORT_STATUSES, 
-    WETH_CONTRACT, 
-    NETWORK_SETTINGS,
     EMAIL_HOST, 
-    DDS_HOST_USER, 
+    DDS_HOST_USER,
     DDS_HOST_PASSWORD, 
-    DDS_MAIL, 
     EMAIL_PORT, 
-    EMAIL_USE_TLS,
-    CAPTCHA_SECRET,
+    EMAIL_USE_TLS, 
+    CAPTCHA_SECRET, 
     CAPTCHA_URL
 )
 from dds.consts import DECIMALS

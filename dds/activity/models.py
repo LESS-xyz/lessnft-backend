@@ -1,7 +1,4 @@
 from django.db import models
-from dds.accounts.models import AdvUser
-from dds.store.models import Token
-from dds.settings import ALLOWED_HOSTS
 from dds.rates.api import calculate_amount
 from dds.consts import MAX_AMOUNT_LEN
 
