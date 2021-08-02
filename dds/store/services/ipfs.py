@@ -1,6 +1,6 @@
 from web3 import Web3, HTTPProvider
 from dds.settings import NETWORK_SETTINGS
-from contract import ERC721_MAIN, ERC1155_MAIN
+from contracts import ERC721_MAIN, ERC1155_MAIN
 
 
 def create_ipfs(request):

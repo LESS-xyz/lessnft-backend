@@ -933,7 +933,7 @@ class GetView(APIView):
                 ownership.minimal_bid = minimal_bid
                 if token.minimal_bid:
                     if token.minimal_bid > ownership.minimal_bid:
-                        token.minimal_bid = ownership.minimal_bi
+                        token.minimal_bid = ownership.minimal_bid
                         token.full_clean()
                         token.save()
             ownership.full_clean()
