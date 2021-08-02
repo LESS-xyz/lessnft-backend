@@ -9,7 +9,16 @@ from dds.store.api import (check_captcha, token_search, collection_search,
 from dds.store.services.ipfs import create_ipfs
 
 from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token
-from dds.store.serializers import TokenPatchSerializer
+from dds.store.serializers import (
+    TokenPatchSerializer, 
+    TokenSerializer,
+    TokenFullSerializer,
+    CollectionSlimSerializer,
+    CollectionSerializer,
+    HotCollectionSerializer,
+    BetSerializer,
+    BidSerializer,
+)
 from dds.utilities import get_media_if_exists, sign_message
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
@@ -286,61 +295,9 @@ class SaveView(APIView):
     def post(self, request):
         token = Token()
         token.save_in_db(request)
-
-        # response with created token info
-        collection_avatar = get_media_if_exists(token.collection, 'avatar')
-        token_owners = []
-        if token.standart == 'ERC1155':
-            owners = token.owners.all()
-            available = 0
-            for owner in owners:
-                holder = {
-                    'id': owner.id,
-                    'name': owner.get_name(),
-                    'avatar': get_media_if_exists(owner, 'avatar'),
-                    'quantity': Ownership.objects.get(owner=owner, token=token).quantity
-                    }
-                token_owners.append(holder)
-                if Ownership.objects.get(owner=owner, token=token).selling:
-                    available += Ownership.objects.get(owner=owner, token=token).quantity
-        else:
-            owner = {
-                'id': token.owner.id,
-                'name': token.owner.get_name(),
-                'avatar': get_media_if_exists(token.owner, 'avatar'),
-                }
-            token_owners.append(owner)
-            if token.selling:
-                available = 1
-            else:
-                available = 0
-        response_data = {
-                'id': token.id, 
-                'name': token.name, 
-                'media': token.media, 
-                'total_supply': token.total_supply,
-                'available': available,
-                'price': (token.price / DECIMALS[token.currency] if token.price else None), 
-                'currency': token.currency,         
-                'USD_price': (calculate_amount(token.price, token.currency)[0] if token.price else None), 
-                'owner': token_owners,
-                'creator': {
-                    'id': token.creator.id,
-                    'name': token.creator.get_name(),
-                    'avatar': ALLOWED_HOSTS[0] + token.creator.avatar.url
-                },
-                'collection': {
-                    'id': token.collection.id,
-                    'avatar': collection_avatar,
-                    'name': token.collection.name
-                },
-                'description': token.description,
-                'details': token.details, 
-                'royalty': token.creator_royalty, 
-                'selling': token.selling
-        }
-
+        response_data = TokenSerializer(token).data
         return Response(response_data, status=status.HTTP_200_OK)
+
 
 class CreateCollectionView(APIView):
     '''
@@ -450,16 +407,7 @@ class SaveCollectionView(APIView):
     def post(self, request):
         collection = Collection()
         collection.save_in_db(request)
-
-        avatar = get_media_if_exists(collection, 'avatar')
-
-        response_data = {
-            'id': collection.id, 
-            'name': collection.name, 
-            'avatar': avatar, 
-            'address': collection.address
-        }
-
+        response_data = CollectionSlimSerializer(collection).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -479,69 +427,13 @@ class GetOwnedView(APIView):
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
         tokens = Token.objects.filter(Q(owner=user) | Q(owners=user)).exclude(status=Status.BURNED).order_by('-id')
-        token_list = []
 
         start = (page - 1) * 50
         end = page * 50 if len(tokens) >= page * 50 else None
 
-        for token in tokens[start:end]:
-            collection_avatar = get_media_if_exists(token.collection, 'avatar')
-
-            token_owners = []
-            if token.standart == 'ERC1155':
-                owners = token.owners.all()
-                available = 0
-                for owner in owners[:3]:
-                    holder = {
-                        'id': owner.id,
-                        'name': owner.get_name(),
-                        'avatar': get_media_if_exists(owner, 'avatar'),
-                        'quantity': Ownership.objects.get(owner=owner, token=token).quantity
-                        }
-                    token_owners.append(holder)
-                for owner in owners:
-                    if Ownership.objects.get(owner=owner, token=token).selling:
-                        available += Ownership.objects.get(owner=owner, token=token).quantity
-            else:
-                owner = {
-                    'id': token.owner.id,
-                    'name': token.owner.get_name(),
-                    'avatar': get_media_if_exists(token.owner, 'avatar'),
-                    }
-                token_owners.append(owner)
-                if token.selling:
-                    available = 1
-                else:
-                    available = 0
-
-            token_list.append({
-                'id': token.id, 
-                'name': token.name, 
-                'standart': token.standart,
-                'media': token.media, 
-                'total_supply': token.total_supply,
-                'available': available,
-                'price': token.price / DECIMALS[token.currency] if token.price else None,
-                'currency': token.currency,
-                'USD_price': calculate_amount(token.price, token.currency)[0] if token.price else None,
-                'owners': token_owners,
-                'creator': {
-                    'id': token.creator.id,
-                    'name': token.creator.get_name(),
-                    'avatar': ALLOWED_HOSTS[0] + token.creator.avatar.url
-                },
-                'collection': {
-                    'id': token.collection.id,
-                    'avatar': collection_avatar,
-                    'name': token.collection.name
-                },
-                'description': token.description, 
-                'royalty': token.creator_royalty,
-                'details': token.details, 
-                'selling': token.selling
-            })
-
-        return Response(token_list, status=status.HTTP_200_OK)
+        token_list = tokens[start:end]
+        response_data = TokenSerializer(token_list, many=True).data
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class GetCreatedView(APIView):
@@ -560,69 +452,12 @@ class GetCreatedView(APIView):
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
         tokens = Token.objects.filter(creator=user).exclude(status=Status.BURNED).order_by('-id')
-        token_list = []
 
         start = (page - 1) * 50
         end = page * 50 if len(tokens) >= page * 50 else None
-
-        for token in tokens[start:end]:
-            collection_avatar = get_media_if_exists(token.collection, 'avatar')
-
-            token_owners = []
-            if token.standart == 'ERC1155':
-                owners = token.owners.all()
-                available = 0
-                for owner in owners:
-                    holder = {
-                        'id': owner.id,
-                        'name': owner.get_name(),
-                        'avatar': get_media_if_exists(owner, 'avatar'),
-                        'quantity': Ownership.objects.get(owner=owner, token=token).quantity
-                        }
-                    token_owners.append(holder)
-                    if Ownership.objects.get(owner=owner, token=token).selling:
-                        available += Ownership.objects.get(owner=owner, token=token).quantity
-            else:
-                owner = {
-                    'id': token.owner.id,
-                    'name': token.owner.get_name(),
-                    'avatar': get_media_if_exists(token.owner, 'avatar'),
-                    }
-                token_owners.append(owner)
-                if token.selling:
-                    available = 1
-                else:
-                    available = 0
-
-
-            token_list.append({
-                'id': token.id, 
-                'name': token.name, 
-                'standart': token.standart, 
-                'media': token.media, 
-                'total_supply': token.total_supply,
-                'available': available, 
-                'price': token.price / DECIMALS[token.currency] if token.price else None,
-                'currency': token.currency,
-                'USD_price': calculate_amount(token.price, token.currency)[0] if token.price else None,
-                'owners': token_owners,
-                'creator': {
-                    'id': token.creator.id,
-                    'name': token.creator.get_name(),
-                    'avatar': ALLOWED_HOSTS[0] + token.creator.avatar.url
-                },
-                'collection': {
-                    'id': token.collection.id,
-                    'avatar': collection_avatar,
-                    'name': token.collection.name
-                },
-                'description': token.description, 
-                'details': token.details,
-                'royalty': token.creator_royalty, 
-                'selling': token.selling
-            })
-        
-        return Response(token_list, status=status.HTTP_200_OK)
+        token_list = tokens[start:end]
+        response_data = TokenSerializer(token_list, many=True).data
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class GetLikedView(APIView):
@@ -647,68 +482,12 @@ class GetLikedView(APIView):
         tokens_action = UserAction.objects.filter(method='like', user__in=ids).order_by('-date')
         
         tokens = [action.token for action in tokens_action]
-        token_list = []
 
         start = (page - 1) * 50
         end = page * 50 if len(tokens) >= page * 50 else None
-
-        for token in tokens[start:end]:
-            collection_avatar = get_media_if_exists(token.collection, 'avatar')
-
-            token_owners = []
-            if token.standart == 'ERC1155':
-                owners = token.owners.all()
-                available = 0
-                for owner in owners:
-                    holder = {
-                        'id': owner.id,
-                        'name': owner.get_name(),
-                        'avatar': get_media_if_exists(owner, 'avatar'),
-                        'quantity': Ownership.objects.get(owner=owner, token=token).quantity
-                        }
-                    token_owners.append(holder)
-                    if Ownership.objects.get(owner=owner, token=token).selling:
-                        available += Ownership.objects.get(owner=owner, token=token).quantity
-            else:
-                owner = {
-                    'id': token.owner.id,
-                    'name': token.owner.get_name(),
-                    'avatar': get_media_if_exists(token.owner, 'avatar'),
-                    }
-                token_owners.append(owner)
-                if token.selling:
-                    available = 1
-                else:
-                    available = 0
-
-            token_list.append({
-                'id': token.id, 
-                'name': token.name, 
-                'standart': token.standart, 
-                'media': token.media, 
-                'total_supply': token.total_supply,
-                'available': available, 
-                'price': token.price / DECIMALS[token.currency] if token.price else None,
-                'currency': token.currency,
-                'USD_price': calculate_amount(token.price, token.currency)[0] if token.price else None,
-                'owners': token_owners,
-                'creator': {
-                    'id': token.creator.id,
-                    'name': token.creator.get_name(),
-                    'avatar': ALLOWED_HOSTS[0] + token.creator.avatar.url
-                },
-                'collection': {
-                    'id': token.collection.id,
-                    'avatar': collection_avatar,
-                    'name': token.collection.name
-                },
-                'description': token.description, 
-                'details': token.details,
-                'royalty': token.creator_royalty, 
-                'selling': token.selling
-            })
-
-        return Response(token_list, status=status.HTTP_200_OK)
+        token_list = tokens[start:end]
+        response_data = TokenSerializer(token_list, many=True).data
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class GetView(APIView):
@@ -727,121 +506,7 @@ class GetView(APIView):
             return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
         if token.status == Status.BURNED:
             return Response({'error': 'burned'}, status=status.HTTP_404_NOT_FOUND)
-        collection_avatar = get_media_if_exists(token.collection, 'avatar')
-
-        bids = Bid.objects.filter(token=token).order_by('-amount')
-        bid_list = []
-        for bid in bids:
-            bid_list.append({
-                'id': bid.id,
-                'bidder': bid.user.get_name(),
-                'bidderid': bid.user.id,
-                'bidderavatar': ALLOWED_HOSTS[0] + bid.user.avatar.url,
-                'quantity': bid.quantity,
-                'amount': bid.amount / DECIMALS[bid.token.currency],
-                'currency': bid.token.currency
-            })
-
-        token_history = []
-        history = token.tokenhistory_set.exclude(method='Burn').order_by('-id')
-
-        if history != []:
-            for action in history:
-                owner = {
-                    'id': action.new_owner.id,
-                    'name': action.new_owner.get_name(),
-                    'avatar': get_media_if_exists(action.new_owner, 'avatar'),
-                    'method': action.method,
-                    'date': action.date,
-                    'price': action.price / DECIMALS[action.token.currency] if action.price else None
-                }
-                token_history.append(owner)
-
-        token_owners = []
-        if token.standart == 'ERC1155':
-            owners = token.owners.all()
-            available = 0
-            for owner in owners:
-                holder = {
-                        'id': owner.id,
-                        'name': owner.get_name(),
-                        'avatar': get_media_if_exists(owner, 'avatar'),
-                        'quantity': Ownership.objects.get(owner=owner, token=token).quantity
-                        }
-                token_owners.append(holder)
-                if Ownership.objects.get(owner=owner, token=token).selling:
-                    available += Ownership.objects.get(owner=owner, token=token).quantity
-        else:
-            owner = {
-                    'id': token.owner.id,
-                    'name': token.owner.get_name(),
-                    'avatar': get_media_if_exists(token.owner, 'avatar'),
-                    }
-            token_owners.append(owner)
-            if token.selling:
-                available = 1
-            else:
-                available = 0
-
-
-        sellers_list = []
-        sellers = Ownership.objects.filter(
-            token=token, 
-            price__isnull=False,
-            selling=True
-        ).order_by('price')
-        for seller in sellers:
-            seller_user = seller.owner
-            sellers_list.append({
-                'id': seller_user.id,
-                'name': seller_user.get_name(),
-                'avatar': get_media_if_exists(seller_user, 'avatar'),
-                'quantity': seller.quantity,
-                'price': seller.price
-            })
-        response_data = {
-            'id': token.id, 
-            'name': token.name, 
-            'standart': token.standart, 
-            'tags': [tag.name for tag in token.tags.all()],
-            'media': token.media,
-            'total_supply': token.total_supply,
-            'available': available, 
-            'price': (token.price / DECIMALS[token.currency] if token.price else None),
-            'minimal_bid': token.minimal_bid / DECIMALS[token.currency] if token.minimal_bid else None,
-            'currency': token.currency,
-            'USD_price': (calculate_amount(token.price, token.currency)[0] if token.price else None), 
-            'owners': token_owners,
-            'history': token_history,
-            'sellers': sellers_list,
-            'creator': {
-                'id': token.creator.id, 
-                'name': token.creator.get_name(),
-                'avatar': get_media_if_exists(token.creator, 'avatar')
-            },
-            'collection': {
-                'id': token.collection.id, 
-                'avatar': get_media_if_exists(token.collection, 'avatar'),
-                'name': token.collection.name,
-                'address': token.collection.address
-            },
-            'bids': bid_list,
-            'description': token.description,
-            'details': token.details,
-            'royalty': token.creator_royalty, 
-            'selling': token.selling,
-            'like_count': token.useraction_set.count(),
-            'service_fee': service_fee,
-            'internl_id': token.internal_id,
-            'owner_auction': token.get_owner_auction()
-        }
-
-        if token.standart == 'ERC1155':
-            if not Ownership.objects.filter(token=token).filter(selling=True):
-                response_data['selling'] = False
-            else:
-                response_data['selling'] = True
-
+        response_data = TokenFullSerializer(token).data
         return Response(response_data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -941,119 +606,7 @@ class GetView(APIView):
             token.selling = False
             token.save()
 
-        #Further is just response creation
-        if token.standart == 'ERC1155':
-            owners = token.owners.all()
-            available = 0
-            for owner in owners:
-                holder = {
-                        'id': owner.id,
-                        'name': owner.get_name(),
-                        'avatar': get_media_if_exists(owner, 'avatar'),
-                        'quantity': Ownership.objects.get(owner=owner, token=token).quantity
-                        }
-                token_owners.append(holder)
-                if Ownership.objects.get(owner=owner, token=token).selling:
-                    available += Ownership.objects.get(owner=owner, token=token).quantity
-        else:
-            owner = {
-                    'id': token.owner.id,
-                    'name': token.owner.get_name(),
-                    'avatar': get_media_if_exists(token.owner, 'avatar'),
-                    }
-            token_owners.append(owner)
-            if token.selling:
-                available = 1
-            else:
-                available = 0
-
-
-        token_history = []
-        history = token.tokenhistory_set.all()
-
-        if history != []:
-            for action in history:
-                owner = {
-                    'id': action.new_owner.id,
-                    'name': action.new_owner.get_name(),
-                    'avatar': get_media_if_exists(action.new_owner, 'avatar'),
-                    'method': action.method,
-                    'date': action.date,
-                    'price': action.price / DECIMALS[action.token.currency] if action.price else None
-                }
-                token_history.append(owner)
-
-        sellers_list = []
-        sellers = Ownership.objects.filter(
-            token=token, 
-            price__isnull=False,
-            selling=True
-        ).order_by('price')
-        for seller in sellers:
-            seller_user = seller.owner
-            sellers_list.append({
-                'id': seller_user.id,
-                'name': seller_user.get_name(),
-                'avatar': get_media_if_exists(seller_user, 'avatar'),
-                'quantity': seller.quantity,
-                'price': seller.price
-            })
-
-        bids = Bid.objects.filter(token=token).order_by('-amount')
-        bid_list = []
-        for bid in bids:
-            bid_list.append({
-                'id': bid.id,
-                'bidder': bid.user.get_name(),
-                'bidderid': bid.user.id,
-                'bidderavatar': ALLOWED_HOSTS[0] + bid.user.avatar.url,
-                'quantity': bid.quantity,
-                'amount': bid.amount / DECIMALS[bid.token.currency],
-                'currency': bid.token.currency
-            })
-
-        if token.minimal_bid:
-            minimal_bid = token.minimal_bid / DECIMALS[token.currency]
-        else:
-            try:
-                minimal_bid = ownership.minimal_bid / DECIMALS[token.currency]
-            except:
-                minimal_bid = None
-
-        response_data = {
-            'id': token.id,
-            'name': token.name,
-            'standart': token.standart,
-            'media': token.media,
-            'total_supply': token.total_supply,
-            'available': available,
-            'price': token.price / DECIMALS[token.currency] if token.price else None,
-            'minimal_bid': minimal_bid,
-            'currency': token.currency,
-            'USD_price': calculate_amount(token.price, token.currency)[0] if token.price else None,
-            'owners': token_owners,
-            'history': token_history,
-            'sellers': sellers_list,
-            'creator': {
-                    'id': token.creator.id,
-                    'name': token.creator.get_name(),
-                    'avatar': ALLOWED_HOSTS[0] + token.creator.avatar.url
-                },
-            'collection': {
-                'id': token.collection.id,
-                'avatar': collection_avatar,
-                'name': token.collection.name,
-                'address': token.collection.address
-            },
-            'bids': bid_list,
-            'details': token.details,
-            'royalty': token.creator_royalty,
-            'selling': token.selling,
-            'like_count': token.useraction_set.count(),
-            'service_fee': service_fee,
-            'internal_id': token.internal_id,
-            'owner_auction': token.get_owner_auction()
-        }
+        response_data = TokenFullSerializer(token).data
         print('token min bid:', token.minimal_bid)
         try:
             price
@@ -1105,78 +658,14 @@ class GetHotView(APIView):
             tokens = Token.objects.exclude(status=Status.BURNED).order_by(order)
         if sort in ('cheapest', 'highest'):
             tokens = tokens.exclude(price=None).exclude(selling=False).exclude(status=Status.BURNED)
-        token_list = []
         length = tokens.count()
 
         start = (page - 1) * 50
         end = page * 50 if len(tokens) >= page * 50 else None
-        
-        for token in tokens[start:end]:
-            collection_avatar = get_media_if_exists(token.collection, 'avatar')
 
-            token_owners = []
-            if token.standart == 'ERC1155':
-                owners = token.owners.all()
-                available = 0
-                for owner in owners:
-                    holder = {
-                        'id': owner.id,
-                        'name': owner.get_name(),
-                        'avatar': get_media_if_exists(owner, 'avatar'),
-                        'quantity': Ownership.objects.get(owner=owner, token=token).quantity
-                        }
-                    token_owners.append(holder)
-                    if Ownership.objects.get(owner=owner, token=token).selling:
-                        available += Ownership.objects.get(owner=owner, token=token).quantity
-            else:
-                owner = {
-                    'id': token.owner.id,
-                    'name': token.owner.get_name(),
-                    'avatar': get_media_if_exists(token.owner, 'avatar'),
-                    }
-                token_owners.append(owner)
-                if token.selling:
-                    available = 1
-                else:
-                    available = 0
-
-            try:
-                highest_bid = Bid.objects.filter(state=Status.COMMITTED).filter(token=token).order_by(
-                                            '-amount').first().amount
-            except AttributeError:
-                highest_bid = ''
-
-            token_list.append({
-                'id': token.id, 
-                'name': token.name, 
-                'standart': token.standart,
-                'media': token.media, 
-                'total_supply': token.total_supply,
-                'available': available, 
-                'price': (token.price / DECIMALS[token.currency] if token.price else None),
-                'currency': token.currency, 
-                'USD_price': (calculate_amount(token.price, token.currency)[0] if token.price else None),
-                'owners': token_owners,
-                'creator': {
-                    'id': token.creator.id, 
-                    'name': token.creator.get_name(), 
-                    'avatar': ALLOWED_HOSTS[0] + token.creator.avatar.url
-                },
-                'collection': {
-                    'id': token.collection.id,
-                    'avatar': collection_avatar,
-                    'name': token.collection.name
-                },
-                'details': token.details, 
-                'royalty': token.creator_royalty, 
-                'selling': token.selling,
-                'service_fee': service_fee,
-                'highest_bid': highest_bid / DECIMALS[token.currency] if highest_bid else None,
-                'minimal_bid': token.minimal_bid / DECIMALS[token.currency] if token.minimal_bid else None
-
-            })
-
-        return Response({'tokens': token_list, 'length': length}, status=status.HTTP_200_OK)
+        token_list = tokens[start:end]
+        response_data = TokenFullSerializer(token_list, many=True).data
+        return Response({'tokens': response_data, 'length': length}, status=status.HTTP_200_OK)
 
 
 class GetHotCollectionsView(APIView):
@@ -1189,38 +678,10 @@ class GetHotCollectionsView(APIView):
         responses={200: create_collection_response},
     )
     def get(self, request):
-        collections = Collection.objects.exclude(name__in=('DDS-721', 'DDS-1155')).filter(Exists(Token.objects.filter(collection__id=OuterRef('id')))).order_by('-id')
-        collection_list = []
+        collections = Collection.objects.exclude(name__in=('DDS-721', 'DDS-1155')).filter(Exists(Token.objects.filter(collection__id=OuterRef('id')))).order_by('-id')[:5]
+        response_data = HotCollectionSerializer(collections, many=True).data
+        return Response(response_data, status=status.HTTP_200_OK)
 
-        for collection in collections[:5]:
-            media = get_media_if_exists(collection, 'avatar')
-
-            tokens = Token.objects.exclude(status=Status.BURNED).filter(collection=collection).order_by(SORT_STATUSES['recent'])[:6]
-            token_list = []
-
-            for token in tokens:
-                token_list.append(token.media)
-
-            avatar = get_media_if_exists(collection.creator, 'avatar')
-
-            creator_collections = {
-                'id': collection.creator.id,
-                'avatar': avatar,
-                'name': collection.creator.get_name()
-            }
-
-            collection_list.append({
-                'id': collection.id, 
-                'name': collection.name, 
-                'address': collection.address,
-                'avatar': media, 
-                'symbol': collection.symbol, 
-                'description': collection.description,
-                'creator': creator_collections, 
-                'tokens': token_list
-            })
-
-        return Response(collection_list, status=status.HTTP_200_OK)
 
 class GetCollectionView(APIView):
     '''
@@ -1237,85 +698,12 @@ class GetCollectionView(APIView):
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        token_list = []
         tokens = Token.objects.filter(collection=collection).exclude(status=Status.BURNED)
 
         start = (page - 1) * 50
         end = page * 50 if len(tokens) >= page * 50 else None
-
-        avatar = get_media_if_exists(collection, 'avatar')
-
-        cover = get_media_if_exists(collection, 'cover')
-
-        for token in tokens[start: end]:
-            token_owners = []
-            if token.standart == 'ERC1155':
-                owners = token.owners.all()
-                available = 0
-                for owner in owners:
-                    holder = {
-                        'id': owner.id,
-                        'name': owner.get_name(),
-                        'avatar': get_media_if_exists(owner, 'avatar'),
-                        'quantity': Ownership.objects.get(owner=owner, token=token).quantity
-                        }
-                    token_owners.append(holder)
-                    if Ownership.objects.get(owner=owner, token=token).selling:
-                        available += Ownership.objects.get(owner=owner, token=token).quantity
-            else:
-                owner = {
-                    'id': token.owner.id,
-                    'name': token.owner.get_name(),
-                    'avatar': get_media_if_exists(token.owner, 'avatar'),
-                    }
-                token_owners.append(owner)
-                if token.selling:
-                    available = 1
-                else:
-                    available = 0
-
-            token_list.append({
-                'id': token.id, 
-                'name': token.name, 
-                'standart': token.standart, 
-                'media': token.media, 
-                'total_supply': token.total_supply,
-                'available': available, 
-                'price': token.price / DECIMALS[token.currency] if token.price else None,
-                'currency': token.currency,
-                'USD_price': calculate_amount(token.price, token.currency)[0] if token.price else None,
-                'owners': token_owners,
-                'creator': {
-                    'id': token.creator.id,
-                    'name': token.creator.get_name(),
-                    'avatar': ALLOWED_HOSTS[0] + token.creator.avatar.url
-                },
-                'collection': {
-                    'id': token.collection.id,
-                    'avatar': get_media_if_exists(token.collection, 'avatar'),
-                    'name': token.collection.name
-                },
-                'description': token.description, 
-                'details': token.details,
-                'royalty': token.creator_royalty, 
-                'selling': token.selling
-            })
-
-        response_data = {
-            'id': collection.id, 
-            'name': collection.name, 
-            'avatar': avatar,
-            'cover': cover,
-            'creator': {
-                'id': collection.creator.id,
-                'name': collection.creator.get_name(),
-                'avatar': get_media_if_exists(collection.creator, 'avatar')
-                },
-            'address': collection.address,
-            'description': collection.description,
-            'tokens': token_list
-        }
-
+        token_list = tokens[start:end]
+        response_data = CollectionSerializer(collection, context={"tokens": token_list}).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -1526,19 +914,8 @@ def get_bids(request, token_id, auth_token):
         return Response({'error': 'you can get bids list only for owned tokens'}, status=status.HTTP_400_BAD_REQUEST)
 
     bids = Bid.objects.filter(token=token)
-    bid_list = []
-    for bid in bids:
-        bid_list.append({
-            'id': bid.id,
-            'bidder': bid.user.get_name(),
-            'bidder_id': bid.user.id,
-            'bidder_avatar': ALLOWED_HOSTS[0] + user.avatar.url,
-            'quantity': bid.quantity,
-            'amount': bid.amount / DECIMALS[bid.token.currency],
-            'currency': bid.token.currency
-            })
-
-    return Response(bid_list, status=status.HTTP_200_OK)
+    response_data = BidSerializer(bids, many=True).data
+    return Response(response_data, status=status.HTTP_200_OK)
 
 
 class VerificateBetView(APIView):
@@ -1570,31 +947,9 @@ class VerificateBetView(APIView):
 
         if check_valid == 'OK':
             print('all ok!')
-            return Response({
-                'id':max_bet.id, 
-                'amount': max_bet.amount, 
-                'quantity': max_bet.quantity,
-                'user': {
-                    'id': user.id,
-                    'name': user.display_name,
-                    'address': user.username,
-                    'avatar': get_media_if_exists(user, 'avatar')
-                }
-            }, status=status.HTTP_200_OK)
-        
+            return Response(BetSerializer(max_bet).data, status=status.HTTP_200_OK)
         else:
             print('not ok(')
-            invalid_bet = {
-                'id':max_bet.id, 
-                'amount': max_bet.amount, 
-                'quantity': max_bet.quantity,
-                'user': {
-                    'id': user.id,
-                    'name': user.display_name,
-                    'address': user.username,
-                    'avatar': get_media_if_exists(user, 'avatar')
-                }
-            }
             max_bet.delete()
             for bet in bets:
                 user = bet.user
@@ -1603,21 +958,10 @@ class VerificateBetView(APIView):
                 check_valid = validate_bid(user, token_id, amount, weth_contract, quantity)
                 if check_valid == 'OK':
                     print('again ok!')
-                    valid_bet = {
-                            'id':bet.id, 
-                            'amount': bet.amount, 
-                            'quantity': bet.quantity,
-                            'user': {
-                                'id': user.id,
-                                'name': user.display_name,
-                                'address': user.username,
-                                'avatar': get_media_if_exists(user, 'avatar')
-                            }
-                        }
                     return Response(
                         {
-                            'invalid_bet': invalid_bet,
-                            'valid_bet': valid_bet
+                            'invalid_bet': BetSerializer(max_bet).data,
+                            'valid_bet': BetSerializer(bet).data,
                         }, 
                         status=status.HTTP_200_OK
                     )
@@ -1625,7 +969,7 @@ class VerificateBetView(APIView):
                     bet.delete()
                     continue
             return Response(
-                {'invalid_bet': invalid_bet, 'valid_bet': None},
+                {'invalid_bet': BetSerializer(max_bet).data, 'valid_bet': None},
                 status=status.HTTP_200_OK)
 
 
@@ -1756,71 +1100,9 @@ def get_fee(request):
 @api_view(http_method_names=['GET'])
 def get_hot_bids(request):
     bids = Bid.objects.filter(state=Status.COMMITTED).order_by('-id')[:6]
-    token_list= []
-    for bid in bids:
-        token = bid.token
-        collection_avatar = get_media_if_exists(token.collection, 'avatar')
-        token_owners = []
-        if token.standart == 'ERC1155':
-            available = 0
-            owners = token.owners.all()
-            for owner in owners[:3]:
-                holder = {
-                    'id': owner.id,
-                    'name': owner.get_name(),
-                    'avatar': get_media_if_exists(owner, 'avatar'),
-                    'quantity': Ownership.objects.get(owner=owner, token=token).quantity
-                }
-            for owner in owners:
-                if Ownership.objects.get(owner=owner, token=token).selling:
-                    available += Ownership.objects.get(owner=owner, token=token).quantity
-            try:
-                token_owners.append(holder)
-            except:
-                pass
-        else:
-            owner = {
-                'id': token.owner.id,
-                'name': token.owner.get_name(),
-                'avatar': get_media_if_exists(token.owner, 'avatar'),
-            }
-            token_owners.append(owner)
-            if token.selling:
-                available = 1
-            else:
-                available = 0
-
-        highest_bid = Bid.objects.filter(state=Status.COMMITTED).filter(token=token).order_by(
-                                         '-amount').first().amount
-
-        token_list.append({
-            'id': token.id,
-            'name': token.name,
-            'standart': token.standart,
-            'media': token.media,
-            'total_supply': token.total_supply,
-            'available': available,
-            'price': (token.price / DECIMALS[token.currency] if token.price else None),
-            'currency': token.currency,
-            'USD_price': (calculate_amount(token.price, token.currency)[0] if token.price else None),
-            'owners': token_owners,
-            'creator': {
-                'id': token.creator.id,
-                'name': token.creator.get_name(),
-                'avatar': ALLOWED_HOSTS[0] + token.creator.avatar.url
-            },
-            'collection': {
-                'id': token.collection.id,
-                'avatar': collection_avatar,
-                'name': token.collection.name
-            },
-            'details': token.details,
-            'royalty': token.creator_royalty,
-            'selling': token.selling,
-            'service_fee': service_fee,
-            'highest_bid': highest_bid / DECIMALS[token.currency]
-        })
-    return Response(token_list, status=status.HTTP_200_OK)
+    token_list= [bid.token for bid in bids]
+    response_data = TokenFullSerializer(token_list, many=True).data
+    return Response(response_data, status=status.HTTP_200_OK)
 
 
 class SupportView(APIView):

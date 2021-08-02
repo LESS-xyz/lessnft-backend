@@ -1,12 +1,19 @@
 import random
 
 from dds.store.api import get_dds_email_connection
-from dds.accounts.api import follow_and_follower, valid_metamask_message
 from dds.accounts.models import AdvUser, VerificationForm
-from dds.accounts.serializers import PatchSerializer
+from dds.accounts.serializers import (
+    PatchSerializer, 
+    MetamaskLoginSerializer, 
+    UserSerializer, 
+    UserSlimSerializer,
+    FollowingSerializer,
+    CoverSerializer,
+)
 from dds.activity.models import UserAction
 from dds.settings import *
 from dds.store.models import Collection, Token
+from dds.store.serializers import UserCollectionSerializer
 from dds.utilities import get_media_if_exists
 
 from django.core.mail import send_mail 
@@ -17,7 +24,6 @@ from django.db import IntegrityError
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
-from rest_auth.registration.serializers import SocialLoginSerializer
 from rest_auth.registration.views import SocialLoginView
 
 from rest_framework import serializers, status
@@ -77,40 +83,6 @@ random_cover_response = openapi.Response(
 not_found_response = 'user not found'
 
 
-class MetamaskLoginSerializer(SocialLoginSerializer):
-    address = serializers.CharField(required=False, allow_blank=True)
-    msg = serializers.CharField(required=False, allow_blank=True)
-    signed_msg = serializers.CharField(required=False, allow_blank=True)
-
-    def validate(self, attrs):
-        address = attrs['address']
-        signature = attrs['signed_msg']
-        session = self.context['request'].session
-        message = session.get('metamask_message')
-
-        if message is None:
-            message = attrs['msg']
-
-        print('metamask login, address', address, 'message', message, 'signature', signature, flush=True)
-        if valid_metamask_message(address, message, signature):
-            metamask_user = AdvUser.objects.filter(username__iexact=address).first()
-
-            if metamask_user is None:
-                self.user = AdvUser.objects.create_user(username=address)
-            else:
-                self.user = metamask_user
-
-            attrs['user'] = self.user
-
-            if not self.user.is_active:
-                raise PermissionDenied(1035)
-            
-        else:
-            raise PermissionDenied(1034)
-
-        return attrs
-
-
 class MetamaskLogin(SocialLoginView):
     serializer_class = MetamaskLoginSerializer
 
@@ -144,31 +116,7 @@ class GetView(APIView):
             user = AdvUser.objects.get(auth_token=token)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
-
-        follows, followers = follow_and_follower(user)
-
-        likes_action = UserAction.objects.filter(method='like', user=user)
-        likes = [action.token.id for action in likes_action]
-       
-        response_data = {
-            'id': user.id, 
-            'address': user.username, 
-            'display_name': user.display_name, 
-            'avatar': ALLOWED_HOSTS[0] + user.avatar.url,
-            'cover': get_media_if_exists(user, 'cover'),
-            'custom_url': user.custom_url, 
-            'bio': user.bio, 
-            'twitter': user.twitter,
-            'instagram': user.instagram,
-            'site': user.site,
-            'is_verificated': user.is_verificated, 
-            'follows': follows,
-            'follows_count': len(follows),
-            'followers': followers,
-            'followers_count': len(followers),
-            'likes': likes
-        }
-
+        response_data = UserSerializer(user).data
         return Response(response_data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -212,19 +160,7 @@ class GetView(APIView):
         #unique constraint handling:
         if isinstance(result, dict):
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
-
-        response_data = {
-            'id': user.id, 
-            'address': user.username, 
-            'display_name': user.display_name, 
-            'avatar': ALLOWED_HOSTS[0] + user.avatar.url,
-            'custom_url': user.custom_url, 
-            'bio': user.bio, 
-            'twitter': user.twitter, 
-            'instagram': user.instagram,
-            'site': user.site,
-            'is_verificated': user.is_verificated}
-
+        response_data = UserSlimSerializer(user).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -241,28 +177,8 @@ class GetOtherView(APIView):
         try:
             user = AdvUser.objects.get(id=id)
         except ObjectDoesNotExist:
-            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
-
-        follows, followers = follow_and_follower(user)
-        
-        response_data = {
-            'id': user.id, 
-            'address': user.username, 
-            'display_name': user.display_name, 
-            'avatar': ALLOWED_HOSTS[0] + user.avatar.url,
-            'cover': get_media_if_exists(user, 'cover'),
-            'custom_url': user.custom_url, 
-            'bio': user.bio, 
-            'twitter': user.twitter, 
-            'instagram': user.instagram,
-            'site': user.site,
-            'is_verificated': user.is_verificated,
-            'follows': follows,
-            'follows_count': len(follows),
-            'followers': followers,
-            'followers_count': len(followers),
-        }
-
+            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED) 
+        response_data = UserSerializer(user).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -333,7 +249,7 @@ class UnfollowView(APIView):
         try:
             follow = AdvUser.objects.get(id=id)
         except ObjectDoesNotExist:
-            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED) 
         
         link = UserAction.objects.filter(whom_follow=follow, user=follower)
         
@@ -371,7 +287,7 @@ class LikeView(APIView):
         try:
             item = Token.objects.get(id=token_id)
         except ObjectDoesNotExist:
-            return Response({'error': 'nothing to like'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'nothing to like'}, status=status.HTTP_400_BAD_REQUEST) 
 
 
         like, created = UserAction.objects.get_or_create(
@@ -409,31 +325,8 @@ class GetUserCollections(APIView):
 
         collections = Collection.objects.filter(name__in=('DDS-721', 'DDS-1155')).filter(status__iexact='Committed')
         collections |= Collection.objects.filter(creator=user).filter(status__iexact='Committed')
-        collection_list = []
-
-        for collection in collections:
-            token_list = []
-            for token in collection.token_set.all()[:6]:
-                token_list.append(token.media)
-
-            avatar = get_media_if_exists(collection, 'avatar')
-            collection_list.append({
-                'id': collection.id,
-                'name':collection.name,
-                'avatar':avatar,
-                'address':collection.address,
-                'symbol':collection.symbol,
-                'description':collection.description,
-                'standart':collection.standart,
-                'short_url':collection.short_url,
-                'creator':collection.creator.username,
-                'status':collection.status,
-                'deploy_hash':collection.deploy_hash,
-                'deploy_block':collection.deploy_block,
-                'tokens': token_list
-            })
-        
-        return Response({'collections': collection_list}, status=status.HTTP_200_OK)
+        response_data = UserCollectionSerializer(collections, many=True).data
+        return Response({'collections': response_data}, status=status.HTTP_200_OK)
 
 
 class GetFollowingView(APIView):
@@ -453,34 +346,8 @@ class GetFollowingView(APIView):
 
         follow_queryset = UserAction.objects.filter(method='follow', user=user)
         followed_users = [action.whom_follow for action in follow_queryset]
-        
-        result_list = []
-
-        for person in followed_users:
-            # the number of subscribers of the person we follow
-            followers_count = len(
-                UserAction.objects.filter(method='follow', whom_follow=person)
-            )
-
-            person_tokens = []
-            for token in person.token_owner.all()[:5]:
-                token_info = {
-                    'id': token.id,
-                    'media': token.media,
-                }
-
-                person_tokens.append(token_info)
-
-            person_info = {
-                'id': person.id,
-                'avatar': get_media_if_exists(person, 'avatar'),
-                'name': person.get_name(),
-                'followers_count': followers_count,
-                'tokens': person_tokens
-            }
-
-            result_list.append(person_info)
-        return Response(result_list, status=status.HTTP_200_OK)
+        response_data = FollowingSerializer(followed_users, many=True).data
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class GetFollowersView(APIView):
@@ -500,35 +367,8 @@ class GetFollowersView(APIView):
 
         follow_queryset = UserAction.objects.filter(method='follow', whom_follow=user)
         followers_users = [action.user for action in follow_queryset]
-
-        result_list = []
-
-        for person in followers_users:
-            
-            followers_count = len(
-                UserAction.objects.filter(method='follow', whom_follow=person)
-            )
-
-            person_tokens = []
-            for token in person.token_owner.all()[:5]:
-                token_info = {
-                    'id': token.id,
-                    'media': token.media,
-                }
-
-                person_tokens.append(token_info)
-
-            person_info = {
-                'id': person.id,
-                'avatar': get_media_if_exists(person, 'avatar'),
-                'name': person.get_name(),
-                'followers_count': followers_count,
-                'tokens': person_tokens
-            }
-
-            result_list.append(person_info)
-
-        return Response(result_list, status=status.HTTP_200_OK)
+        response_data = FollowingSerializer(followers_users, many=True).data
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class VerificationView(APIView):
@@ -621,8 +461,5 @@ class GetRandomCoverView(APIView):
             random_cover = random.choice(covers)
         except:
             return Response({'error': 'there is no available cover'}, status=status.HTTP_404_NOT_FOUND)
-        response_data = {
-            'cover': get_media_if_exists(random_cover, 'cover'), 'owner': random_cover.get_name(),
-            'avatar': get_media_if_exists(random_cover, 'avatar'), 'id': random_cover.id
-            }
+        response_data = CoverSerializer(random_cover).data
         return Response(response_data, status=status.HTTP_200_OK)

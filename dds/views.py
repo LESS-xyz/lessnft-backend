@@ -7,7 +7,9 @@ from rest_framework.views import APIView
 from django.core.exceptions import ObjectDoesNotExist
 
 from dds.store.models import Collection, Token, Ownership
+from dds.store.serializers import CollectionSerializer
 from dds.accounts.models import AdvUser
+from dds.accounts.serializers import UserSerializer
 from dds.accounts.api import follow_and_follower
 from dds.utilities import get_media_if_exists
 from dds.settings import ALLOWED_HOSTS
@@ -63,80 +65,13 @@ class GetShortView(APIView):
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        token_list = []
         tokens = Token.objects.filter(collection=collection)
 
         start = (page - 1) * 50
         end = page * 50 if len(tokens) >= page * 50 else None
 
-        avatar = get_media_if_exists(collection, 'avatar')
-
-        cover = get_media_if_exists(collection, 'cover')
-
-        for token in tokens[start: end]:
-            media = get_media_if_exists(token, 'media')
-
-            token_owners = []
-            if token.standart == 'ERC1155':
-                owners = token.owners.all()
-                for owner in owners[:3]:
-                    holder = {
-                        'id': owner.id,
-                        'name': owner.get_name(),
-                        'avatar': get_media_if_exists(owner, 'avatar'),
-                        'quantity': Ownership.objects.get(owner=owner, token=token).quantity
-                    }
-                    token_owners.append(holder)
-            else:
-                owner = {
-                    'id': token.owner.id,
-                    'name': token.owner.get_name(),
-                    'avatar': get_media_if_exists(token.owner, 'avatar'),
-                }
-                token_owners.append(owner)
-
-            token_list.append({
-                'id': token.id,
-                'name': token.name,
-                'standart': token.standart,
-                'media': media,
-                'total_supply': token.total_supply,
-                'available': token.available,
-                'price': token.price / DECIMALS[token.currency] if token.price else None,
-                'currency': token.currency,
-                'USD_price': calculate_amount(token.price, token.currency)[0] if token.price else None,
-                'owners': token_owners,
-                'creator': {
-                    'id': token.creator.id,
-                    'name': token.creator.get_name(),
-                    'avatar': ALLOWED_HOSTS[0] + token.creator.avatar.url
-                },
-                'collection': {
-                    'id': token.collection.id,
-                    'avatar': ALLOWED_HOSTS[0] + token.collection.avatar.url,
-                    'name': token.collection.name
-                },
-                'description': token.description,
-                'details': token.details,
-                'royalty': token.creator_royalty,
-                'selling': token.selling
-            })
-
-        response_data = {
-            'id': collection.id,
-            'name': collection.name,
-            'avatar': avatar,
-            'cover': cover,
-            'creator': {
-                'id': collection.creator.id,
-                'name': collection.creator.get_name(),
-                'avatar': get_media_if_exists(collection.creator, 'avatar')
-            },
-            'address': collection.address,
-            'description': collection.description,
-            'tokens': token_list
-        }
-
+        token_list = tokens[start:end]
+        response_data = CollectionSerializer(collection, context={"tokens": token_list}).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 class GetShortUserView(APIView):
@@ -153,25 +88,5 @@ class GetShortUserView(APIView):
             user = AdvUser.objects.get(custom_url=short)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
-
-        follows, followers = follow_and_follower(user)
-
-        response_data = {
-            'id': user.id,
-            'address': user.username,
-            'display_name': user.display_name,
-            'avatar': ALLOWED_HOSTS[0] + user.avatar.url,
-            'cover': get_media_if_exists(user, 'cover'),
-            'custom_url': user.custom_url,
-            'bio': user.bio,
-            'twitter': user.twitter,
-            'site': user.site,
-            'is_verificated': user.is_verificated,
-            'follows': follows,
-            'follows_count': len(follows),
-            'followers': followers,
-            'followers_count': len(followers),
-        }
-        print('res:', response_data)
-
+        response_data = UserSerializer(user).data
         return Response(response_data, status=status.HTTP_200_OK)
