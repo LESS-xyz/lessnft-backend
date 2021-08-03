@@ -20,6 +20,7 @@ from dds.utilities import get_media_if_exists
 from django.core.mail import send_mail 
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
+from django.db.models import Q
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -119,9 +120,14 @@ class GetOtherView(APIView):
         operation_description="get other user's info",
         responses={200: SelfUserSerializer, 401: not_found_response},
     )
-    def get(self, request, id):
+    def get(self, request, param):
         try:
-            user = AdvUser.objects.get(id=id)
+            # convert param to int() if it contains only digitts, because string params are not allowed
+            # in searching by id field. Numeric custom_urls should be prohibited on frontend
+            id_ = int(param) if param.isdigit() else None
+            user = AdvUser.objects.get(
+                Q(id=id_) | Q(custom_url=param)
+            )
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED) 
         response_data = SelfUserSerializer(user).data
@@ -146,10 +152,13 @@ class FollowView(APIView):
     def post(self, request):
         follower = request.user
         request_data = request.data
-        id = request_data.get('id')
+        id_ = request_data.get('id')
 
         try:
-            follow = AdvUser.objects.get(id=id)
+            int_id = int(id_) if id_.isdigit() else None
+            user = AdvUser.objects.get(
+                Q(id=int_id) | Q(custom_url=id_)
+            )
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -182,10 +191,13 @@ class UnfollowView(APIView):
     def post(self, request):
         follower = request.user
         request_data = request.data
-        id = request_data.get('id')
+        id_ = request_data.get('id')
         
         try:
-            follow = AdvUser.objects.get(id=id)
+            int_id = int(id_) if id_.isdigit() else None
+            user = AdvUser.objects.get(
+                Q(id=int_id) | Q(custom_url=id_)
+            )
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED) 
         
@@ -221,7 +233,6 @@ class LikeView(APIView):
             item = Token.objects.get(id=token_id)
         except ObjectDoesNotExist:
             return Response({'error': 'nothing to like'}, status=status.HTTP_400_BAD_REQUEST) 
-
 
         like, created = UserAction.objects.get_or_create(
             user=request.user, 
@@ -273,7 +284,10 @@ class GetFollowingView(APIView):
 
     def get(self, request, address, page):
         try:
-            user = AdvUser.objects.get(username=address)
+            id_ = int(address) if address.isdigit() else None
+            user = AdvUser.objects.get(
+                Q(id=id_) | Q(custom_url=address)
+            )
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -294,7 +308,10 @@ class GetFollowersView(APIView):
 
     def get(self, request, address, page):
         try:
-            user = AdvUser.objects.get(username=address)
+            id_ = int(address) if address.isdigit() else None
+            user = AdvUser.objects.get(
+                Q(id=id_) | Q(custom_url=address)
+            )
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 

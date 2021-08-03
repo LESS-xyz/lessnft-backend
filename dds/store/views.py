@@ -161,7 +161,10 @@ class CreateView(APIView):
         token_collection_id = request_data.get('collection')
         
         try:
-            token_collection = Collection.objects.get(id=token_collection_id)
+            int_token_collection_id = int(token_collection_id) if token_collection_id.isdigit() else None
+            token_collection = Collection.objects.get(
+                Q(id=int_token_collection_id) | Q(short_url=token_collection_id)
+            )
         except:
             return Response({'error': 'Collection not found'}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -592,9 +595,12 @@ class GetCollectionView(APIView):
         responses={200: CollectionSerializer, 400: 'collection not found'},
     )
 
-    def get(self, request, id, page):
+    def get(self, request, param, page):
         try:
-            collection = Collection.objects.get(id=id)
+            id_ = int(param) if param.isdigit() else None
+            collection = Collection.objects.get(
+                Q(id=id_) | Q(short_url=param)
+            )
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -682,7 +688,10 @@ class BuyTokenView(APIView):
         buyer = request.user
         try:
             if seller_id:
-                seller = AdvUser.objects.get(id=seller_id)
+                int_id = int(seller_id) if seller_id.isdigit() else None
+                seller = AdvUser.objects.get(
+                    Q(id=int_id) | Q(custom_url=seller_id)
+                )
                 ownership = Ownership.objects.filter(token__id=token_id, owner=seller).filter(selling=True)
                 if not ownership:
                     return Response({'error': 'user is not owner or token is not on sell'})
@@ -967,7 +976,10 @@ class SetCoverView(APIView):
         user = request.user
         collection_id = request.data.get('id')
         try:
-            collection = Collection.objects.get(id=collection_id)
+            int_collection_id = int(collection_id) if collection_id.isdigit() else None
+            collection = Collection.objects.get(
+                Q(id=int_collection_id) | Q(short_url=collection_id)
+            )
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
         if collection.creator != user:

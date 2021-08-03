@@ -13,7 +13,7 @@ urlpatterns = [
     path('created/<str:address>/<int:page>/', GetCreatedView.as_view()),
     path('liked/<str:address>/<int:page>/', GetLikedView.as_view()),
     path('transfer/<str:token>/', TransferOwned.as_view()),
-    path('collection/<int:id>/<int:page>/', GetCollectionView.as_view()),
+    path('collection/<str:param>/<int:page>/', GetCollectionView.as_view()),
     path('<int:id>/', GetView.as_view()),
     path('buy/', BuyTokenView.as_view()),
     path('tags/', get_tags),

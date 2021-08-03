@@ -36,6 +36,11 @@ class AdvUser(AbstractUser):
     def __str__(self):
         return self.get_name()
 
+    @property
+    def url(self):
+        return self.custom_url if self.custom_url else self.id
+
+
 def user_registrated_dispatcher(sender, instance, created, **kwargs):
     if created:
         instance.avatar = random.choice(DEFAULT_AVATARS)

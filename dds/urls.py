@@ -6,7 +6,6 @@ from drf_yasg import openapi
 from rest_framework import permissions
 from dds.settings import MEDIA_URL, MEDIA_ROOT, STATIC_ROOT, STATIC_URL
 from django.conf.urls.static import static
-from dds.views import GetShortView, GetShortUserView
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -25,8 +24,6 @@ urlpatterns = [
     path('api/v1/rates/', include('dds.rates.urls')),
     path('api/v1/store/', include('dds.store.urls')),
     path('api/v1/activity/', include('dds.activity.urls')),
-    path('api/v1/user/<str:short>/', GetShortUserView.as_view()),
-    path('api/v1/<str:short>/<int:page>/', GetShortView.as_view()),
 ]
 
 urlpatterns += static(MEDIA_URL, document_root=MEDIA_ROOT)

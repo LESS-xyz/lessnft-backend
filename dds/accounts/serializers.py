@@ -80,6 +80,7 @@ class MetamaskLoginSerializer(SocialLoginSerializer):
 
 
 class CoverSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
     owner = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
     cover = serializers.SerializerMethodField()
@@ -87,6 +88,9 @@ class CoverSerializer(serializers.ModelSerializer):
     class Meta:
         model = AdvUser
         fields = ("id", "owner", "avatar", "cover")
+
+    def get_id(self, obj):
+        return obj.url
 
     def get_owner(self, obj):
         return obj.get_name()
@@ -99,12 +103,16 @@ class CoverSerializer(serializers.ModelSerializer):
 
 
 class BaseAdvUserSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
 
     class Meta:
         model = AdvUser
         fields = ("id", "name", "avatar")
+
+    def get_id(self, obj):
+        return obj.url
 
     def get_avatar(self, obj):
         return ALLOWED_HOSTS[0] + obj.avatar.url
@@ -149,6 +157,7 @@ class CreatorSerializer(BaseAdvUserSerializer):
 
 
 class UserSlimSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
     address = serializers.SerializerMethodField()
 
@@ -166,6 +175,9 @@ class UserSlimSerializer(serializers.ModelSerializer):
             "site",
             "is_verificated",
         )
+
+    def get_id(self, obj):
+        return obj.url
 
     def get_avatar(self, obj):
         return ALLOWED_HOSTS[0] + obj.avatar.url

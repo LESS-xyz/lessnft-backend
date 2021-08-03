@@ -105,6 +105,7 @@ class BidSerializer(serializers.ModelSerializer):
 
 
 class CollectionSlimSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
 
     class Meta:
@@ -115,6 +116,9 @@ class CollectionSlimSerializer(serializers.ModelSerializer):
             "avatar",
             "address",
         )
+
+    def get_id(self, obj):
+        return obj.url
 
     def get_avatar(self, obj):
         return get_media_if_exists(obj, "avatar")

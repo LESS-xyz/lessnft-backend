@@ -51,6 +51,10 @@ class Collection(models.Model):
     deploy_hash = models.CharField(max_length=100, null=True)
     deploy_block = models.IntegerField(null=True, default=None)
 
+    @property
+    def url(self):
+        return self.short_url if self.short_url else self.id
+
     def __str__(self):
         return self.name
 
@@ -160,6 +164,10 @@ class Token(models.Model):
         selling = request.data.get('selling')
         self.creator = creator
         self.collection = Collection.objects.get(id=collection)
+        collection_id = int(collection) if collection.isdigit() else None
+        self.collection = Collection.objects.get(
+            Q(id=collection_id) | Q(short_url=collection)
+        )
 
         if self.standart == 'ERC721':
             self.total_supply = 1
