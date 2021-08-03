@@ -180,7 +180,6 @@ class UserSerializer(UserSlimSerializer):
     follows_count = serializers.SerializerMethodField()
     followers = serializers.SerializerMethodField()
     followers_count = serializers.SerializerMethodField()
-    likes = serializers.SerializerMethodField()
 
     class Meta(UserSlimSerializer.Meta):
         fields = UserSlimSerializer.Meta.fields + (
@@ -189,7 +188,6 @@ class UserSerializer(UserSlimSerializer):
             "follows_count",
             "followers",
             "followers_count",
-            "likes",
         )
 
     def get_cover(self, obj):
@@ -208,6 +206,13 @@ class UserSerializer(UserSlimSerializer):
 
     def get_followers_count(self, obj):
         return obj.following.filter(method="follow").count()
+
+
+class SelfUserSerializer(UserSerializer):
+    likes = serializers.SerializerMethodField()
+
+    class Meta(UserSerializer.Meta):
+        fields = UserSerializer.Meta.fields + ("likes")
 
     def get_likes(self, obj):
         return obj.followers.filter(method="like").count()

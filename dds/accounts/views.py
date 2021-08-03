@@ -7,6 +7,7 @@ from dds.accounts.serializers import (
     MetamaskLoginSerializer, 
     UserSerializer, 
     UserSlimSerializer,
+    SelfUserSerializer,
     FollowingSerializer,
     CoverSerializer,
 )
@@ -116,14 +117,14 @@ class GetOtherView(APIView):
 
     @swagger_auto_schema(
         operation_description="get other user's info",
-        responses={200: UserSerializer, 401: not_found_response},
+        responses={200: SelfUserSerializer, 401: not_found_response},
     )
     def get(self, request, id):
         try:
             user = AdvUser.objects.get(id=id)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED) 
-        response_data = UserSerializer(user).data
+        response_data = SelfUserSerializer(user).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
