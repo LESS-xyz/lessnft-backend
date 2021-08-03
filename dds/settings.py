@@ -157,3 +157,10 @@ try:
     from dds.settings_local import *
 except ImportError:
     print('SETTINGS: cannot import local settings', flush=True)
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ]
+}

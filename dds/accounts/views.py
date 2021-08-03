@@ -25,6 +25,7 @@ from drf_yasg.utils import swagger_auto_schema
 
 from rest_auth.registration.views import SocialLoginView
 
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -103,17 +104,14 @@ class GetView(APIView):
     '''
     view for getting and patching user info
     '''
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="get self info",
         responses={200: get_response, 401: not_found_response},
     )
-    def get(self, request, token):
-        try:
-            user = AdvUser.objects.get(auth_token=token)
-        except ObjectDoesNotExist:
-            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
-        response_data = UserSerializer(user).data
+    def get(self, request):
+        response_data = UserSerializer(request.user).data
         return Response(response_data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -131,12 +129,9 @@ class GetView(APIView):
         ),
         responses={200: get_response, 400: 'attr: this attr is occupied', 401: not_found_response},
     )
-    def patch(self, request, token):
+    def patch(self, request):
         request_data = request.data.copy()
-        try:
-            user = AdvUser.objects.get(auth_token=token)
-        except ObjectDoesNotExist:
-            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
+        user = request.user
         if request_data.get('custom_url')=='':
             request_data.pop('custom_url')
         if request_data.get('twitter')=='':
@@ -183,7 +178,7 @@ class FollowView(APIView):
     '''
        View for following another user.
     '''
-
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description="follow user",
         request_body=openapi.Schema(
@@ -194,12 +189,8 @@ class FollowView(APIView):
         responses={200: 'OK', 400: 'error', 401: not_found_response}
     )
 
-    def post(self, request, token):
-        try:
-            follower = AdvUser.objects.get(auth_token=token)
-        except ObjectDoesNotExist:
-            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
-
+    def post(self, request):
+        follower = request.user
         request_data = request.data
         id = request_data.get('id')
 
@@ -223,7 +214,7 @@ class UnfollowView(APIView):
     '''
        View for unfollowing another user.
     '''
-
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description="unfollow user",
         request_body=openapi.Schema(
@@ -234,12 +225,8 @@ class UnfollowView(APIView):
         responses={200: 'OK', 400: 'error', 401: not_found_response}
     )
 
-    def post(self, request, token):
-        try:
-            follower = AdvUser.objects.get(auth_token=token)
-        except ObjectDoesNotExist:
-            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
-        
+    def post(self, request):
+        follower = request.user
         request_data = request.data
         id = request_data.get('id')
         
@@ -261,7 +248,7 @@ class LikeView(APIView):
     '''
        View for liking token.
     '''
-
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description="like token",
         request_body=openapi.Schema(
@@ -272,12 +259,7 @@ class LikeView(APIView):
         responses={200: 'liked/unliked', 400: 'error', 401: not_found_response}
     )
 
-    def post(self, request, token):
-        try:
-            follower = AdvUser.objects.get(auth_token=token)
-        except ObjectDoesNotExist:
-            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
-
+    def post(self, request):
         request_data = request.data
         token_id = request_data.get('id')
 
@@ -288,7 +270,7 @@ class LikeView(APIView):
 
 
         like, created = UserAction.objects.get_or_create(
-            user=follower, 
+            user=request.user, 
             whom_follow=None, 
             method='like', 
             token=item
@@ -372,7 +354,7 @@ class VerificationView(APIView):
     '''
        View for liking token.
     '''
-
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description="like token",
         request_body=openapi.Schema(
@@ -394,12 +376,7 @@ class VerificationView(APIView):
     )
 
     def post(self, request):
-        auth_token = request.data.get('auth_token')
-        try:
-            user = AdvUser.objects.get(auth_token=auth_token)
-        except ObjectDoesNotExist:
-            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
-
+        user = request.user
         verification = VerificationForm(user=user)
         try:
             verification.save()
@@ -426,6 +403,7 @@ class VerificationView(APIView):
 
 
 class SetUserCoverView(APIView):
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description='set cover',
         request_body=openapi.Schema(
@@ -438,11 +416,7 @@ class SetUserCoverView(APIView):
         responses={200: 'OK', 400: 'error'}
     )
     def post(self, request):
-        auth_token = request.data.get('auth_token')
-        try:
-            user = AdvUser.objects.get(auth_token=auth_token)
-        except:
-            return Response({'error': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)
+        user = request.user
         user.cover.save(request.FILES.get('cover').name, request.FILES.get('cover'))
         return Response(get_media_if_exists(user, 'cover'), status=status.HTTP_200_OK)
 

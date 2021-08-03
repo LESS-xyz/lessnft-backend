@@ -22,9 +22,9 @@ from django.core.mail import send_mail
 from django.db.models import Exists, OuterRef, Q
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework import status
-from rest_framework.authtoken.models import Token as AuthToken
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from web3 import HTTPProvider, Web3
@@ -211,6 +211,7 @@ class CreateView(APIView):
     '''
     View for create token transaction.
     '''
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description="token_creation",
         request_body=openapi.Schema(
@@ -222,7 +223,6 @@ class CreateView(APIView):
                 'currency': openapi.Schema(type=openapi.TYPE_STRING),
                 'description': openapi.Schema(type=openapi.TYPE_STRING),
                 'price': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'creator': openapi.Schema(type=openapi.TYPE_STRING),
                 'creator_royalty': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'collection': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'details': openapi.Schema(type=openapi.TYPE_OBJECT),
@@ -231,14 +231,8 @@ class CreateView(APIView):
     )
     def post(self, request):
         request_data = request.data
-        creator = request_data.get('creator')
         standart = request_data.get('standart')
-
-        try:
-            creator = AdvUser.objects.get(auth_token=creator)
-        except:
-            return Response({'error': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)
-
+        creator = request.user
         token_collection_id = request_data.get('collection')
         
         try:
@@ -268,7 +262,7 @@ class SaveView(APIView):
     '''
     View for saving token in database. Should be called after successfull minting or contain minting logic.
     '''
-
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description="token_creation",
         request_body=openapi.Schema(
@@ -281,7 +275,6 @@ class SaveView(APIView):
                 'currency': openapi.Schema(type=openapi.TYPE_STRING),
                 'description': openapi.Schema(type=openapi.TYPE_STRING),
                 'price': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'creator': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'creator_royalty': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'collection': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'details': openapi.Schema(type=openapi.TYPE_OBJECT),
@@ -300,7 +293,7 @@ class CreateCollectionView(APIView):
     '''
     View for create collection transaction..
     '''
-
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description="collection_creation",
         request_body=openapi.Schema(
@@ -312,7 +305,6 @@ class CreateCollectionView(APIView):
                 'symbol': openapi.Schema(type=openapi.TYPE_STRING),
                 'description': openapi.Schema(type=openapi.TYPE_STRING),
                 'short_url': openapi.Schema(type=openapi.TYPE_STRING),
-                'creator': openapi.Schema(type=openapi.TYPE_STRING)
             },
             required=['name', 'creator', 'avatar', 'symbol', 'standart']),
         responses={200: create_collection_response},
@@ -334,12 +326,8 @@ class CreateCollectionView(APIView):
 
         baseURI = '/ipfs/'
 
-        creator = request_data.get('creator')
         standart = request_data.get('standart')
-
-        token = AuthToken.objects.get(key=creator)
-        owner = AdvUser.objects.get(id=token.user_id)
-
+        owner = request.user
         address = SIGNER_ADDRESS
         signature = sign_message(['address'], [address])
 
@@ -384,7 +372,7 @@ class SaveCollectionView(APIView):
     '''
     View for save collection in database. Should be called after successfull minting.
     '''
-
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description="collection_save",
         request_body=openapi.Schema(
@@ -397,7 +385,6 @@ class SaveCollectionView(APIView):
                 'symbol': openapi.Schema(type=openapi.TYPE_STRING),
                 'description': openapi.Schema(type=openapi.TYPE_STRING),
                 'short_url': openapi.Schema(type=openapi.TYPE_STRING),
-                'creator': openapi.Schema(type=openapi.TYPE_STRING)
             }),
         responses={200: 'OK'},
     )
@@ -491,6 +478,7 @@ class GetView(APIView):
     '''
     View for get token info.
     '''
+    permission_classes = [IsAuthenticatedOrReadOnly]
     @swagger_auto_schema(
         operation_description="get token info",
         responses={200: get_single_response, 401: not_found_response},
@@ -511,7 +499,6 @@ class GetView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'AuthToken': openapi.Schema(type=openapi.TYPE_STRING),
                 'selling': openapi.Schema(type=openapi.TYPE_BOOLEAN),
                 'price': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'currency': openapi.Schema(type=openapi.TYPE_STRING)
@@ -521,13 +508,7 @@ class GetView(APIView):
     )
     def patch(self, request, id):
         request_data = request.data.copy()
-        user_token = request_data.pop('AuthToken')
-
-        try:
-            auth_token = AuthToken.objects.get(key=user_token)
-            user = AdvUser.objects.get(id=auth_token.user_id)
-        except ObjectDoesNotExist:
-            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
+        user = request.user
 
         try:
             token = Token.objects.get(id=id)
@@ -705,7 +686,7 @@ class TransferOwned(APIView):
     '''
     View for tansfering token owned by user.
     '''
-
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description="transfer_owned",
         request_body=openapi.Schema(
@@ -717,7 +698,7 @@ class TransferOwned(APIView):
         responses={200: transfer_tx, 400: "you can not transfer tokens that don't belong to you"},
     )
     def post(self, request, token):
-        #get token and collection
+        #get token, collection and user
         id = request.data.get('id')
         new_owner = Web3.toChecksumAddress(request.data.get('address'))
         transferring_token = Token.objects.get(id=id)
@@ -726,12 +707,7 @@ class TransferOwned(APIView):
         if transferring_token.internal_id is None:
             return Response('token is not validated yet, please wait up to 5 minutes. If problem persists,'
                             'please contact us through support form', status=status.HTTP_400_BAD_REQUEST)
-        #check user's authtoken
-        try:
-            token = AuthToken.objects.get(key=token)
-            user = AdvUser.objects.get(id=token.user_id)
-        except ObjectDoesNotExist:
-            return Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
+        user = request.user
 
         #construct tx
         current_owner = Web3.toChecksumAddress(user.username)
@@ -748,6 +724,7 @@ class BuyTokenView(APIView):
     '''
     view to buy a token
     '''
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description="buy_token",
         request_body=openapi.Schema(
@@ -758,7 +735,7 @@ class BuyTokenView(APIView):
             }),
         responses={200:buy_token_response, 400:"you cant buy token"}
     )
-    def post(self, request, token):
+    def post(self, request):
         #get token and collection
         
         try:
@@ -777,9 +754,8 @@ class BuyTokenView(APIView):
                             'please contact us through support form', status=status.HTTP_400_BAD_REQUEST)
         token_amount = int(request.data.get('tokenAmount'))
 
+        buyer = request.user
         try:
-            token = AuthToken.objects.get(key=token)
-            buyer = AdvUser.objects.get(id=token.user_id)
             if seller_id:
                 seller = AdvUser.objects.get(id=seller_id)
                 ownership = Ownership.objects.filter(token__id=token_id, owner=seller).filter(selling=True)
@@ -816,6 +792,7 @@ class MakeBid(APIView):
     '''
     view for making bid on auction
     '''
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="make_bid",
@@ -832,7 +809,6 @@ class MakeBid(APIView):
 
     def post(self, request):
         request_data = request.data
-        auth_token = request_data.get('auth_token')
         token_id = request_data.get('token_id')
         amount = request_data.get('amount')
         quantity = request_data.get('quantity')
@@ -841,10 +817,7 @@ class MakeBid(APIView):
         weth_contract = web3.eth.contract(
             address=web3.toChecksumAddress(WETH_CONTRACT['address']), abi=WETH_CONTRACT['abi'])
 
-        try:
-            user = AdvUser.objects.get(auth_token=auth_token)
-        except:
-            return Response({'error': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)
+        user = request.user
 
         #returns True if OK, or error message
         result = validate_bid(user, token_id, amount, weth_contract, quantity)
@@ -891,7 +864,8 @@ class MakeBid(APIView):
 
 
 @api_view(http_method_names=['GET'])
-def get_bids(request, token_id, auth_token):
+@permission_classes([IsAuthenticated])
+def get_bids(request, token_id):
     #validating token and user
     try:
         token = Token.objects.get(id=token_id)
@@ -899,10 +873,7 @@ def get_bids(request, token_id, auth_token):
         return Response({'error': 'token not found'}, status=status.HTTP_400_BAD_REQUEST)
     if not token.selling:
         return Response({'error': 'token is not on sale'}, status=status.HTTP_400_BAD_REQUEST)
-    try:
-        user = AdvUser.objects.get(auth_token=auth_token)
-    except:
-        return Response({'error': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)
+    user = request.user
     if token.owner != user:
         return Response({'error': 'you can get bids list only for owned tokens'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -967,6 +938,7 @@ class VerificateBetView(APIView):
 
 
 class AuctionEndView(APIView):
+    permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description='end if auction and take the greatest bet',
@@ -988,18 +960,14 @@ class AuctionEndView(APIView):
         buyer = bet.user
         price = bet.amount
 
-        seller_token = request.data.get('token')
-        try:
-            seller = AdvUser.objects.get(auth_token=seller_token)
-            if token.standart == 'ERC721':
-                if seller != token.owner:
-                    return Response({'error': 'user is not owner or token is not on sell'})
-            else:
-                ownership = Ownership.objects.filter(token=token, owner=seller).first()
-                if not ownership:
-                    return Response({'error': 'user is not owner or token is not on sell'})
-        except AdvUser.DoesNotExist:
-            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
+        seller = request.user
+        if token.standart == 'ERC721':
+            if seller != token.owner:
+                return Response({'error': 'user is not owner or token is not on sell'})
+        else:
+            ownership = Ownership.objects.filter(token=token, owner=seller).first()
+            if not ownership:
+                return Response({'error': 'user is not owner or token is not on sell'})
 
         if token.standart == 'ERC721':
             token_amount = 0
@@ -1056,6 +1024,8 @@ class ReportView(APIView):
 
 
 class SetCoverView(APIView):
+    permission_classes = [IsAuthenticated]
+
     @swagger_auto_schema(
         operation_description='set cover',
         request_body=openapi.Schema(
@@ -1069,16 +1039,12 @@ class SetCoverView(APIView):
         responses={200: 'OK', 400: 'error'}
     )
     def post(self, request):
-        auth_token = request.data.get('auth_token')
+        user = request.user
         collection_id = request.data.get('id')
         try:
             collection = Collection.objects.get(id=collection_id)
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            user = AdvUser.objects.get(auth_token=auth_token)
-        except:
-            return Response({'error': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)
         if collection.creator != user:
             return Response({'error': 'you can set covers only for your collections'}, status=status.HTTP_400_BAD_REQUEST)
         collection.cover.save(request.FILES.get('cover').name, request.FILES.get('cover'))

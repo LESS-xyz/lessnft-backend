@@ -24,7 +24,6 @@ from contracts import (
     ERC1155_MAIN
 )
 from rest_framework import status
-from rest_framework.authtoken.models import Token as AuthToken
 from rest_framework.response import Response
 from rest_framework import status
 from dds.consts import DECIMALS
@@ -67,9 +66,7 @@ class Collection(models.Model):
         self.description = request.data.get('description')
         self.short_url = request.data.get('short_url')
         self.deploy_hash = request.data.get('tx_hash')
-        creator = request.data.get('creator')
-        token = AuthToken.objects.get(key=creator)
-        self.creator = AdvUser.objects.get(id=token.user_id)
+        self.creator = request.user
         self.save()
         try:
             self.avatar.save(request.FILES.get('avatar').name, request.FILES.get('avatar'))
@@ -158,9 +155,7 @@ class Token(models.Model):
         self.description = request.data.get('description')
         self.creator_royalty = request.data.get('creator_royalty')
         price = request.data.get('price')
-        creator = request.data.get('creator')
-        token = AuthToken.objects.get(key=creator)
-        creator = AdvUser.objects.get(id=token.user_id)
+        creator = request.user
         collection = request.data.get('collection')
         selling = request.data.get('selling')
         self.creator = creator
