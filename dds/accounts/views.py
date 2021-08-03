@@ -30,53 +30,6 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-get_response = openapi.Response(
-    description="Response with user info",
-    schema=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'address': openapi.Schema(type=openapi.TYPE_STRING),
-            'display_name': openapi.Schema(type=openapi.TYPE_STRING),
-            'avatar': openapi.Schema(type=openapi.TYPE_STRING),
-            'bio': openapi.Schema(type=openapi.TYPE_STRING),
-            'custom_url': openapi.Schema(type=openapi.TYPE_STRING),
-            'twitter': openapi.Schema(type=openapi.TYPE_STRING),
-            'site': openapi.Schema(type=openapi.TYPE_STRING),
-            'follows': openapi.Schema(type=openapi.TYPE_OBJECT),
-            'followers': openapi.Schema(type=openapi.TYPE_OBJECT)
-        }
-    )
-)
-
-get_list_response = openapi.Response(
-    description='Response with search results',
-    schema=openapi.Schema(
-        type=openapi.TYPE_ARRAY,
-        items=openapi.Items(type=openapi.TYPE_OBJECT,
-        properties={
-            'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'name': openapi.Schema(type=openapi.TYPE_STRING),
-            'avatar': openapi.Schema(type=openapi.TYPE_STRING),
-            'following counnt': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'token': openapi.Schema(type=openapi.TYPE_OBJECT)
-        }
-    ))
-)
-
-random_cover_response = openapi.Response(
-    description='Response with random cover',
-    schema=openapi.Schema(
-        type=openapi.TYPE_ARRAY,
-        items=openapi.Items(type=openapi.TYPE_OBJECT,
-        properties={
-            'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'name': openapi.Schema(type=openapi.TYPE_STRING),
-            'avatar': openapi.Schema(type=openapi.TYPE_STRING),
-            'cover': openapi.Schema(type=openapi.TYPE_STRING),
-        }
-    ))
-)
 
 not_found_response = 'user not found'
 
@@ -108,7 +61,7 @@ class GetView(APIView):
 
     @swagger_auto_schema(
         operation_description="get self info",
-        responses={200: get_response, 401: not_found_response},
+        responses={200: UserSerializer, 401: not_found_response},
     )
     def get(self, request):
         response_data = UserSerializer(request.user).data
@@ -127,7 +80,7 @@ class GetView(APIView):
                 'site': openapi.Schema(type=openapi.TYPE_STRING)
             },
         ),
-        responses={200: get_response, 400: 'attr: this attr is occupied', 401: not_found_response},
+        responses={200: UserSlimSerializer, 400: 'attr: this attr is occupied', 401: not_found_response},
     )
     def patch(self, request):
         request_data = request.data.copy()
@@ -163,7 +116,7 @@ class GetOtherView(APIView):
 
     @swagger_auto_schema(
         operation_description="get other user's info",
-        responses={200: get_response, 401: not_found_response},
+        responses={200: UserSerializer, 401: not_found_response},
     )
     def get(self, request, id):
         try:
@@ -290,7 +243,7 @@ class GetUserCollections(APIView):
 
     @swagger_auto_schema(
         operation_description="get collections by user",
-        resposnes={200: get_response, 401: not_found_response}
+        resposnes={200: UserCollectionSerializer, 401: not_found_response}
     )
     def get(self, request, string):
         try:
@@ -314,7 +267,7 @@ class GetFollowingView(APIView):
     '''
     @swagger_auto_schema(
         operation_description="post search pattern",
-        responses={200: get_list_response, 401: not_found_response},
+        responses={200: FollowingSerializer(many=True), 401: not_found_response},
     )
 
     def get(self, request, address, page):
@@ -335,7 +288,7 @@ class GetFollowersView(APIView):
     '''
     @swagger_auto_schema(
         operation_description="post search pattern",
-        responses={200: get_list_response, 401: not_found_response},
+        responses={200: FollowingSerializer(many=True), 401: not_found_response},
     )
 
     def get(self, request, address, page):
@@ -424,7 +377,7 @@ class SetUserCoverView(APIView):
 class GetRandomCoverView(APIView):
     @swagger_auto_schema(
         operation_description='get random cover',
-        responses={200: random_cover_response, 400: 'error'}
+        responses={200: CoverSerializer, 400: 'error'}
     )
     def get(self, request):
         covers = AdvUser.objects.exclude(cover=None).exclude(cover='').exclude(is_verificated=False)

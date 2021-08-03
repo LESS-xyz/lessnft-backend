@@ -10,37 +10,6 @@ from dds.store.serializers import CollectionSerializer
 from dds.accounts.models import AdvUser
 from dds.accounts.serializers import UserSerializer
 
-get_collection_response = openapi.Response(
-    description='Response with created collection',
-    schema=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'name': openapi.Schema(type=openapi.TYPE_STRING),
-            'avatar': openapi.Schema(type=openapi.TYPE_STRING),
-            'address': openapi.Schema(type=openapi.TYPE_STRING),
-            'tokens': openapi.Schema(type=openapi.TYPE_OBJECT),
-        }
-    ))
-
-get_response = openapi.Response(
-    description="Response with user info",
-    schema=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'address': openapi.Schema(type=openapi.TYPE_STRING),
-            'display_name': openapi.Schema(type=openapi.TYPE_STRING),
-            'avatar': openapi.Schema(type=openapi.TYPE_STRING),
-            'bio': openapi.Schema(type=openapi.TYPE_STRING),
-            'custom_url': openapi.Schema(type=openapi.TYPE_STRING),
-            'twitter': openapi.Schema(type=openapi.TYPE_STRING),
-            'site': openapi.Schema(type=openapi.TYPE_STRING),
-            'follows': openapi.Schema(type=openapi.TYPE_OBJECT),
-            'followers': openapi.Schema(type=openapi.TYPE_OBJECT)
-        }
-    )
-)
 
 not_found_response = 'user not found'
 
@@ -52,7 +21,7 @@ class GetShortView(APIView):
 
     @swagger_auto_schema(
         operation_description="get collection info",
-        responses={200: get_collection_response, 400: 'collection not found'},
+        responses={200: CollectionSerializer, 400: 'collection not found'},
     )
     def get(self, request, short, page):
         try:
@@ -76,7 +45,7 @@ class GetShortUserView(APIView):
 
     @swagger_auto_schema(
         operation_description="get other user's info",
-        responses={200: get_response, 401: not_found_response},
+        responses={200: UserSerializer, 401: not_found_response},
     )
     def get(self, request, short):
         try:

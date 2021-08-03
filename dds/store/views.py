@@ -37,29 +37,6 @@ from contracts import (
     WETH_CONTRACT
 )
 
-get_list_response = openapi.Response(
-    description='Response with search results',
-    schema=openapi.Schema(
-        type=openapi.TYPE_ARRAY,
-        items=openapi.Items(type=openapi.TYPE_OBJECT,
-        properties={
-            'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'name': openapi.Schema(type=openapi.TYPE_STRING),
-            'media': openapi.Schema(type=openapi.TYPE_STRING),
-            'total_supply': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'price': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'currency': openapi.Schema(type=openapi.TYPE_STRING),
-            'USD_price': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'owner': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'creator': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'collection': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'description': openapi.Schema(type=openapi.TYPE_STRING),
-            'details': openapi.Schema(type=openapi.TYPE_OBJECT),
-            'creator_royalty': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'selling': openapi.Schema(type=openapi.TYPE_BOOLEAN)
-        }
-    ))
-)
 
 transfer_tx = openapi.Response(
     description='Response with prepared transfer tx',
@@ -70,31 +47,6 @@ transfer_tx = openapi.Response(
             'tx': openapi.Schema(type=openapi.TYPE_STRING)
         }
     ))
-)
-
-
-get_single_response = openapi.Response(
-    description='Response with single response',
-    schema=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'name': openapi.Schema(type=openapi.TYPE_STRING),
-            'media': openapi.Schema(type=openapi.TYPE_STRING),
-            'total_supply': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'available': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'price': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'currency': openapi.Schema(type=openapi.TYPE_STRING),
-            'USD_price': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'owner': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'creator': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'collection': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'description': openapi.Schema(type=openapi.TYPE_STRING),
-            'details': openapi.Schema(type=openapi.TYPE_OBJECT),
-            'creator_royalty': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'selling': openapi.Schema(type=openapi.TYPE_BOOLEAN)
-        }
-    )
 )
 
 
@@ -117,33 +69,6 @@ create_response = openapi.Response(
         }
     ))
 )
-
-create_collection_response = openapi.Response(
-    description='Response with created collection',
-    schema=openapi.Schema(
-        type=openapi.TYPE_ARRAY,
-        items=openapi.Items(type=openapi.TYPE_OBJECT,
-        properties={
-            'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'name': openapi.Schema(type=openapi.TYPE_STRING),
-            'avatar': openapi.Schema(type=openapi.TYPE_STRING),
-            'address': openapi.Schema(type=openapi.TYPE_STRING),
-        }
-    ))
-)
-
-get_collection_response = openapi.Response(
-    description='Response with created collection',
-    schema=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'name': openapi.Schema(type=openapi.TYPE_STRING),
-            'avatar': openapi.Schema(type=openapi.TYPE_STRING),
-            'address': openapi.Schema(type=openapi.TYPE_STRING),
-            'tokens': openapi.Schema(type=openapi.TYPE_OBJECT),
-        }
-    ))
 
 buy_token_response = openapi.Response(
     description='Response with buyed token',
@@ -193,7 +118,7 @@ class SearchView(APIView):
             properties={
                 'text': openapi.Schema(type=openapi.TYPE_STRING),
                 'page': openapi.Schema(type=openapi.TYPE_NUMBER)}),
-        responses={200: get_list_response},
+        responses={200: TokenSerializer(many=True)},
     )
     def post(self, request):
         request_data = request.data
@@ -280,7 +205,7 @@ class SaveView(APIView):
                 'details': openapi.Schema(type=openapi.TYPE_OBJECT),
                 'selling': openapi.Schema(type=openapi.TYPE_STRING),
             }),
-        responses={200: create_response},
+        responses={200: TokenSerializer},
     )
     def post(self, request):
         token = Token()
@@ -307,7 +232,7 @@ class CreateCollectionView(APIView):
                 'short_url': openapi.Schema(type=openapi.TYPE_STRING),
             },
             required=['name', 'creator', 'avatar', 'symbol', 'standart']),
-        responses={200: create_collection_response},
+        responses={200: CollectionSlimSerializer},
     )
     def post(self, request):
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
@@ -386,7 +311,7 @@ class SaveCollectionView(APIView):
                 'description': openapi.Schema(type=openapi.TYPE_STRING),
                 'short_url': openapi.Schema(type=openapi.TYPE_STRING),
             }),
-        responses={200: 'OK'},
+        responses={200: CollectionSlimSerializer},
     )
     def post(self, request):
         collection = Collection()
@@ -401,7 +326,7 @@ class GetOwnedView(APIView):
     '''
     @swagger_auto_schema(
         operation_description="get tokens owned by address",
-        responses={200: get_list_response, 401: not_found_response},
+        responses={200: TokenSerializer(many=True), 401: not_found_response},
     )
 
     def get(self, request, address, page):
@@ -426,7 +351,7 @@ class GetCreatedView(APIView):
     '''
     @swagger_auto_schema(
         operation_description="get tokens created by address",
-        responses={200: get_list_response, 401: not_found_response},
+        responses={200: TokenSerializer(many=True), 401: not_found_response},
     )
 
     def get(self, request, address, page):
@@ -450,7 +375,7 @@ class GetLikedView(APIView):
     '''
     @swagger_auto_schema(
         operation_description="get tokens liked by address",
-        responses={200: get_list_response, 401: not_found_response},
+        responses={200: TokenSerializer(many=True), 401: not_found_response},
     )
 
     def get(self, request, address, page):
@@ -481,7 +406,7 @@ class GetView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
     @swagger_auto_schema(
         operation_description="get token info",
-        responses={200: get_single_response, 401: not_found_response},
+        responses={200: TokenFullSerializer, 401: not_found_response},
     )
 
     def get(self, request, id):
@@ -504,7 +429,7 @@ class GetView(APIView):
                 'currency': openapi.Schema(type=openapi.TYPE_STRING)
             },
         ),
-        responses={200: get_single_response, 401: not_found_response, 400: "this token doesn't belong to you"},
+        responses={200: TokenFullSerializer, 401: not_found_response, 400: "this token doesn't belong to you"},
     )
     def patch(self, request, id):
         request_data = request.data.copy()
@@ -619,7 +544,7 @@ class GetHotView(APIView):
 
     @swagger_auto_schema(
         operation_description="get hot tokens",
-        responses={200: get_list_response},
+        responses={200: TokenFullSerializer(many=True)},
     )
     def get(self, request, page):
         sort = request.query_params.get('sort', 'recent')
@@ -650,7 +575,7 @@ class GetHotCollectionsView(APIView):
 
     @swagger_auto_schema(
         operation_description="get hot collections",
-        responses={200: create_collection_response},
+        responses={200: HotCollectionSerializer(many=True)},
     )
     def get(self, request):
         collections = Collection.objects.exclude(name__in=('DDS-721', 'DDS-1155')).filter(Exists(Token.objects.filter(collection__id=OuterRef('id')))).order_by('-id')[:5]
@@ -664,7 +589,7 @@ class GetCollectionView(APIView):
     '''
     @swagger_auto_schema(
         operation_description="get collection info",
-        responses={200: get_collection_response, 400: 'collection not found'},
+        responses={200: CollectionSerializer, 400: 'collection not found'},
     )
 
     def get(self, request, id, page):
@@ -886,7 +811,7 @@ class VerificateBetView(APIView):
 
     @swagger_auto_schema(
         operation_description="verificate bet",
-        responses={200: 'ok', 400: 'verificate bet not found'},
+        responses={200: BetSerializer, 400: 'verificate bet not found'},
     )
     def get(self, request, token_id):
         print('virificate!')

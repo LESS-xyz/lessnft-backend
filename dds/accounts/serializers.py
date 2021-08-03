@@ -219,7 +219,7 @@ class UserSerializer(UserSlimSerializer):
     def get_follows_count(self, obj):
         return obj.followers.filter(method="follow").count()
 
-    def get_follows(self, obj):
+    def get_followers(self, obj):
         following = obj.following.filter(method="follow")
         return FollowerSerializer(following).data
 
