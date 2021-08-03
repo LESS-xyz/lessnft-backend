@@ -98,21 +98,27 @@ class CoverSerializer(serializers.ModelSerializer):
         return get_media_if_exists(obj, 'cover')
 
 
-class FollowingSerializer(serializers.ModelSerializer):
+class BaseAdvUserSerializer(serializers.ModelSerializer):
     avatar = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
-    followers_count = serializers.SerializerMethodField()
-    tokens = serializers.SerializerMethodField()
 
     class Meta:
         model = AdvUser
-        fields = ("id", "name", "avatar", "followers_count", "tokens")
+        fields = ("id", "name", "avatar")
 
     def get_avatar(self, obj):
         return ALLOWED_HOSTS[0] + obj.avatar.url
 
     def get_name(self, obj):
         return obj.get_name()
+
+
+class FollowingSerializer(BaseAdvUserSerializer):
+    followers_count = serializers.SerializerMethodField()
+    tokens = serializers.SerializerMethodField()
+
+    class Meta(BaseAdvUserSerializer.Meta):
+        fields = BaseAdvUserSerializer.Meta.fields + ("followers_count", "tokens")
 
     def get_followers_count(self, obj):
         return obj.following.filter(method="follow").count()
@@ -122,44 +128,21 @@ class FollowingSerializer(serializers.ModelSerializer):
         return TokenSlimSerializer(tokens, many=True).data  
 
 
-class FollowerSerializer(serializers.ModelSerializer):
-    avatar = serializers.SerializerMethodField()
-    name = serializers.SerializerMethodField()
+class FollowerSerializer(BaseAdvUserSerializer):
     his_followers = serializers.SerializerMethodField()
 
-    class Meta:
-        model = AdvUser
-        fields = ("id", "name", "avatar", "his_followers")
-
-    def get_avatar(self, obj):
-        return ALLOWED_HOSTS[0] + obj.avatar.url
-
-    def get_name(self, obj):
-        return obj.get_name()
+    class Meta(BaseAdvUserSerializer.Meta):
+        fields = BaseAdvUserSerializer.Meta.fields + ("his_followers")
 
     def get_his_followers(self, obj):
         return obj.following.filter(method="follow").count()
 
 
-class CreatorSerializer(serializers.ModelSerializer):
-    name = serializers.SerializerMethodField()
-    avatar = serializers.SerializerMethodField()
+class CreatorSerializer(BaseAdvUserSerializer):
     address = serializers.SerializerMethodField()
 
-    class Meta:
-        model = AdvUser
-        fields = (
-            "id",
-            "name",
-            "avatar",
-            "address",
-        )
-
-    def get_avatar(self, obj):
-        return get_media_if_exists(obj, 'avatar')
-
-    def get_name(self, obj):
-        return obj.get_name()
+    class Meta(BaseAdvUserSerializer.Meta):
+        fields = BaseAdvUserSerializer.Meta.fields + ("address")
 
     def get_address(self, obj):
         return obj.username
