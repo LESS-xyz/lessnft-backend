@@ -1,11 +1,11 @@
 import ipfshttpclient 
 from web3 import Web3, HTTPProvider
-from dds.settings import NETWORK_SETTINGS
+from dds.settings import NETWORK_SETTINGS, IPFS_CLIENT
 from contracts import ERC721_MAIN, ERC1155_MAIN
 
 
 def create_ipfs(request):
-    client = ipfshttpclient.connect("/dns/144.76.201.50/tcp/6001/http")
+    client = ipfshttpclient.connect(IPFS_CLIENT)
     name = request.data.get("name")
     description = request.data.get("description")
     media = request.FILES.get("media")
@@ -47,5 +47,5 @@ def get_ipfs_by_hash(ipfs_hash) -> dict:
     """
     return ipfs by hash
     """
-    client = ipfshttpclient.connect("/dns/144.76.201.50/tcp/6001/http")
+    client = ipfshttpclient.connect(IPFS_CLIENT)
     return client.get_json(ipfs_hash)
