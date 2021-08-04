@@ -140,7 +140,7 @@ class FollowerSerializer(BaseAdvUserSerializer):
     his_followers = serializers.SerializerMethodField()
 
     class Meta(BaseAdvUserSerializer.Meta):
-        fields = BaseAdvUserSerializer.Meta.fields + ("his_followers")
+        fields = BaseAdvUserSerializer.Meta.fields + ("his_followers", )
 
     def get_his_followers(self, obj):
         return obj.following.filter(method="follow").count()
@@ -150,7 +150,7 @@ class CreatorSerializer(BaseAdvUserSerializer):
     address = serializers.SerializerMethodField()
 
     class Meta(BaseAdvUserSerializer.Meta):
-        fields = BaseAdvUserSerializer.Meta.fields + ("address")
+        fields = BaseAdvUserSerializer.Meta.fields + ("address", )
 
     def get_address(self, obj):
         return obj.username
@@ -224,7 +224,7 @@ class SelfUserSerializer(UserSerializer):
     likes = serializers.SerializerMethodField()
 
     class Meta(UserSerializer.Meta):
-        fields = UserSerializer.Meta.fields + ("likes")
+        fields = UserSerializer.Meta.fields + ("likes", )
 
     def get_likes(self, obj):
         return obj.followers.filter(method="like").count()
