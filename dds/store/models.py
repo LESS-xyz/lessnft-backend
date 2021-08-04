@@ -148,13 +148,12 @@ class Token(models.Model):
     def __str__(self):
         return self.name
 
-    def save_in_db(self, request):
+    def save_in_db(self, request, ipfs):
         self.name = request.data.get('name')
         self.standart = request.data.get('standart')
-        self.status = Status.COMMITTED
+        self.status = Status.PENDING
         self.total_supply = request.data.get('total_supply')
         self.currency = request.data.get('currency')
-        self.tx_hash = request.data.get('tx_hash')
         self.details = request.data.get('details')
         self.description = request.data.get('description')
         self.creator_royalty = request.data.get('creator_royalty')
@@ -214,9 +213,7 @@ class Token(models.Model):
             ownership.save()
 
         self.full_clean()
-        ipfs = get_ipfs(self)
-        if ipfs:
-            self.ipfs = ipfs["media"] 
+        self.ipfs = ipfs
         self.save()
 
     def transfer(self, new_owner):

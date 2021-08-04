@@ -3,7 +3,7 @@ from dds.activity.models import BidsHistory, ListingHistory, UserAction
 from dds.consts import DECIMALS
 from dds.settings import *
 from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid)
-from dds.store.services.ipfs import create_ipfs
+from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash
 
 from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token
 from dds.store.serializers import (
@@ -151,6 +151,7 @@ class CreateView(APIView):
                 'creator_royalty': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'collection': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'details': openapi.Schema(type=openapi.TYPE_OBJECT),
+                'selling': openapi.Schema(type=openapi.TYPE_STRING),
             }),
         responses={200: create_response},
     )
@@ -175,6 +176,7 @@ class CreateView(APIView):
             return Response({'name': 'name already used'}, status=status.HTTP_400_BAD_REQUEST)
 
         ipfs = create_ipfs(request)
+        ipfs = get_ipfs_by_hash(ipfs)["media"]
         if standart == 'ERC721':
             signature = sign_message(['address', 'string'], [token_collection.address, ipfs])
             amount = 1
@@ -183,37 +185,9 @@ class CreateView(APIView):
             signature = sign_message(['address', 'string', 'uint256'], [token_collection.address, ipfs, int(amount)])
 
         initial_tx = token_collection.create_token(creator, ipfs, signature, amount)
-        return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
-
-
-class SaveView(APIView):
-    '''
-    View for saving token in database. Should be called after successfull minting or contain minting logic.
-    '''
-    permission_classes = [IsAuthenticated]
-    @swagger_auto_schema(
-        operation_description="token_creation",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'tx_hash': openapi.Schema(type=openapi.TYPE_STRING),
-                'name': openapi.Schema(type=openapi.TYPE_STRING),
-                'standart': openapi.Schema(type=openapi.TYPE_STRING),
-                'total_supply': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'currency': openapi.Schema(type=openapi.TYPE_STRING),
-                'description': openapi.Schema(type=openapi.TYPE_STRING),
-                'price': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'creator_royalty': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'collection': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'details': openapi.Schema(type=openapi.TYPE_OBJECT),
-                'selling': openapi.Schema(type=openapi.TYPE_STRING),
-            }),
-        responses={200: TokenSerializer},
-    )
-    def post(self, request):
         token = Token()
-        token.save_in_db(request)
-        response_data = TokenSerializer(token).data
+        token.save_in_db(request, ipfs)
+        response_data = {'initial_tx': initial_tx, 'token': TokenSerializer(token).data}
         return Response(response_data, status=status.HTTP_200_OK)
 
 

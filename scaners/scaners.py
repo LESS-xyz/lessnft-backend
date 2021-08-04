@@ -20,6 +20,7 @@ from local_settings import (
                     )
 
 from dds.store.models import *
+from dds.store.services.ipfs import get_ipfs
 from dds.activity.models import BidsHistory, TokenHistory
 from dds.accounts.models import AdvUser
 
@@ -149,11 +150,12 @@ def mint_transfer(latest_block, dds_contract, smart_contract):
         new_owner = AdvUser.objects.filter(username=new_owner_address)
         if not new_owner.exists():
             new_owner = [None]
+        ipfs = get_ipfs(token_id, coll_addr, contract_standart)["media"]
         
         # if from equal empty_address this is mint event
         if event['args']['from'] == empty_address:
             token = Token.objects.filter(
-                    tx_hash=tx_hash, 
+                    ipfs=ipfs, 
                     collection__address=coll_addr
                 )
             if token.exists():
@@ -164,7 +166,11 @@ def mint_transfer(latest_block, dds_contract, smart_contract):
             
             logging.info('Mint!')
             
-            token.update(status=Status.COMMITTED, internal_id=token_id)
+            token.update(
+                status=Status.COMMITTED,
+                internal_id=token_id,
+                tx_hash=tx_hash,
+            )
             TokenHistory.objects.get_or_create(
                 token = token[0],
                 tx_hash=tx_hash,
@@ -177,7 +183,7 @@ def mint_transfer(latest_block, dds_contract, smart_contract):
         elif event['args']['from'] != empty_address:
 
             token = Token.objects.filter(
-                    internal_id=token_id, 
+                    ipfs=ipfs, 
                     collection__address=coll_addr
                 )
             if token.exists():
@@ -213,7 +219,11 @@ def mint_transfer(latest_block, dds_contract, smart_contract):
             if event['args']['to'] != empty_address:
                 logging.info('Transfer!')
 
-                token.update(owner=new_owner[0])
+                token.update(
+                    owner=new_owner[0], 
+                    tx_hash=tx_hash,
+                    internal_id=token_id,
+                )
                 
                 wtf = TokenHistory.objects.filter(tx_hash=tx_hash)
                 if wtf.exists():
