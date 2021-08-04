@@ -117,7 +117,7 @@ def validate_nonzero(value):
 
 class Token(models.Model):
     name = models.CharField(max_length=200, unique=True)
-    tx_hash = models.CharField(max_length=200, default='0xE4Bdc4D423FaC9549bdCcabD1b59071E4fe99BDa')
+    tx_hash = models.CharField(max_length=200, null=True, blank=True)
     ipfs = models.CharField(max_length=200, null=True, default=True)
     standart = models.CharField(max_length=10, choices=[('ERC721', 'ERC721'), ('ERC1155', 'ERC1155')])
     total_supply = models.PositiveIntegerField(validators=[validate_nonzero])
