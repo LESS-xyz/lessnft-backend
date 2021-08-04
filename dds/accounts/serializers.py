@@ -136,6 +136,21 @@ class FollowingSerializer(BaseAdvUserSerializer):
         return TokenSlimSerializer(tokens, many=True).data  
 
 
+class UserSearchSerializer(BaseAdvUserSerializer):
+    followers = serializers.SerializerMethodField()
+    tokens = serializers.SerializerMethodField()
+
+    class Meta(BaseAdvUserSerializer.Meta):
+        fields = BaseAdvUserSerializer.Meta.fields + ("followers", "tokens")
+
+    def get_followers(self, obj):
+        return obj.following.count()
+
+    def get_tokens(self, obj):
+        tokens = obj.token_owner.all()[:6]
+        return TokenSlimSerializer(tokens, many=True).data  
+
+
 class FollowerSerializer(BaseAdvUserSerializer):
     his_followers = serializers.SerializerMethodField()
 

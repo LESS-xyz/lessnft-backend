@@ -104,6 +104,31 @@ class BidSerializer(serializers.ModelSerializer):
         return obj.token.currency
 
 
+class CollectionSearchSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
+    tokens = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Collection
+        fields = (
+            "id",
+            "name",
+            "avatar",
+            "tokens",
+        )
+
+    def get_id(self, obj):
+        return obj.url
+
+    def get_avatar(self, obj):
+        return get_media_if_exists(obj, "avatar")
+
+    def get_tokens(self, obj):
+        tokens = obj.token_set.order_by(SORT_STATUSES["recent"])[:6]
+        return [token.media for token in tokens]
+
+
 class CollectionSlimSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()

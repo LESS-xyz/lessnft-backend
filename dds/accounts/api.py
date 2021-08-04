@@ -10,6 +10,7 @@ from eth_account.messages import encode_defunct
 from eth_account import Account
 
 from dds.accounts.models import AdvUser
+from dds.accounts.serializers import UserSearchSerializer, FollowerSerializer
 from dds.activity.models import UserAction
 from dds.settings import ALLOWED_HOSTS
 from dds.utilities import get_media_if_exists
@@ -50,30 +51,9 @@ def user_search(words, page):
         users = users.filter(display_name__icontains=word)
 
     print(users.__dict__)
-    search_result = []
     start = (page - 1) * 50
     end = page * 50 if len(users) >= page * 50 else None
-
-    for user in users[start: end]:
-        avatar = get_media_if_exists(user, 'avatar')
-
-        tokens = []
-        for token in user.token_owner.all()[:6]:
-            t = {
-                'id': token.id,
-                'media': get_media_if_exists(token, 'media')
-            }
-            tokens.append(t)
-            
-        search_result.append({
-            'id': user.id,
-            'name': user.get_name(),
-            'avatar': avatar,
-            'followers': user.following.count(),
-            'tokens': tokens
-        })
-
-    return search_result
+    return UserSearchSerializer(users[start:end], many=True).data
 
 
 def follow_and_follower(user):
@@ -81,32 +61,14 @@ def follow_and_follower(user):
     function for getting who the user is subscribed to and who is subscribed to the user
     '''
 
-    followers, follows = [], []
-
     # who follow user
     follow_actions = UserAction.objects.filter(method='follow', whom_follow=user)
     followers_queryset = [action.user for action in follow_actions]
-
-    for follower in followers_queryset:
-        name = follower.display_name if follower.display_name else follower.username
-        followers.append({
-            'id': follower.id,
-            'name': name, 
-            'avatar': ALLOWED_HOSTS[0] + follower.avatar.url,
-            'his_followers': len(UserAction.objects.filter(method='follow', whom_follow=follower))
-        })
+    followers = FollowerSerializer(followers_queryset, many=True).data
 
     # user follow
     follow_actions = UserAction.objects.filter(method='follow', user=user)
     follow_queryset = [action.whom_follow for action in follow_actions]
-
-    for follow in follow_queryset:
-        name = follow.display_name if follow.display_name else follow.username
-        follows.append({
-            'id': follow.id,
-            'name': name, 
-            'avatar': ALLOWED_HOSTS[0] + follow.avatar.url,
-            'his_followers': len(UserAction.objects.filter(method='follow', whom_follow=follow))
-        })
+    follows = FollowerSerializer(follow_queryset, many=True).data
 
     return follows, followers
