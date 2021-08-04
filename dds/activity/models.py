@@ -38,35 +38,6 @@ class UserAction(models.Model):
 
         ordering = ["-date"]
 
-    def get_like(self):
-        media = self.token.media 
-
-        if self.token.price:
-            price = self.token.price / DECIMALS[self.token.currency]
-        else:
-            price = None
-
-        user_liking = self.user
-        token_info = {
-            'id': self.token.id,
-            'name': self.token.name,
-            'standart': self.token.standart,
-            'media': media,
-            'total_supply': self.token.total_supply,
-            'available': self.token.available,
-            'price': price,
-            'currency': 'WETH' if self.token.currency=='ETH' else self.token.currency,
-            'USD_price': calculate_amount(self.token.price, self.token.currency)[0], 
-            'owner': self.token.owner.id, 
-            'creator': self.token.creator.id,
-            'collection': self.token.collection.id, 
-            'description': self.token.description, 
-            'details': self.token.details,
-            'royalty': self.token.creator_royalty, 
-            'selling': self.token.selling
-        }
-        return {'user': user_liking, 'token': token_info}
-
 
 class TokenHistory(models.Model):
     token = models.ForeignKey('store.Token', on_delete=models.CASCADE)

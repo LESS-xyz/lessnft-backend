@@ -248,9 +248,3 @@ class GetBestDealView(APIView):
         sellers_list.append(sellers)
 
         return Response({'buyers': buyers_list, 'sellers': sellers_list}, status=status.HTTP_200_OK)
-
-
-class GetLikedView(APIView):
-
-    def get(self, request, address):
-        pass
