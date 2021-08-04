@@ -32,8 +32,6 @@ from web3 import HTTPProvider, Web3
 from dds.settings import NETWORK_SETTINGS
 from contracts import (
     EXCHANGE,
-    ERC721_FABRIC,
-    ERC1155_FABRIC,
     WETH_CONTRACT
 )
 
@@ -212,61 +210,20 @@ class CreateCollectionView(APIView):
         responses={200: CollectionSlimSerializer},
     )
     def post(self, request):
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
-
-        request_data = request.data
-        name = request_data.get('name')
-        symbol = request_data.get('symbol')
-        short_url = request_data.get('short_url')
-
-        if Collection.objects.filter(name=request_data.get('name')):
-            return Response({'name': 'this collection name is occupied'}, status=status.HTTP_400_BAD_REQUEST)
-        if Collection.objects.filter(symbol=request_data.get('symbol')):
-            return Response({'symbol': 'this collection symbol is occupied'}, status=status.HTTP_400_BAD_REQUEST)
-        if short_url and Collection.objects.filter(short_url=short_url):
-            return Response({'short_url': 'this collection short_url is occupied'}, status=status.HTTP_400_BAD_REQUEST)
-
-        baseURI = '/ipfs/'
-
-        standart = request_data.get('standart')
+        name = request.data.get('name')
+        symbol = request.data.get('symbol')
+        short_url = request.data.get('short_url')
+        standart = request.data.get('standart')
         owner = request.user
-        address = SIGNER_ADDRESS
-        signature = sign_message(['address'], [address])
 
-        tx_params = {
-            'chainId': web3.eth.chainId,
-            'gas': COLLECTION_CREATION_GAS_LIMIT,
-            'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(owner.username), 'pending'),
-            'gasPrice': web3.eth.gasPrice,
-        }
+        is_unique, response = Collection.collection_is_unique(name, symbol, short_url)
+        if not is_unique:
+            return response
 
-        if standart == 'ERC721':
-            myContract = web3.eth.contract(
-                address=web3.toChecksumAddress(ERC721_FABRIC['address']),
-                abi=ERC721_FABRIC['abi'])
-
-            initial_tx = myContract.functions.makeERC721(
-                name, 
-                symbol, 
-                baseURI, 
-                address, 
-                signature
-            ).buildTransaction(tx_params)
-
-        elif standart == 'ERC1155':
-            myContract = web3.eth.contract(
-                address=web3.toChecksumAddress(ERC1155_FABRIC['address']),
-                abi=ERC1155_FABRIC['abi'])
-                
-            initial_tx = myContract.functions.makeERC1155(
-                baseURI, 
-                address, 
-                signature
-            ).buildTransaction(tx_params)
-
-        else:
+        if standart not in ["ERC721", "ERC1155"]:
             return Response('invalid collection type', status=status.HTTP_400_BAD_REQUEST)
 
+        initial_tx = Collection.create_contract(name, symbol, standart, owner)
         return Response(initial_tx, status=status.HTTP_200_OK)
 
 

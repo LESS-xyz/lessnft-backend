@@ -1,5 +1,6 @@
 import random
 import secrets
+from typing import Tuple, Union
 from decimal import *
 from django.db import models
 from web3 import Web3, HTTPProvider
@@ -28,6 +29,14 @@ from rest_framework.response import Response
 from rest_framework import status
 from dds.consts import DECIMALS
 from .services.ipfs import get_ipfs
+from contracts import (
+    ERC721_FABRIC,
+    ERC1155_FABRIC,
+)
+from dds.settings import (
+    SIGNER_ADDRESS,
+    COLLECTION_CREATION_GAS_LIMIT,
+)
 
 
 class Status(models.TextChoices):
@@ -97,6 +106,51 @@ class Collection(models.Model):
         else:
             initial_tx = myContract.functions.mint( int(amount), ipfs, signature).buildTransaction(tx_params)
         return initial_tx
+
+    @classmethod
+    def collection_is_unique(cls, name, symbol, short_url) -> Tuple[bool, Union[Response, None]]:
+        if Collection.objects.filter(name=name):
+            return False, Response({'name': 'this collection name is occupied'}, status=status.HTTP_400_BAD_REQUEST)
+        if Collection.objects.filter(symbol=request_data.get('symbol')):
+            return False, Response({'symbol': 'this collection symbol is occupied'}, status=status.HTTP_400_BAD_REQUEST)
+        if short_url and Collection.objects.filter(short_url=short_url):
+            return False, Response({'short_url': 'this collection short_url is occupied'}, status=status.HTTP_400_BAD_REQUEST)
+        return True, None
+
+    @classmethod
+    def create_contract(name, symbol, standart, owner):
+        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
+        baseURI = '/ipfs/'
+        signature = sign_message(['address'], [SIGNER_ADDRESS])
+        tx_params = {
+            'chainId': web3.eth.chainId,
+            'gas': COLLECTION_CREATION_GAS_LIMIT,
+            'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(owner.username), 'pending'),
+            'gasPrice': web3.eth.gasPrice,
+        }
+        if standart == 'ERC721':
+            myContract = web3.eth.contract(
+                address=web3.toChecksumAddress(ERC721_FABRIC['address']),
+                abi=ERC721_FABRIC['abi'],
+            )
+            return myContract.functions.makeERC721(
+                name, 
+                symbol, 
+                baseURI, 
+                SIGNER_ADDRESS, 
+                signature
+            ).buildTransaction(tx_params)
+
+        myContract = web3.eth.contract(
+            address=web3.toChecksumAddress(ERC1155_FABRIC['address']),
+            abi=ERC1155_FABRIC['abi'],
+        )
+        return myContract.functions.makeERC1155(
+            baseURI, 
+            SIGNER_ADDRESS, 
+            signature
+        ).buildTransaction(tx_params)
+
 
 def collection_created_dispatcher(sender, instance, created, **kwargs):
     if created:
