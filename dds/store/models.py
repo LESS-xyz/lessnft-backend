@@ -170,6 +170,10 @@ def validate_nonzero(value):
 
 
 class Token(models.Model):
+    class SellStatus(models.TextChoices):
+        NOT_FOR_SALE = 'Not for sale'
+        FIXED_PRICE = 'Fixed price'
+        AUCTION = 'Auciton'
     name = models.CharField(max_length=200, unique=True)
     tx_hash = models.CharField(max_length=200, null=True, blank=True)
     ipfs = models.CharField(max_length=200, null=True, default=True)
@@ -198,6 +202,15 @@ class Token(models.Model):
         if not self.ipfs:
             return None
         return "https://ipfs.io/ipfs/{ipfs}".format(ipfs=self.ipfs)
+
+    @propery
+    def sell_status(self):
+        if self.sellng and self.price:
+            return self.SellStatus.FIXED_PRICE
+        elif self.selling:
+            return self.SellStatus.AUCTION
+        else:
+            return self.SellStatus.NOT_FOR_SALE
 
     def __str__(self):
         return self.name

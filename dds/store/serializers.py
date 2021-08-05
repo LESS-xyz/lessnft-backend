@@ -166,7 +166,10 @@ class TokenSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Token
-        fields = (
+        read_only_fields = (
+            "sell_status",
+        )
+        fields = read_only_fields + (
             "id",
             "name",
             "media",
