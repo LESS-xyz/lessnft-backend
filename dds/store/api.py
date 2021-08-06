@@ -5,8 +5,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import get_connection
 
 from dds.settings import (
-    ALLOWED_HOSTS, 
-    SORT_STATUSES, 
     EMAIL_HOST, 
     DDS_HOST_USER,
     DDS_HOST_PASSWORD, 
@@ -15,10 +13,7 @@ from dds.settings import (
     CAPTCHA_SECRET, 
     CAPTCHA_URL
 )
-from dds.consts import DECIMALS
-from dds.rates.api import calculate_amount
-from dds.store.models import Token, Collection, Ownership
-from dds.utilities import get_media_if_exists
+from dds.store.models import Token, Collection
 from dds.store.serializers import TokenSerializer, CollectionSearchSerializer
 
 

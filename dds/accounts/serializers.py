@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 from rest_auth.registration.serializers import SocialLoginSerializer
-from dds.accounts.api import valid_metamask_message
+from dds.accounts.utils import valid_metamask_message
 
 from dds.utilities import get_media_if_exists
 from dds.settings import ALLOWED_HOSTS

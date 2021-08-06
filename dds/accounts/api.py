@@ -3,34 +3,10 @@ from string import ascii_letters
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
-
-from eth_utils.hexadecimal import add_0x_prefix
-from eth_account.messages import encode_defunct
-from eth_account import Account
 
 from dds.accounts.models import AdvUser
 from dds.accounts.serializers import UserSearchSerializer, FollowerSerializer
 from dds.activity.models import UserAction
-from dds.settings import ALLOWED_HOSTS
-from dds.utilities import get_media_if_exists
-
-def valid_metamask_message(address, message, signature):
-    r = int(signature[0:66], 16)
-    s = int(add_0x_prefix(signature[66:130]), 16)
-    v = int(add_0x_prefix(signature[130:132]), 16)
-    if v not in (27, 28):
-        v += 27
-
-    message_hash = encode_defunct(text=message)
-    signer_address = Account.recover_message(message_hash, vrs=(v, r, s))
-    print(signer_address)
-    print(address)
-
-    if signer_address.lower() != address.lower():
-        raise ValidationError({'result': 'Incorrect signature'}, code=400)
-
-    return True
 
 
 @api_view(http_method_names=['GET'])
