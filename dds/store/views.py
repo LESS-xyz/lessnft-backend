@@ -736,8 +736,8 @@ def get_bids(request, token_id):
         token = Token.objects.get(id=token_id)
     except ObjectDoesNotExist:
         return Response({'error': 'token not found'}, status=status.HTTP_400_BAD_REQUEST)
-    if not token.selling:
-        return Response({'error': 'token is not on sale'}, status=status.HTTP_400_BAD_REQUEST)
+    if token.sell_status != token.SellStatus.AUCTION:
+        return Response({'error': 'token is not set on auction'}, status=status.HTTP_400_BAD_REQUEST)
     user = request.user
     if token.owner != user:
         return Response({'error': 'you can get bids list only for owned tokens'}, status=status.HTTP_400_BAD_REQUEST)
@@ -780,6 +780,7 @@ class VerificateBetView(APIView):
         else:
             print('not ok(')
             max_bet.delete()
+            print(bets)
             for bet in bets:
                 user = bet.user
                 amount = bet.amount
@@ -816,8 +817,9 @@ class AuctionEndView(APIView):
     )
     def post(self, request, token_id):
 
-        bets = Bid.objects.filter(token__id=token_id).order_by('-amount')
-        bet = bets[0]
+        bet = Bid.objects.filter(token__id=token_id).order_by('-amount').first()
+        if not bet:
+            return {'error': 'no active bids'}
 
         master_account = MasterUser.objects.get()
 
@@ -839,9 +841,8 @@ class AuctionEndView(APIView):
             seller=None
         else:
             token_amount = min(bet.quantity, ownership.quantity)
-       
-        sell = token.buy_token(token_amount, buyer, master_account,seller=seller, price=price)
 
+        sell = token.buy_token(token_amount, buyer, master_account,seller=seller, price=price)
         return sell
 
 

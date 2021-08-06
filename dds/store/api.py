@@ -48,6 +48,8 @@ def validate_bid(user, token_id, amount, weth_contract, quantity):
         token = Token.objects.get(id=token_id)
     except ObjectDoesNotExist:
         return 'Token not found'
+    if token.sell_status != token.SellStatus.AUCTION:
+        return 'token is not set on action'
     if token.minimal_bid and token.minimal_bid > amount:
         return 'Your bid is too low'
     if token.total_supply < quantity:
