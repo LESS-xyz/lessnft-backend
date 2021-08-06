@@ -123,7 +123,7 @@ class Collection(models.Model):
         return True, None
 
     @classmethod
-    def create_contract(name, symbol, standart, owner):
+    def create_contract(cls, name, symbol, standart, owner):
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
         baseURI = '/ipfs/'
         signature = sign_message(['address'], [SIGNER_ADDRESS])
