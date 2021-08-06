@@ -203,7 +203,7 @@ class Token(models.Model):
     def media(self):
         get_media_from_ipfs(self.ipfs)
 
-    @propery
+    @property
     def sell_status(self):
         if self.sellng and self.price:
             return self.SellStatus.FIXED_PRICE
