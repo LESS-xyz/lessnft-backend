@@ -21,7 +21,7 @@ class PatchSerializer(serializers.ModelSerializer):
     '''
     class Meta:
         model = AdvUser
-        fields = ('display_name', 'avatar', 'custom_url', 'bio', 'twitter', 'instagram', 'site')
+        fields = ('display_name', 'custom_url', 'bio', 'twitter', 'instagram', 'site')
 
     def update(self, instance, validated_data):
         print('started patch')
@@ -82,12 +82,11 @@ class MetamaskLoginSerializer(SocialLoginSerializer):
 class CoverSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     owner = serializers.SerializerMethodField()
-    avatar = serializers.SerializerMethodField()
-    cover = serializers.SerializerMethodField()
 
     class Meta:
         model = AdvUser
-        fields = ("id", "owner", "avatar", "cover")
+        read_only_fields = ("avatar", "Cover",)
+        fields = ("id", "owner",) + read_only_fields
 
     def get_id(self, obj):
         return obj.url
@@ -95,27 +94,18 @@ class CoverSerializer(serializers.ModelSerializer):
     def get_owner(self, obj):
         return obj.get_name()
 
-    def get_avatar(self, obj):
-        return get_media_if_exists(obj, 'avatar')
-
-    def get_cover(self, obj):
-        return get_media_if_exists(obj, 'cover')
-
 
 class BaseAdvUserSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
-    avatar = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
 
     class Meta:
         model = AdvUser
-        fields = ("id", "name", "avatar")
+        read_only_fields = ("avatar",)
+        fields = read_only_fields + ("id", "name",)
 
     def get_id(self, obj):
         return obj.url
-
-    def get_avatar(self, obj):
-        return ALLOWED_HOSTS[0] + obj.avatar.url
 
     def get_name(self, obj):
         return obj.get_name()
@@ -173,16 +163,15 @@ class CreatorSerializer(BaseAdvUserSerializer):
 
 class UserSlimSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
-    avatar = serializers.SerializerMethodField()
     address = serializers.SerializerMethodField()
 
     class Meta:
         model = AdvUser
-        fields = (
+        read_only_fields = ("avatar",)
+        fields = read_only_fields + (
             "id",
             "address",
             "display_name",
-            "avatar",
             "custom_url",
             "bio",
             "twitter",
@@ -194,21 +183,18 @@ class UserSlimSerializer(serializers.ModelSerializer):
     def get_id(self, obj):
         return obj.url
 
-    def get_avatar(self, obj):
-        return ALLOWED_HOSTS[0] + obj.avatar.url
-
     def get_address(self, obj):
         return obj.username
 
 
 class UserSerializer(UserSlimSerializer):
-    cover = serializers.SerializerMethodField()
     follows = serializers.SerializerMethodField()
     follows_count = serializers.SerializerMethodField()
     followers = serializers.SerializerMethodField()
     followers_count = serializers.SerializerMethodField()
 
     class Meta(UserSlimSerializer.Meta):
+        read_only_fields = UserSlimSerializer.Meta.read_only_fields + ("cover",)
         fields = UserSlimSerializer.Meta.fields + (
             "cover",
             "follows",
@@ -217,8 +203,6 @@ class UserSerializer(UserSlimSerializer):
             "followers_count",
         )
 
-    def get_cover(self, obj):
-        return get_media_if_exists(obj, "cover")
 
     def get_follows(self, obj):
         followers = obj.followers.filter(method="follow")

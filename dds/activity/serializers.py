@@ -8,7 +8,6 @@ from dds.activity.models import TokenHistory
 class TokenHistorySerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
-    avatar = serializers.SerializerMethodField()
     price = serializers.SerializerMethodField()
 
     class Meta:
@@ -27,9 +26,6 @@ class TokenHistorySerializer(serializers.ModelSerializer):
 
     def get_name(self, obj):
         return obj.new_owner.get_name()
-
-    def get_avatar(self, obj):
-        return get_media_if_exists(obj.new_owner, 'avatar')
 
     def get_price(self, obj):
         if obj.price:

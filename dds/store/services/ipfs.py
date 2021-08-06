@@ -20,6 +20,10 @@ def create_ipfs(request):
     res = client.add_json(ipfs_json)
     return res
 
+def send_to_ipfs(media):
+    client = ipfshttpclient.connect(IPFS_CLIENT)
+    file_res = client.add(media)
+    return file_res
 
 def get_ipfs(token_id, address, standart) -> dict:
     """

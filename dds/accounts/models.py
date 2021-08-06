@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 
 from dds.settings import DEFAULT_AVATARS
+from dds.utilities import get_media_from_ipfs
 
 
 class MasterUser(models.Model):
@@ -20,8 +21,8 @@ class MasterUser(models.Model):
 
 
 class AdvUser(AbstractUser):
-    avatar = models.ImageField(blank=True, upload_to=get_timestamp_path)
-    cover = models.ImageField(blank=True, upload_to=get_timestamp_path)
+    avatar_ipfs = models.CharField(max_length=200, null=True, default=None)
+    cover_ipfs = models.CharField(max_length=200, null=True, default=None)
     display_name = models.CharField(max_length=50, default=None, null=True, blank=True)
     custom_url = models.CharField(max_length=80, default=None, null=True, blank=True, unique=True)
     bio = models.TextField(default=None, null=True, blank=True)
@@ -35,6 +36,14 @@ class AdvUser(AbstractUser):
 
     def __str__(self):
         return self.get_name()
+
+    @property
+    def avatar(self):
+        get_media_from_ipfs(self.avatar_ipfs)
+
+    @property
+    def cover(self):
+        get_media_from_ipfs(self.cover_ipfs)
 
     @property
     def url(self):

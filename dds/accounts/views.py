@@ -107,6 +107,11 @@ class GetView(APIView):
         #unique constraint handling:
         if isinstance(result, dict):
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        media = request.FILES.get('avatar')
+        if media:
+            ipfs = send_to_ipfs(media)
+            user.avatar_ipfs = ipfs
+            user.save()
         response_data = UserSlimSerializer(user).data
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -388,8 +393,12 @@ class SetUserCoverView(APIView):
     )
     def post(self, request):
         user = request.user
-        user.cover.save(request.FILES.get('cover').name, request.FILES.get('cover'))
-        return Response(get_media_if_exists(user, 'cover'), status=status.HTTP_200_OK)
+        media = request.FILES.get('cover')
+        if media:
+            ipfs = send_to_ipfs(media)
+            user.cover_ipfs = ipfs
+            user.save()
+        return Response(user.cover, status=status.HTTP_200_OK)
 
 
 class GetRandomCoverView(APIView):

@@ -3,7 +3,7 @@ from dds.activity.models import BidsHistory, ListingHistory, UserAction
 from dds.consts import DECIMALS
 from dds.settings import *
 from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid)
-from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash
+from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs
 
 from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token
 from dds.store.serializers import (
@@ -249,7 +249,9 @@ class SaveCollectionView(APIView):
     )
     def post(self, request):
         collection = Collection()
-        collection.save_in_db(request)
+        media = request.FILES.get('avatar')
+        ipfs = send_to_ipfs(media)
+        collection.save_in_db(request, ipfs)
         response_data = CollectionSlimSerializer(collection).data
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -916,8 +918,12 @@ class SetCoverView(APIView):
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
         if collection.creator != user:
             return Response({'error': 'you can set covers only for your collections'}, status=status.HTTP_400_BAD_REQUEST)
-        collection.cover.save(request.FILES.get('cover').name, request.FILES.get('cover'))
-        return Response(get_media_if_exists(collection, 'cover'), status=status.HTTP_200_OK)
+        media = request.FILES.get('cover')
+        if media:
+            ipfs = send_to_ipfs(media)
+            collection.cover_ipfs = ipfs
+            collection.save()
+        return Response(collection.cover, status=status.HTTP_200_OK)
 
 
 @api_view(http_method_names=['GET'])

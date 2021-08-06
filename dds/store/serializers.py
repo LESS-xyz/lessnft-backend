@@ -40,20 +40,17 @@ class TokenPatchSerializer(serializers.ModelSerializer):
 class OwnershipSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
-    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = Ownership
-        fields = ("id", "name", "avatar", "quantity", "price")
+        read_only_fields = ("avatar",)
+        fields = read_only_fields + ("id", "name", "quantity", "price")
 
     def get_id(self, obj):
         return obj.owner.id
 
     def get_name(self, obj):
         return obj.owner.get_name()
-
-    def get_avatar(self, obj):
-        return (get_media_if_exists(obj.owner, "avatar"),)
 
 
 class BetSerializer(serializers.ModelSerializer):
@@ -70,9 +67,9 @@ class BetSerializer(serializers.ModelSerializer):
 
 
 class BidSerializer(serializers.ModelSerializer):
+    bidder_avatar = serializers.CharField(read_only=True, source='user.avatar')
     bidder = serializers.SerializerMethodField()
     bidder_id = serializers.SerializerMethodField()
-    bidder_avatar = serializers.SerializerMethodField()
     amount = serializers.SerializerMethodField()
     currency = serializers.SerializerMethodField()
 
@@ -94,8 +91,6 @@ class BidSerializer(serializers.ModelSerializer):
     def get_bidder_id(self, obj):
         return obj.user.id
 
-    def get_bidder_avatar(self, obj):
-        return ALLOWED_HOSTS[0] + obj.user.avatar.url
 
     def get_amount(self, obj):
         return obj.amount / DECIMALS[obj.token.currency]
@@ -106,23 +101,20 @@ class BidSerializer(serializers.ModelSerializer):
 
 class CollectionSearchSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
-    avatar = serializers.SerializerMethodField()
     tokens = serializers.SerializerMethodField()
 
     class Meta:
         model = Collection
-        fields = (
+        read_only_fields = ("avatar",)
+        fields = read_only_fields + (
             "id",
             "name",
-            "avatar",
             "tokens",
         )
 
     def get_id(self, obj):
         return obj.url
 
-    def get_avatar(self, obj):
-        return get_media_if_exists(obj, "avatar")
 
     def get_tokens(self, obj):
         tokens = obj.token_set.order_by(SORT_STATUSES["recent"])[:6]
@@ -131,22 +123,18 @@ class CollectionSearchSerializer(serializers.ModelSerializer):
 
 class CollectionSlimSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
-    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = Collection
-        fields = (
+        read_only_fields = ("avatar",)
+        fields = read_only_fields + (
             "id",
             "name",
-            "avatar",
             "address",
         )
 
     def get_id(self, obj):
         return obj.url
-
-    def get_avatar(self, obj):
-        return get_media_if_exists(obj, "avatar")
 
 
 class TokenSlimSerializer(serializers.ModelSerializer):
@@ -265,20 +253,17 @@ class UserCollectionSerializer(CollectionSlimSerializer):
 
 
 class CollectionSerializer(CollectionSlimSerializer):
-    cover = serializers.SerializerMethodField()
     tokens = serializers.SerializerMethodField()
     creator = CreatorSerializer()
 
     class Meta(CollectionSlimSerializer.Meta):
+        read_only_fields = CollectionSlimSerializer.Meta.read_only_fields + ("cover")
         fields = CollectionSlimSerializer.Meta.fields + (
             "cover",
             "creator",
             "description",
             "tokens",
         )
-
-    def get_cover(self, obj):
-        return get_media_if_exists(obj, "cover")
 
     def get_tokens(self, obj):
         tokens = self.context.get("tokens") 

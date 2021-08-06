@@ -15,10 +15,7 @@ def sign_message(type, message):
     print(signed['signature'].hex())
     return signed['signature'].hex()
 
-def get_media_if_exists(queryset, field):
-    try:
-        avatar = ALLOWED_HOSTS[0] + getattr(queryset, field).url
-    except ValueError:
-        avatar = ''
-
-    return avatar
+def get_media_from_ipfs(hash):
+    if not hash:
+        return None
+    return "https://ipfs.io/ipfs/{ipfs}".format(ipfs=hash)

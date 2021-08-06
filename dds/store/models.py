@@ -8,7 +8,7 @@ from web3 import Web3, HTTPProvider
 from django.db.models.signals import post_save
 from django.core.validators import MaxValueValidator, MinValueValidator
 from dds.consts import MAX_AMOUNT_LEN
-from dds.utilities import get_timestamp_path, sign_message, get_media_if_exists
+from dds.utilities import get_timestamp_path, sign_message, get_media_from_ipfs
 from dds.accounts.models import AdvUser
 from dds.consts import DECIMALS
 from dds.settings import (
@@ -48,8 +48,8 @@ class Status(models.TextChoices):
 
 class Collection(models.Model):
     name = models.CharField(max_length=50, unique=True)
-    avatar = models.ImageField(blank=True, upload_to=get_timestamp_path)
-    cover = models.ImageField(blank=True, upload_to=get_timestamp_path)
+    avatar_ipfs = models.CharField(max_length=200, null=True, default=None)
+    cover_ipfs = models.CharField(max_length=200, null=True, default=None)
     address = models.CharField(max_length=60, unique=True, null=True, blank=True)
     symbol = models.CharField(max_length=10, unique=True)
     description = models.TextField(null=True, blank=True)
@@ -61,30 +61,32 @@ class Collection(models.Model):
     deploy_block = models.IntegerField(null=True, default=None)
 
     @property
+    def avatar(self):
+        get_media_from_ipfs(self.avatar_ipfs)
+
+    @property
+    def cover(self):
+        get_media_from_ipfs(self.cover_ipfs)
+
+    @property
     def url(self):
         return self.short_url if self.short_url else self.id
 
     def __str__(self):
         return self.name
 
-    def save_in_db(self, request):
+    def save_in_db(self, request, avatar):
         self.name = request.data.get('name')
-        try:
-            self.avatar = request.FILES.get('filename')
-        except:
-            pass
         self.symbol = request.data.get('symbol')
         self.address = request.data.get('address')
+        self.avatar_ipfs = avatar
         self.standart = request.data.get('standart')
         self.description = request.data.get('description')
         self.short_url = request.data.get('short_url')
         self.deploy_hash = request.data.get('tx_hash')
         self.creator = request.user
         self.save()
-        try:
-            self.avatar.save(request.FILES.get('avatar').name, request.FILES.get('avatar'))
-        except:
-            pass
+
 
     def create_token(self, creator, ipfs, signature, amount):
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
@@ -176,7 +178,7 @@ class Token(models.Model):
         AUCTION = 'Auciton'
     name = models.CharField(max_length=200, unique=True)
     tx_hash = models.CharField(max_length=200, null=True, blank=True)
-    ipfs = models.CharField(max_length=200, null=True, default=True)
+    ipfs = models.CharField(max_length=200, null=True, default=None)
     standart = models.CharField(max_length=10, choices=[('ERC721', 'ERC721'), ('ERC1155', 'ERC1155')])
     total_supply = models.PositiveIntegerField(validators=[validate_nonzero])
     price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
@@ -199,9 +201,7 @@ class Token(models.Model):
 
     @property
     def media(self):
-        if not self.ipfs:
-            return None
-        return "https://ipfs.io/ipfs/{ipfs}".format(ipfs=self.ipfs)
+        get_media_from_ipfs(self.ipfs)
 
     @propery
     def sell_status(self):
@@ -393,7 +393,7 @@ class Token(models.Model):
                 'id': owner.owner.id,
                 'name': owner.owner.display_name,
                 'address': owner.owner.username,
-                'avatar': get_media_if_exists(owner.owner, 'avatar'),
+                'avatar': owner.owner.avatar,
                 'quantity': owner.quantity
             }
             owners_auction_info.append(info)
