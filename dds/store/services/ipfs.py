@@ -1,4 +1,4 @@
-import ipfshttpclient 
+import ipfshttpclient
 from web3 import Web3, HTTPProvider
 from dds.settings import NETWORK_SETTINGS, IPFS_CLIENT
 from contracts import ERC721_MAIN, ERC1155_MAIN
@@ -31,7 +31,7 @@ def get_ipfs(token_id, address, standart) -> dict:
 
     :param token_id: token internal id
     :param address: contract address
-    :param standart: token standart 
+    :param standart: token standart
     """
     if token_id:
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS["ETH"]["endpoint"]))

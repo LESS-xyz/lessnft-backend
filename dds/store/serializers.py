@@ -1,6 +1,5 @@
 from rest_framework import serializers
 
-from dds.utilities import get_media_if_exists
 from dds.settings import ALLOWED_HOSTS, SORT_STATUSES
 from dds.consts import DECIMALS
 from dds.rates.api import calculate_amount
@@ -95,7 +94,7 @@ class BidSerializer(serializers.ModelSerializer):
     def get_amount(self, obj):
         return obj.amount / DECIMALS[obj.token.currency]
 
-    def get_bidder(self, obj):
+    def get_currency(self, obj):
         return obj.token.currency
 
 
