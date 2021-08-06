@@ -29,7 +29,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from web3 import HTTPProvider, Web3
 
-from dds.settings import NETWORK_SETTINGS
+from dds.settings import NETWORK_SETTINGS, WETH_ADDRESS
 from contracts import (
     EXCHANGE,
     WETH_CONTRACT
@@ -682,7 +682,7 @@ class MakeBid(APIView):
 
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
         weth_contract = web3.eth.contract(
-            address=web3.toChecksumAddress(WETH_CONTRACT['address']), abi=WETH_CONTRACT['abi'])
+            address=web3.toChecksumAddress(WETH_CONTRACT_ADDRESS), abi=WETH_CONTRACT)
 
         user = request.user
 
@@ -701,7 +701,7 @@ class MakeBid(APIView):
 
             #construct approve tx if not approved yet:
             allowance = weth_contract.functions.allowance(web3.toChecksumAddress(user.username),
-                                                          web3.toChecksumAddress(EXCHANGE['address'])).call()
+                                                          web3.toChecksumAddress(EXCHANGE_ADDRESS)).call()
             user_balance = weth_contract.functions.balanceOf(Web3.toChecksumAddress(user.username)).call()
             if allowance < amount * quantity:
                 tx_params = {
@@ -710,7 +710,7 @@ class MakeBid(APIView):
                     'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(user.username), 'pending'),
                     'gasPrice': web3.eth.gasPrice,
                 }
-                initial_tx = weth_contract.functions.approve(web3.toChecksumAddress(EXCHANGE['address']), user_balance).buildTransaction(tx_params)
+                initial_tx = weth_contract.functions.approve(web3.toChecksumAddress(EXCHANGE_ADDRESS), user_balance).buildTransaction(tx_params)
                 return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
 
             else:
@@ -759,8 +759,8 @@ class VerificateBetView(APIView):
         print('virificate!')
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
         weth_contract = web3.eth.contract(
-            address=web3.toChecksumAddress(WETH_CONTRACT['address']),
-            abi=WETH_CONTRACT['abi']
+            address=web3.toChecksumAddress(WETH_CONTRACT_ADDRESS),
+            abi=WETH_CONTRACT
         )
 
         bets = Bid.objects.filter(token__id=token_id).order_by('-amount')

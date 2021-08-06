@@ -1,6 +1,4 @@
-{
-  "address": "0xdC2fBC02197dF78643a53a39fD5F322307613127",
-  "abi": [
+[
   {
     "constant": true,
     "inputs": [],
@@ -279,4 +277,3 @@
     "type": "event"
   }
 ]
-}

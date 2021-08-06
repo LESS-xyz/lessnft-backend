@@ -17,7 +17,10 @@ from dds.settings import (
     TOKEN_TRANSFER_GAS_LIMIT,
     TOKEN_BUY_GAS_LIMIT,
     ERC20_ADDRESS,
-    DEFAULT_AVATARS
+    DEFAULT_AVATARS,
+    ERC721_FABRIC_ADDRESS,
+    ERC1155_FABRIC_ADDRESS,
+    EXCHANGE_ADDRESS
 )
 from contracts import (
     EXCHANGE,
@@ -91,9 +94,9 @@ class Collection(models.Model):
     def create_token(self, creator, ipfs, signature, amount):
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
         if self.standart == 'ERC721':
-            abi = ERC721_MAIN['abi']
+            abi = ERC721_MAIN
         else:
-            abi = ERC1155_MAIN['abi']
+            abi = ERC1155_MAIN
         myContract = web3.eth.contract(
             address=web3.toChecksumAddress(self.address),
             abi=abi)
@@ -132,8 +135,8 @@ class Collection(models.Model):
         }
         if standart == 'ERC721':
             myContract = web3.eth.contract(
-                address=web3.toChecksumAddress(ERC721_FABRIC['address']),
-                abi=ERC721_FABRIC['abi'],
+                address=web3.toChecksumAddress(ERC721_FABRIC_ADDRESS),
+                abi=ERC721_FABRIC,
             )
             return myContract.functions.makeERC721(
                 name, 
@@ -144,8 +147,8 @@ class Collection(models.Model):
             ).buildTransaction(tx_params)
 
         myContract = web3.eth.contract(
-            address=web3.toChecksumAddress(ERC1155_FABRIC['address']),
-            abi=ERC1155_FABRIC['abi'],
+            address=web3.toChecksumAddress(ERC1155_FABRIC_ADDRESS),
+            abi=ERC1155_FABRIC,
         )
         return myContract.functions.makeERC1155(
             baseURI, 
@@ -286,9 +289,9 @@ class Token(models.Model):
     def transfer(self, new_owner):
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
         if self.standart == 'ERC721':
-            abi = ERC721_MAIN['abi']
+            abi = ERC721_MAIN
         else:
-            abi = ERC1155_MAIN['abi']
+            abi = ERC1155_MAIN
         myContract = web3.eth.contract(
             address=web3.toChecksumAddress(self.collection.address),
             abi=abi)
@@ -376,7 +379,7 @@ class Token(models.Model):
             ),
             'gasPrice': web3.eth.gasPrice,
             'gas': TOKEN_BUY_GAS_LIMIT,
-            'to': EXCHANGE['address'],
+            'to': EXCHANGE_ADDRESS,
             'method': method,
             'value': 0,
             'data': data

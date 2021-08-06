@@ -1,6 +1,4 @@
-{
-    "address": "0x05ACE37ed9148ac503642E9E17C456b3F5a2E9D6",
-    "abi": [
+[
   {
     "inputs": [
       {
@@ -669,4 +667,3 @@
     "type": "function"
   }
 ]
-}

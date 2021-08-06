@@ -437,7 +437,7 @@ def aproove_bet_scaner(latest_block, dds_contract):
         exchange = event['args']['guy']
         logging.info(f'exchange: {exchange} \n user: {user}')
 
-        if exchange != EXCHANGE['address']:
+        if exchange != EXCHANGE_ADDRESS:
             logging.info('not our wxchage')
             continue
 
@@ -488,9 +488,9 @@ def scaner(smart_contract, standart=None):
                 )
     else:
         if smart_contract.standart == 'ERC721':
-            abi = ERC721_MAIN['abi']
+            abi = ERC721_MAIN
         elif smart_contract.standart == 'ERC1155':
-            abi = ERC1155_MAIN['abi']
+            abi = ERC1155_MAIN
         dds_contract = w3.eth.contract(
             address=Web3.toChecksumAddress(smart_contract.address),
             abi=abi
