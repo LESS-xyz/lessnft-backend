@@ -1,4 +1,4 @@
-def partition(nums, low, high):  
+def partition(nums, low, high):
     # Выбираем средний элемент в качестве опорного
     # Также возможен выбор первого, последнего
     # или произвольного элементов в качестве опорного
@@ -21,7 +21,7 @@ def partition(nums, low, high):
         # элемент с индексом j (справа от опорного), меняем их местами
         nums[i], nums[j] = nums[j], nums[i]
 
-def quick_sort(nums):  
+def quick_sort(nums):
     # Создадим вспомогательную функцию, которая вызывается рекурсивно
     def _quick_sort(items, low, high):
         if low < high:

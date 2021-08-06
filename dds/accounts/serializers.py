@@ -1,9 +1,8 @@
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 from rest_auth.registration.serializers import SocialLoginSerializer
-from dds.accounts.utils import valid_metamask_message
 
-from dds.utilities import get_media_if_exists
+from dds.accounts.utils import valid_metamask_message
 from dds.settings import ALLOWED_HOSTS
 from dds.store.models import Token
 from dds.accounts.models import AdvUser
@@ -85,7 +84,7 @@ class CoverSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AdvUser
-        read_only_fields = ("avatar", "Cover",)
+        read_only_fields = ("avatar", "cover",)
         fields = ("id", "owner",) + read_only_fields
 
     def get_id(self, obj):
@@ -206,14 +205,14 @@ class UserSerializer(UserSlimSerializer):
 
     def get_follows(self, obj):
         followers = obj.followers.filter(method="follow")
-        return FollowerSerializer(followers).data
+        return FollowerSerializer(followers, many=True).data
 
     def get_follows_count(self, obj):
         return obj.followers.filter(method="follow").count()
 
     def get_followers(self, obj):
         following = obj.following.filter(method="follow")
-        return FollowerSerializer(following).data
+        return FollowerSerializer(following, meny=True).data
 
     def get_followers_count(self, obj):
         return obj.following.filter(method="follow").count()

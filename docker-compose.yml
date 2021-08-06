@@ -8,7 +8,7 @@ services:
     volumes:
       - ./.docker/postgres-data:/var/lib/postgresql/data
     networks:
-      dds-net:
+      dds2-net:
   web:
     build:
       context: .
@@ -22,7 +22,7 @@ services:
       - ./media/:/code/media/
       - ./static/:/code/static/
     networks:
-      dds-net:
+      dds2-net:
   rates_checker:
     build:
       context: .
@@ -31,7 +31,7 @@ services:
       - db
     restart: unless-stopped
     networks:
-      dds-net:
+      dds2-net:
   scanner_721:
     build:
       context: .
@@ -43,7 +43,7 @@ services:
       - ./dds/blocks:/code/blocks
       - ./logs:/code/logs/
     networks:
-      dds-net:
+      dds2-net:
   scanner_1155:
     build:
       context: .
@@ -55,7 +55,7 @@ services:
       - ./dds/blocks:/code/blocks
       - ./logs:/code/logs/
     networks:
-      dds-net:
+      dds2-net:
   scanner_money:
     build: 
       context: .
@@ -67,6 +67,6 @@ services:
       - ./dds/blocks:/code/blocks
       - ./logs:/code/logs/
     networks:
-      dds-net:
+      dds2-net:
 networks:
-  dds-net:
+  dds2-net:

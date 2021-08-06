@@ -1,7 +1,5 @@
 import datetime
 
-from dds.consts import DECIMALS
-from dds.utilities import get_media_if_exists
 from django.db.models import Q
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -9,6 +7,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from dds.consts import DECIMALS
 from .models import BidsHistory, ListingHistory, TokenHistory, UserAction
 from .utils import quick_sort
 
@@ -39,7 +38,7 @@ class GetActivityView(APIView):
         end = page * 50
 
         diff_activity = []
-        print(address) 
+        print(address)
         if query:
             print('query:', query)
             if 'purchase' in query or 'sale' in query:
@@ -47,32 +46,32 @@ class GetActivityView(APIView):
                 if address:
                     buy  = TokenHistory.objects.filter(
                         Q(new_owner__username=address) | Q(old_owner__username=address),
-                        method='Buy', 
+                        method='Buy',
                     ).order_by('-date')[start:end]
                 else:
                     buy  = TokenHistory.objects.filter(method='Buy').order_by('-date')[start:end]
                 for item in buy:
                     diff_activity.append(item)
-            
+
             if 'transfer' in query:
                 print('transter!')
                 if address:
                     transfer = TokenHistory.objects.filter(
                         Q(new_owner__username=address) | Q(old_owner__username=address),
-                        method='Transfer', 
+                        method='Transfer',
                     ).order_by('-date')[start:end]
                 else:
                     transfer = TokenHistory.objects.filter(method='Transfer').order_by('-date')[start:end]
                 for item in transfer:
                     diff_activity.append(item)
-            
+
             if 'like' in query:
                 print('like!')
                 if address:
                     print(1)
                     like = UserAction.objects.filter(
                         Q(user__username=address) | Q(whom_follow__username=address),
-                        method='like', 
+                        method='like',
                     ).order_by('-date')[start:end]
                     print(like.all())
                 else:
@@ -81,13 +80,13 @@ class GetActivityView(APIView):
                     print(like.all())
                 for item in like:
                     diff_activity.append(item)
-            
+
             if 'follow' in query:
                 print('follow!')
                 if address:
                     follow = UserAction.objects.filter(
                         Q(user__username=address) | Q(whom_follow__username=address),
-                        method='follow', 
+                        method='follow',
                     ).order_by('-date')[start:end]
                 else:
                     follow = UserAction.objects.filter(method='follow').order_by('-date')[start:end]
@@ -98,7 +97,7 @@ class GetActivityView(APIView):
                 if address:
                     mint = TokenHistory.objects.filter(
                         Q(new_owner__username=address),
-                        method='Mint', 
+                        method='Mint',
                     ).order_by('-date')[start:end]
                 else:
                     mint = TokenHistory.objects.filter(method='Mint').order_by('-date')[start:end]
@@ -109,7 +108,7 @@ class GetActivityView(APIView):
                 if address:
                     burn = TokenHistory.objects.filter(
                         Q(new_owner__username=address),
-                        method='Burn', 
+                        method='Burn',
                     ).order_by('-date')[start:end]
                 else:
                     burn = TokenHistory.objects.filter(method='Burn').order_by('-date')[start:end]
@@ -164,7 +163,7 @@ class GetActivityView(APIView):
         print(len(diff_activity))
         quick_sort(diff_activity)
         print(len(diff_activity))
-        
+
         sorted_activity = []
 
         for activ in diff_activity:
@@ -172,7 +171,7 @@ class GetActivityView(APIView):
                 user_from = getattr(activ, 'user')
             except AttributeError:
                 user_from = getattr(activ, 'old_owner')
-            
+
             try:
                 user_to = getattr(activ, 'whom_follow')
             except AttributeError:
@@ -184,10 +183,10 @@ class GetActivityView(APIView):
                 price = getattr(activ, 'price')
             except AttributeError:
                 price = ''
-            
+
             if price:
                 price = price / DECIMALS[activ.token.currency]
-            
+
             try:
                 quantity = getattr(activ, 'quantity')
             except AttributeError:
@@ -221,10 +220,10 @@ class GetBestDealView(APIView):
     def get(self, request, days):
 
         end_date = datetime.datetime.today()
-        start_date = start_date - datetime.timedelta(days=days)
+        start_date = end_date - datetime.timedelta(days=days)
 
         tokens = TokenHistory.objects.filter(method='Buy').filter(date__range=[start_date, end_date])
-     
+
         buyers = {}
         sellers = {}
         for token in tokens:

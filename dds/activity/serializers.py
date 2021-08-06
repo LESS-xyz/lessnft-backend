@@ -1,6 +1,5 @@
 from rest_framework import serializers
 
-from dds.utilities import get_media_if_exists
 from dds.consts import DECIMALS
 from dds.activity.models import TokenHistory
 
@@ -29,4 +28,5 @@ class TokenHistorySerializer(serializers.ModelSerializer):
 
     def get_price(self, obj):
         if obj.price:
-            return obj.price / DECIMALS[obj.token.currency] 
+            return obj.price / DECIMALS[obj.token.currency]
+        return None

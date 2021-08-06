@@ -2,7 +2,6 @@ import random
 
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from dds.utilities import get_timestamp_path
 from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 
@@ -52,7 +51,7 @@ class AdvUser(AbstractUser):
 
 def user_registrated_dispatcher(sender, instance, created, **kwargs):
     if created:
-        instance.avatar = random.choice(DEFAULT_AVATARS)
+        instance.avatar_ipfs = random.choice(DEFAULT_AVATARS)
         instance.save()
 
 

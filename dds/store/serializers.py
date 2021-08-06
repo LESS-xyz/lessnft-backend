@@ -1,6 +1,5 @@
 from rest_framework import serializers
 
-from dds.utilities import get_media_if_exists
 from dds.settings import ALLOWED_HOSTS, SORT_STATUSES
 from dds.consts import DECIMALS
 from dds.rates.api import calculate_amount
@@ -44,7 +43,12 @@ class OwnershipSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ownership
         read_only_fields = ("avatar",)
-        fields = read_only_fields + ("id", "name", "quantity", "price")
+        fields = read_only_fields + (
+            "id",
+            "name",
+            "quantity",
+            "price"
+        )
 
     def get_id(self, obj):
         return obj.owner.id
@@ -95,7 +99,7 @@ class BidSerializer(serializers.ModelSerializer):
     def get_amount(self, obj):
         return obj.amount / DECIMALS[obj.token.currency]
 
-    def get_bidder(self, obj):
+    def get_currency(self, obj):
         return obj.token.currency
 
 
@@ -257,7 +261,7 @@ class CollectionSerializer(CollectionSlimSerializer):
     creator = CreatorSerializer()
 
     class Meta(CollectionSlimSerializer.Meta):
-        read_only_fields = CollectionSlimSerializer.Meta.read_only_fields + ("cover")
+        read_only_fields = CollectionSlimSerializer.Meta.read_only_fields + ("cover",)
         fields = CollectionSlimSerializer.Meta.fields + (
             "cover",
             "creator",

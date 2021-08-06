@@ -1,19 +1,19 @@
 from django.db import models
-from dds.rates.api import calculate_amount
+
 from dds.consts import MAX_AMOUNT_LEN
 
 
 class UserAction(models.Model):
     whom_follow = models.ForeignKey(
-        'accounts.AdvUser', 
-        related_name="following", 
+        'accounts.AdvUser',
+        related_name="following",
         on_delete=models.CASCADE,
         blank=True,
         null=True
     )
     user = models.ForeignKey(
-        'accounts.AdvUser', 
-        related_name="followers", 
+        'accounts.AdvUser',
+        related_name="followers",
         on_delete=models.CASCADE
     )
     date = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -23,9 +23,9 @@ class UserAction(models.Model):
         default='follow'
     )
     token = models.ForeignKey(
-        'store.Token', 
-        on_delete=models.CASCADE, 
-        blank=True, 
+        'store.Token',
+        on_delete=models.CASCADE,
+        blank=True,
         null=True,
         default=None
     )
@@ -44,19 +44,19 @@ class TokenHistory(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     tx_hash = models.CharField(max_length=200)
     method = models.CharField(
-        max_length=10, 
-        choices=[('Transfer', 'Transfer'), ('Buy', 'Buy'), ('Mint', 'Mint'), ('Burn', 'Burn')], 
+        max_length=10,
+        choices=[('Transfer', 'Transfer'), ('Buy', 'Buy'), ('Mint', 'Mint'), ('Burn', 'Burn')],
         default='Transfer'
     )
     new_owner = models.ForeignKey(
-        'accounts.AdvUser',  
+        'accounts.AdvUser',
         on_delete=models.DO_NOTHING,
         blank=True,
         null=True,
         related_name='new_owner'
     )
     old_owner = models.ForeignKey(
-        'accounts.AdvUser',  
+        'accounts.AdvUser',
         on_delete=models.DO_NOTHING,
         blank=True,
         null=True,
@@ -76,7 +76,7 @@ class ListingHistory(models.Model):
 
 class BidsHistory(models.Model):
     token = models.ForeignKey('store.Token', on_delete=models.CASCADE)
-    date = models.DateTimeField() 
+    date = models.DateTimeField()
     user = models.ForeignKey('accounts.AdvUser', on_delete=models.CASCADE)
     price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True, null=True)
     method = models.CharField(choices=[('Bet', 'Bet')], default='Bet', max_length=3)
