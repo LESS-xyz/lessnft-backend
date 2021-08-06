@@ -15,7 +15,6 @@ from dds.activity.models import UserAction
 from dds.settings import *
 from dds.store.models import Collection, Token
 from dds.store.serializers import UserCollectionSerializer
-from dds.utilities import get_media_if_exists
 
 from django.core.mail import send_mail 
 from django.core.exceptions import ObjectDoesNotExist
@@ -63,10 +62,10 @@ class GetView(APIView):
 
     @swagger_auto_schema(
         operation_description="get self info",
-        responses={200: UserSerializer, 401: not_found_response},
+        responses={200: SelfUserSerializer, 401: not_found_response},
     )
     def get(self, request):
-        response_data = UserSerializer(request.user).data
+        response_data = SelfUserSerializer(request.user).data
         return Response(response_data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -123,7 +122,7 @@ class GetOtherView(APIView):
 
     @swagger_auto_schema(
         operation_description="get other user's info",
-        responses={200: SelfUserSerializer, 401: not_found_response},
+        responses={200: UserSerializer, 401: not_found_response},
     )
     def get(self, request, param):
         try:
@@ -135,7 +134,7 @@ class GetOtherView(APIView):
             )
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED) 
-        response_data = SelfUserSerializer(user).data
+        response_data = UserSerializer(user).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 

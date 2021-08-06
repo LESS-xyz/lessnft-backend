@@ -8,7 +8,7 @@ from web3 import Web3, HTTPProvider
 from django.db.models.signals import post_save
 from django.core.validators import MaxValueValidator, MinValueValidator
 from dds.consts import MAX_AMOUNT_LEN
-from dds.utilities import get_timestamp_path, sign_message, get_media_from_ipfs
+from dds.utilities import sign_message, get_media_from_ipfs
 from dds.accounts.models import AdvUser
 from dds.consts import DECIMALS
 from dds.settings import (
@@ -159,7 +159,7 @@ class Collection(models.Model):
 
 def collection_created_dispatcher(sender, instance, created, **kwargs):
     if created:
-        instance.avatar = random.choice(DEFAULT_AVATARS)
+        instance.avatar_ipfs = random.choice(DEFAULT_AVATARS)
         instance.save()
 
 

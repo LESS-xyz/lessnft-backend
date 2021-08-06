@@ -16,7 +16,7 @@ from dds.store.serializers import (
     BetSerializer,
     BidSerializer,
 )
-from dds.utilities import get_media_if_exists, sign_message
+from dds.utilities import sign_message
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
 from django.db.models import Exists, OuterRef, Q

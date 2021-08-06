@@ -43,7 +43,12 @@ class OwnershipSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ownership
         read_only_fields = ("avatar",)
-        fields = read_only_fields + ("id", "name", "quantity", "price")
+        fields = read_only_fields + (
+            "id",
+            "name",
+            "quantity",
+            "price"
+        )
 
     def get_id(self, obj):
         return obj.owner.id
@@ -256,7 +261,7 @@ class CollectionSerializer(CollectionSlimSerializer):
     creator = CreatorSerializer()
 
     class Meta(CollectionSlimSerializer.Meta):
-        read_only_fields = CollectionSlimSerializer.Meta.read_only_fields + ("cover")
+        read_only_fields = CollectionSlimSerializer.Meta.read_only_fields + ("cover",)
         fields = CollectionSlimSerializer.Meta.fields + (
             "cover",
             "creator",
