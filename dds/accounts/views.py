@@ -166,11 +166,11 @@ class FollowView(APIView):
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
-        if follower == follow:
+        if follower == user:
             return Response({'error': 'you cannot follow yourself'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            p = UserAction.objects.create(user=follower, whom_follow=follow)
+            p = UserAction.objects.create(user=follower, whom_follow=user)
         except IntegrityError:
             return Response({'error': 'already following'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -205,7 +205,7 @@ class UnfollowView(APIView):
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED) 
         
-        link = UserAction.objects.filter(whom_follow=follow, user=follower)
+        link = UserAction.objects.filter(whom_follow=user, user=follower)
         
         if link:
             link[0].delete()
