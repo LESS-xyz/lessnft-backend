@@ -10,7 +10,7 @@ from dds.store.models import (
     Ownership,
     Bid,
 )
-from dds.accounts.serializers import CreatorSerializer 
+from dds.accounts.serializers import CreatorSerializer, UserSerializer
 from dds.activity.serializers import TokenHistorySerializer 
 from dds.accounts.models import MasterUser
 
@@ -180,8 +180,7 @@ class TokenSerializer(serializers.ModelSerializer):
         )
         
     def get_royalty(self, obj):
-        if obj.price:
-            return obj.creator_royalty
+        return obj.creator_royalty
 
     def get_price(self, obj):
         if obj.price:
@@ -203,8 +202,9 @@ class TokenSerializer(serializers.ModelSerializer):
 
     def get_owners(self, obj):
         if obj.standart == "ERC721":
-            return OwnershipSerializer([obj.owner], many=True).data
-        return OwnershipSerializer([obj.owners.all()], many=True).data
+            return UserSerializer(obj.owner).data
+        owners = obj.owners.filter(token=obj, selling=True)
+        return OwnershipSerializer(owners, many=True).data
 
 
 class HotCollectionSerializer(CollectionSlimSerializer):

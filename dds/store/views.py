@@ -680,12 +680,12 @@ class MakeBid(APIView):
     def post(self, request):
         request_data = request.data
         token_id = request_data.get('token_id')
-        amount = request_data.get('amount')
-        quantity = request_data.get('quantity')
+        amount = int(request_data.get('amount'))
+        quantity = int(request_data.get('quantity'))
 
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
         weth_contract = web3.eth.contract(
-            address=web3.toChecksumAddress(WETH_CONTRACT_ADDRESS), abi=WETH_CONTRACT)
+            address=web3.toChecksumAddress(WETH_ADDRESS), abi=WETH_CONTRACT)
 
         user = request.user
 

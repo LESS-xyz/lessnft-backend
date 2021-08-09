@@ -151,6 +151,17 @@ class Collection(models.Model):
             address=web3.toChecksumAddress(ERC1155_FABRIC_ADDRESS),
             abi=ERC1155_FABRIC,
         )
+        '''
+        # JUST FOR TESTS
+        tx = myContract.functions.makeERC1155(
+            baseURI,
+            SIGNER_ADDRESS,
+            signature
+        ).buildTransaction(tx_params)
+        signed_tx = web3.eth.account.sign_transaction(tx,'92cf3cee409da87ce5eb2137f2befce69d4ebaab14f898a8211677d77f91e6b0')
+        tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
+        return tx_hash.hex()
+        '''
         return myContract.functions.makeERC1155(
             baseURI, 
             SIGNER_ADDRESS, 
@@ -209,7 +220,7 @@ class Token(models.Model):
 
     @property
     def sell_status(self):
-        if self.sellng and self.price:
+        if self.selling and self.price:
             return self.SellStatus.FIXED_PRICE
         elif self.selling:
             return self.SellStatus.AUCTION
