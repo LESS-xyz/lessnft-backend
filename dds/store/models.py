@@ -207,6 +207,12 @@ class Token(models.Model):
         return get_media_from_ipfs(self.ipfs)
 
     @property
+    def get_price(self):
+        if self.price:
+            return self.price
+        return self.minimal_bid
+
+    @property
     def sell_status(self):
         if self.sellng and self.price:
             return self.SellStatus.FIXED_PRICE
@@ -435,6 +441,12 @@ class Ownership(models.Model):
                                 null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
     minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
                                 null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
+
+    @property
+    def get_price(self):
+        if self.price:
+            return self.price
+        return self.minimal_bid
 
 
 class Tags(models.Model):

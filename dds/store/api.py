@@ -3,6 +3,7 @@ import requests
 from web3 import Web3
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import get_connection
+from django.db.models import Q
 
 from dds.settings import (
     EMAIL_HOST, 
@@ -17,14 +18,56 @@ from dds.store.models import Token, Collection
 from dds.store.serializers import TokenSerializer, CollectionSearchSerializer
 
 
-def token_search(words, page):
+def token_sort_price(token, reverse=False):
+    if token.standart=="ERC721":
+        return token.price if token.price else token.minimal_bid
+    if reverse:
+        return max(token.ownership_set.values_list("get_price", flat=True))
+    return min(token.ownership_set.values_list("get_price", flat=True))
+
+
+def token_sort_likes(token, reverse=False):
+    return token.useraction_set.filter(method="like").count()
+
+
+def token_search(words, page, **kwargs):
     words = words.split(' ')
+    is_verified = kwargs.get("is_verified")
+    max_price = kwargs.get("max_price")
+    order_by = kwargs.get("order_by")
 
     tokens = Token.objects.all()
 
     for word in words:
         tokens = tokens.filter(name__icontains=word)
+    
+    if is_verified is not None:
+        is_verified = is_verified[0]
+        tokens = tokens.filter(
+            Q(owner__is_verificated=is_verified) | 
+            Q(owners__is_verificated=is_verified)
+        ) 
 
+    if max_price:
+        ...
+    
+    if order_by is not None:
+        order_by = order_by[0]
+    reverse = False
+    if order_by.startswith("-"):
+        order_by = order_by[1:]
+        reverse = True
+    
+    if order_by == "date":
+        tokens = tokens.order_by("updated_at")
+        if reverse:
+            tokens = tokens.reverse()
+    elif order_by == "price":
+        tokens = sorted(tokens, key=token_sort_price, reverse=reverse)
+    elif order_by == "likes":
+        tokens = sorted(tokens, key=token_sort_likes, reverse=reverse)
+
+    page = int(page)
     start = (page - 1) * 50
     end = page * 50 if len(tokens) >= page * 50 else None
     return TokenSerializer(tokens[start:end], many=True).data
