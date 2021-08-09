@@ -38,11 +38,11 @@ class AdvUser(AbstractUser):
 
     @property
     def avatar(self):
-        get_media_from_ipfs(self.avatar_ipfs)
+        return get_media_from_ipfs(self.avatar_ipfs)
 
     @property
     def cover(self):
-        get_media_from_ipfs(self.cover_ipfs)
+        return get_media_from_ipfs(self.cover_ipfs)
 
     @property
     def url(self):

@@ -13,5 +13,6 @@ EXPOSE 8000
 
 COPY . /code/
 
-CMD ["gunicorn", "--bind", ":8000", "--workers", "8", "dds.wsgi:application"]
+#CMD ["gunicorn", "--bind", ":8000", "--workers", "8", "dds.wsgi:application"]
+CMD python manage.py runserver 0.0.0.0:8000
 

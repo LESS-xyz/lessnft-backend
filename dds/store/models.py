@@ -65,11 +65,11 @@ class Collection(models.Model):
 
     @property
     def avatar(self):
-        get_media_from_ipfs(self.avatar_ipfs)
+        return get_media_from_ipfs(self.avatar_ipfs)
 
     @property
     def cover(self):
-        get_media_from_ipfs(self.cover_ipfs)
+        return get_media_from_ipfs(self.cover_ipfs)
 
     @property
     def url(self):
@@ -204,7 +204,7 @@ class Token(models.Model):
 
     @property
     def media(self):
-        get_media_from_ipfs(self.ipfs)
+        return get_media_from_ipfs(self.ipfs)
 
     @property
     def sell_status(self):
