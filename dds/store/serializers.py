@@ -39,7 +39,7 @@ class TokenPatchSerializer(serializers.ModelSerializer):
 class OwnershipSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
-
+    avatar = serializers.CharField(read_only=True, source='owner.avatar')
     class Meta:
         model = Ownership
         read_only_fields = ("avatar",)
@@ -195,7 +195,7 @@ class TokenSerializer(serializers.ModelSerializer):
         if obj.standart == "ERC721":
             available = 1 if obj.selling else 0
         else:
-            owners = obj.owners.filter(token=obj, selling=True)
+            owners = Ownership.objects.filter(token=obj, selling=True)
             available = 0
             for owner in owners:
                 available += owner.quantity

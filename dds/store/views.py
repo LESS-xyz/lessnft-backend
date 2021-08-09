@@ -250,7 +250,10 @@ class SaveCollectionView(APIView):
     def post(self, request):
         collection = Collection()
         media = request.FILES.get('avatar')
-        ipfs = send_to_ipfs(media)
+        if media:
+            ipfs = send_to_ipfs(media)
+        else:
+            ipfs = None
         collection.save_in_db(request, ipfs)
         response_data = CollectionSlimSerializer(collection).data
         return Response(response_data, status=status.HTTP_200_OK)

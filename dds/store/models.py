@@ -5,6 +5,7 @@ from decimal import *
 from django.db import models
 from web3 import Web3, HTTPProvider
 
+from django.db.models import Q
 from django.db.models.signals import post_save
 from django.core.validators import MaxValueValidator, MinValueValidator
 from dds.consts import MAX_AMOUNT_LEN
@@ -116,7 +117,7 @@ class Collection(models.Model):
     def collection_is_unique(cls, name, symbol, short_url) -> Tuple[bool, Union[Response, None]]:
         if Collection.objects.filter(name=name):
             return False, Response({'name': 'this collection name is occupied'}, status=status.HTTP_400_BAD_REQUEST)
-        if Collection.objects.filter(symbol=request_data.get('symbol')):
+        if Collection.objects.filter(symbol=symbol):
             return False, Response({'symbol': 'this collection symbol is occupied'}, status=status.HTTP_400_BAD_REQUEST)
         if short_url and Collection.objects.filter(short_url=short_url):
             return False, Response({'short_url': 'this collection short_url is occupied'}, status=status.HTTP_400_BAD_REQUEST)
@@ -225,6 +226,7 @@ class Token(models.Model):
         self.total_supply = request.data.get('total_supply')
         self.currency = request.data.get('currency')
         self.details = request.data.get('details')
+        self.ipfs = ipfs
         self.description = request.data.get('description')
         self.creator_royalty = request.data.get('creator_royalty')
         price = request.data.get('price')
@@ -283,7 +285,6 @@ class Token(models.Model):
             ownership.save()
 
         self.full_clean()
-        self.ipfs = ipfs
         self.save()
 
     def transfer(self, new_owner):
