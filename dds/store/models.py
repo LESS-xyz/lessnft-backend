@@ -187,10 +187,6 @@ def validate_nonzero(value):
 
 
 class Token(models.Model):
-    class SellStatus(models.TextChoices):
-        NOT_FOR_SALE = 'Not for sale'
-        FIXED_PRICE = 'Fixed price'
-        AUCTION = 'Auciton'
     name = models.CharField(max_length=200, unique=True)
     tx_hash = models.CharField(max_length=200, null=True, blank=True)
     ipfs = models.CharField(max_length=200, null=True, default=None)
@@ -219,13 +215,23 @@ class Token(models.Model):
         return get_media_from_ipfs(self.ipfs)
 
     @property
-    def sell_status(self):
-        if self.selling and self.price:
-            return self.SellStatus.FIXED_PRICE
-        elif self.selling:
-            return self.SellStatus.AUCTION
-        else:
-            return self.SellStatus.NOT_FOR_SALE
+    def is_selling(self):
+        if self.standart == "ERC1155":
+            return self.ownership_set.filter(
+                selling=True, 
+                price__isnull=False,
+            ).exists()
+        return self.sellng and self.price
+
+    @property
+    def is_auc_selling(self):
+        if self.standart == "ERC1155":
+            return self.ownership_set.filter(
+                selling=True, 
+                price__isnull=True,
+            ).exists()
+        return self.sellng and not self.price
+
 
     def __str__(self):
         return self.name

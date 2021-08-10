@@ -741,7 +741,7 @@ def get_bids(request, token_id):
         token = Token.objects.get(id=token_id)
     except ObjectDoesNotExist:
         return Response({'error': 'token not found'}, status=status.HTTP_400_BAD_REQUEST)
-    if token.sell_status != token.SellStatus.AUCTION:
+    if token.is_auc_selling:
         return Response({'error': 'token is not set on auction'}, status=status.HTTP_400_BAD_REQUEST)
     user = request.user
     if token.owner != user:
