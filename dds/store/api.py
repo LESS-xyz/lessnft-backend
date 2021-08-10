@@ -14,7 +14,7 @@ from dds.settings import (
     CAPTCHA_SECRET, 
     CAPTCHA_URL
 )
-from dds.store.models import Token, Collection
+from dds.store.models import Token, Collection, Ownership
 from dds.store.serializers import TokenSerializer, CollectionSearchSerializer
 
 
@@ -31,10 +31,12 @@ def token_sort_likes(token, reverse=False):
 
 
 def token_search(words, page, **kwargs):
+    # TODO: move filters to custom QuerySet
     words = words.split(' ')
     is_verified = kwargs.get("is_verified")
     max_price = kwargs.get("max_price")
     order_by = kwargs.get("order_by")
+    on_sale = kwargs.get("on_sale")
 
     tokens = Token.objects.all()
 
@@ -47,6 +49,19 @@ def token_search(words, page, **kwargs):
             Q(owner__is_verificated=is_verified) | 
             Q(owners__is_verificated=is_verified)
         ) 
+
+    if on_sale:
+        new_tokens = set()
+        for token in tokens:
+            if token.standart=="ERC721":
+                if token.is_selling or token.is_auc_selling:
+                    new_tokens.add(token)
+            elif Ownership.objects.filter(token=token).filter(
+                Q(is_selling=True) |
+                Q(is_auc_selling=True)
+            ).exists():
+                new_tokens.add(token)
+        tokens = list(new_tokens)
 
     if max_price:
         ...
