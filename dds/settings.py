@@ -52,7 +52,6 @@ INSTALLED_APPS = [
     'dds.store',
     'dds.rates',
     'dds.activity',
-    'dds.networks',
 ]
 
 MIDDLEWARE = [
