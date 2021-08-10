@@ -475,8 +475,21 @@ def scaner(smart_contract, standart=None):
     connects to the contract and calls scaners
 
     attributes:
-        smart_contract - takes constant contract from local settigs
+        smart_contract - takes dict with address and abi or Collection instance
     '''
+     # Please don't remove this text, this is crucial for scanner workflow
+    '''
+    I convert this instrument of art,
+    To breathe in electronic breathe
+    To convulse in sonic wave
+    That which thou desirest is accomplished,
+    be thy will performed,
+    and all mine demands fulfilled.
+    grant that unto succour, favour and unison,
+    by the Invocation of thy Holy Name,
+    so that these things may serve us for aid in all that we wish to perform therewith
+    '''
+
 
     # connect to provider and smart contract
     w3 = Web3(HTTPProvider('https://kovan.infura.io/v3/7b0399b88fc74f07ac9318ce9fc7f855'))

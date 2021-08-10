@@ -7,6 +7,7 @@ django.setup()
 
 from multiprocessing import Process
 from scaners import scaner
+from dds.settings import ERC1155_FABRIC_ADDRESS
 from contracts import ERC1155_FABRIC
 from dds.store.models import Collection
 import time
@@ -14,7 +15,7 @@ import time
 
 if __name__ == '__main__':
 
-    Process(target=scaner, args=(ERC1155_FABRIC,)).start()
+    Process(target=scaner, args=({'address': ERC1155_FABRIC_ADDRESS, 'abi': ERC1155_FABRIC})).start()
 
     c = Collection.objects.filter(standart='ERC1155')
     for i in c:
