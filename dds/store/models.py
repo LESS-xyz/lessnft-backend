@@ -196,7 +196,7 @@ class Token(models.Model):
                                 null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
     minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
                                       null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
-    currency = models.CharField(max_length=20, default='ETH')
+    currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None)
     owner = models.ForeignKey('accounts.AdvUser', on_delete=models.PROTECT, related_name='%(class)s_owner', null=True, blank=True)
     owners = models.ManyToManyField('accounts.AdvUser', through='Ownership', null=True)
     creator = models.ForeignKey('accounts.AdvUser', on_delete=models.PROTECT, related_name='%(class)s_creator')
