@@ -19,6 +19,13 @@ from local_settings import (
     HOLDERS_CHECK_TIMEOUT
 )
 
+from dds.settings import (
+    ERC1155_FABRIC_ADDRESS,
+    ERC721_FABRIC_ADDRESS,
+    EXCHANGE_ADDRESS,
+    WETH_ADDRESS
+)
+
 from dds.store.models import *
 from dds.store.services.ipfs import get_ipfs
 from dds.activity.models import BidsHistory, TokenHistory
@@ -512,11 +519,11 @@ def scaner(smart_contract, standart=None):
     while True:
         latest_block = w3.eth.blockNumber
         
-        if smart_contract == ERC721_FABRIC or smart_contract == ERC1155_FABRIC:
+        if smart_contract.get('address') == ERC721_FABRIC_ADDRESS or smart_contract.get('address') == ERC1155_FABRIC_ADDRESS:
             scan_deploy(latest_block, dds_contract, smart_contract)
-        elif smart_contract == EXCHANGE:
+        elif smart_contract.get('address') == EXCHANGE_ADDRESS:
             buy_scanner(latest_block, dds_contract, standart)
-        elif smart_contract == WETH_CONTRACT:
+        elif smart_contract.get('address') == WETH_ADDRESS:
             aproove_bet_scaner(latest_block, dds_contract)
         elif smart_contract.standart == 'ERC721' or smart_contract.standart == 'ERC1155':
             mint_transfer(latest_block, dds_contract, smart_contract)
