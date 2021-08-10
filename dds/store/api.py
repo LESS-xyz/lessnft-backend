@@ -64,7 +64,14 @@ def token_search(words, page, **kwargs):
         tokens = list(new_tokens)
 
     if max_price:
-        ...
+        ownerships = Ownership.objects.filter(token__in=tokens)
+        ownerships = ownerships.filter(
+            Q(price__lte=max_price) |
+            Q(minimal_bid__lte=max_price)
+        )
+        token_ids = ownerships.values_list("token").distinct()
+        token_ids.extend(tokens.values_list("id").distinct())
+        tokens = Token.objects.filter(token_id__in=token_ids)
     
     if order_by is not None:
         order_by = order_by[0]
