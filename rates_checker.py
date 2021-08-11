@@ -18,7 +18,7 @@ API_URL = 'https://api.coingecko.com/api/v3/coins/{coin_code}'
 
 
 QUERY_TSYMS = {
-    "ETH": "ethereum",
+    "WETH": "weth",
     "ETC": "ethereum-chain-token",
     "USDC": "usd-coin",
     "LESS": "less-network",
@@ -60,12 +60,9 @@ if __name__ == '__main__':
                 rate_object.coin_node = rate["coin_node"]
                 rate_object.name = rate["name"]
                 rate_object.image = rate["image"]
-                if not rate.get("address"):
-                    rate_object.address = ERC20_ADDRESS
-                else:
-                    rate_object.address = rate["address"]
-            if not rate_object.decimal:
-                rate_object.set_decimals()
+                rate_object.address = rate["address"]
             rate_object.rate = rate["rate"]
             rate_object.save()
+            if not rate_object.decimal:
+                rate_object.set_decimals()
         time.sleep(RATES_CHECKER_TIMEOUT)

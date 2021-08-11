@@ -9,11 +9,11 @@ from dds.rates.models import UsdRate
 
 
 rates_response = openapi.Response(
-    description='ETH, BTC, USDC rates',
+    description='WETH, ETC, USDC, LESS rates',
     schema=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
-            'ETH': openapi.Schema(type=openapi.TYPE_STRING),
+            'WETH': openapi.Schema(type=openapi.TYPE_STRING),
             'ETC': openapi.Schema(type=openapi.TYPE_STRING),
             'USDC': openapi.Schema(type=openapi.TYPE_STRING),
             'LESS': openapi.Schema(type=openapi.TYPE_STRING),
