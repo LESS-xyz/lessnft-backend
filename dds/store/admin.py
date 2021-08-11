@@ -20,7 +20,7 @@ class TokenAdmin(admin.ModelAdmin):
 
     def image_preview(self, obj):
         # ex. the name of column is "image"
-        if obj.media:
+        if obj.ipfs:
             return mark_safe(
                 '<img src="{0}" width="400" height="400" style="object-fit:contain" />'.format(obj.ipfs))
         else:
