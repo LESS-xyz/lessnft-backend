@@ -209,6 +209,7 @@ class Token(models.Model):
     status = models.CharField(max_length=50, choices=Status.choices)
     updated_at = models.DateTimeField(auto_now_add=True)
     tags = models.ManyToManyField('Tags', blank=True, null=True)
+    is_favorite = models.BooleanField(default=False)
 
     @property
     def media(self):

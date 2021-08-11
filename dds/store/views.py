@@ -935,6 +935,13 @@ def get_fee(request):
 
 
 @api_view(http_method_names=['GET'])
+def get_favorites(request):
+    token_list = Token.objects.filter(is_favorite=True).order_by("-updated_at")
+    response_data = TokenSerializer(token_list, many=True).data
+    return Response(response_data, status=status.HTTP_200_OK)
+
+
+@api_view(http_method_names=['GET'])
 def get_hot_bids(request):
     bids = Bid.objects.filter(state=Status.COMMITTED).order_by('-id')[:6]
     token_list= [bid.token for bid in bids]
