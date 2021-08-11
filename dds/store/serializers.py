@@ -204,7 +204,7 @@ class TokenSerializer(serializers.ModelSerializer):
     def get_owners(self, obj):
         if obj.standart == "ERC721":
             return UserSerializer(obj.owner).data
-        owners = obj.owners.filter(token=obj, selling=True)
+        owners = Ownership.objects.filter(token=obj, selling=True)
         return OwnershipSerializer(owners, many=True).data
 
 

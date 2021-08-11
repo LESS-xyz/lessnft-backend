@@ -23,7 +23,7 @@ def create_ipfs(request):
 def send_to_ipfs(media):
     client = ipfshttpclient.connect(IPFS_CLIENT)
     file_res = client.add(media)
-    return file_res
+    return file_res["Hash"]
 
 def get_ipfs(token_id, address, standart) -> dict:
     """

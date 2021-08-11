@@ -15,6 +15,7 @@ from dds.activity.models import UserAction
 from dds.settings import *
 from dds.store.models import Collection, Token
 from dds.store.serializers import UserCollectionSerializer
+from dds.store.services.ipfs import send_to_ipfs
 
 from django.core.mail import send_mail 
 from django.core.exceptions import ObjectDoesNotExist
@@ -94,7 +95,7 @@ class GetView(APIView):
             request_data.pop('instagram')
         if request_data.get('site')=='':
             request_data.pop('site')
-        if request_data.get('displey_name')=='':
+        if request_data.get('display_name')=='':
             request_data.pop('display_name')
         
 
