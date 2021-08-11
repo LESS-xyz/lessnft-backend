@@ -11,6 +11,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from dds.consts import MAX_AMOUNT_LEN
 from dds.utilities import sign_message, get_media_from_ipfs
 from dds.accounts.models import AdvUser
+from dds.rates.models import UsdRate
 from dds.consts import DECIMALS
 from dds.settings import (
     NETWORK_SETTINGS,
@@ -220,8 +221,9 @@ class Token(models.Model):
             return self.ownership_set.filter(
                 selling=True, 
                 price__isnull=False,
+                currency__isnull=False,
             ).exists()
-        return self.sellng and self.price
+        return self.sellng and self.price and self.currency
 
     @property
     def is_auc_selling(self):
@@ -229,8 +231,9 @@ class Token(models.Model):
             return self.ownership_set.filter(
                 selling=True, 
                 price__isnull=True,
+                currency__isnull=False,
             ).exists()
-        return self.sellng and not self.price
+        return self.sellng and not self.price and self.currency
 
 
     def __str__(self):
@@ -241,7 +244,6 @@ class Token(models.Model):
         self.standart = request.data.get('standart')
         self.status = Status.PENDING
         self.total_supply = request.data.get('total_supply')
-        self.currency = request.data.get('currency')
         self.details = request.data.get('details')
         self.ipfs = ipfs
         self.description = request.data.get('description')
@@ -256,16 +258,23 @@ class Token(models.Model):
         self.collection = Collection.objects.get(
             Q(id=collection_id) | Q(short_url=collection)
         )
+        currency_symbol = request.data.get("currency")
+        if currency_symbol:
+            cur = UsdRate.objects.filter(symbol=currency_symbol)
+            currency = None
+            if cur:
+                currency = cur
 
         if self.standart == 'ERC721':
+            self.currency = currency
             self.total_supply = 1
             self.owner = self.creator
             if selling == 'true':
                 self.selling = True
             if request.data.get('minimal_bid'):
-                self.minimal_bid = int(float(request.data.get('minimal_bid')) * DECIMALS[self.currency])
+                self.minimal_bid = int(float(request.data.get('minimal_bid')) * DECIMALS[self.currency.symbol])
             if price:
-                self.price = int(float(price) * DECIMALS[self.currency])
+                self.price = int(float(price) * DECIMALS[self.currency.symbol])
         else:
             self.full_clean()
             self.save()
@@ -273,11 +282,12 @@ class Token(models.Model):
             self.save()
             ownership = Ownership.objects.get(owner=creator, token=self)
             ownership.quantity = self.total_supply
+            ownership.currency = currency
             if selling == 'true':
                 ownership.selling = True
                 self.selling=True
             if price:
-                ownership.price = int(float(price) * DECIMALS[self.currency])
+                ownership.price = int(float(price) * DECIMALS[self.currency.symbol])
             if self.price:
                 if self.price > ownership.price:
                     self.price = ownership.price
@@ -289,7 +299,7 @@ class Token(models.Model):
                 self.save()
             minimal_bid = request.data.get('minimal_bid')
             if minimal_bid:
-                minimal_bid = int(float(minimal_bid) * DECIMALS[self.currency])
+                minimal_bid = int(float(minimal_bid) * DECIMALS[self.currency.symbol])
                 ownership.minimal_bid = minimal_bid
                 if self.minimal_bid:
                     if self.minimal_bid > minimal_bid:
@@ -447,6 +457,7 @@ post_save.connect(token_save_dispatcher, sender=Token)
 class Ownership(models.Model):
     token = models.ForeignKey('Token', on_delete=models.CASCADE)
     owner = models.ForeignKey('accounts.AdvUser', on_delete=models.CASCADE)
+    currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None)
     quantity = models.PositiveIntegerField(null=True)
     selling = models.BooleanField(default=False)
     price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,

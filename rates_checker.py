@@ -20,7 +20,7 @@ QUERY_TSYMS = {
     "ETH": "ethereum",
     "ETC": "ethereum-chain-token",
     "USDC": "usd-coin",
-    "LESs": "less-network",
+    "LESS": "less-network",
 }
 QUERY_FSYM = 'usd'
 

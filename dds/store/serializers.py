@@ -13,11 +13,23 @@ from dds.store.models import (
 from dds.accounts.serializers import CreatorSerializer, UserSerializer
 from dds.activity.serializers import TokenHistorySerializer 
 from dds.accounts.models import MasterUser
+from dds.rates.models import UsdRate
 
 try:
     service_fee = MasterUser.objects.get().commission
 except:
     print('master user not found, please add him for correct backend start')
+
+
+class CurrencySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UsdRate
+        fields = (
+            "rate",
+            "symbol",
+            "name",
+            "image",
+        )
 
 
 class TokenPatchSerializer(serializers.ModelSerializer):
@@ -26,7 +38,7 @@ class TokenPatchSerializer(serializers.ModelSerializer):
     '''
     class Meta:
         model = Token
-        fields = ('price', 'currency', 'selling', 'minimal_bid')
+        fields = ('price', 'selling', 'minimal_bid')
 
     def update(self, instance, validated_data):
         print('started patch')
@@ -40,6 +52,8 @@ class OwnershipSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
     avatar = serializers.CharField(read_only=True, source='owner.avatar')
+    currency = CurrencySerializer()
+
     class Meta:
         model = Ownership
         read_only_fields = ("avatar",)
@@ -47,7 +61,8 @@ class OwnershipSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "quantity",
-            "price"
+            "price",
+            "currency",
         )
 
     def get_id(self, obj):
@@ -95,12 +110,11 @@ class BidSerializer(serializers.ModelSerializer):
     def get_bidder_id(self, obj):
         return obj.user.id
 
-
     def get_amount(self, obj):
-        return obj.amount / DECIMALS[obj.token.currency]
+        return obj.amount / DECIMALS[obj.token.currency.symbol]
 
     def get_currency(self, obj):
-        return obj.token.currency
+        return CurrencySerializer(obj.token.currency).data
 
 
 class CollectionSearchSerializer(serializers.ModelSerializer):
@@ -155,6 +169,7 @@ class TokenSerializer(serializers.ModelSerializer):
     royalty = serializers.SerializerMethodField()
     creator = CreatorSerializer()
     collection = CollectionSlimSerializer()
+    currency = CurrencySerializer()
 
     class Meta:
         model = Token
@@ -185,11 +200,11 @@ class TokenSerializer(serializers.ModelSerializer):
 
     def get_price(self, obj):
         if obj.price:
-            return obj.price / DECIMALS[obj.currency]
+            return obj.price / DECIMALS[obj.currency.symbol]
 
     def get_USD_price(self, obj):
         if obj.price:
-            return calculate_amount(obj.price, obj.currency)[0]
+            return calculate_amount(obj.price, obj.currency.symbol)[0]
 
     def get_available(self, obj):
         if obj.standart == "ERC721":
@@ -308,7 +323,7 @@ class TokenFullSerializer(TokenSerializer):
 
     def get_minimal_bid(self, obj):
         if obj.minimal_bid:
-            return obj.minimal_bid / DECIMALS[obj.currency]
+            return obj.minimal_bid / DECIMALS[obj.currency.symbol]
 
     def get_highest_bid(self, obj):
         bids = obj.bid_set.filter(state=Status.COMMITTED).order_by(

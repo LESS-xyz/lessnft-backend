@@ -28,5 +28,5 @@ class TokenHistorySerializer(serializers.ModelSerializer):
 
     def get_price(self, obj):
         if obj.price:
-            return obj.price / DECIMALS[obj.token.currency]
+            return obj.price / DECIMALS[obj.token.currency.symbol]
         return None
