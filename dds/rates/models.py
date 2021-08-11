@@ -30,7 +30,8 @@ class CoinPlatform(models.Model):
     network = models.CharField(max_length=32, choices=NetworkEnum.choices)
 
     class Meta:
-        unique_together = [['address', 'network']]
+        ...
+        # unique_together = [['address', 'network']]
 
     def __str__(self):
         return self.address
