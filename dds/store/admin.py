@@ -27,8 +27,9 @@ class TokenAdmin(admin.ModelAdmin):
             return '(No image)'
 
     image_preview.short_description = 'Preview'
-    list_display = ('name', 'collection', 'standart')
-    list_filter = ('standart',)
+    list_display = ('name', 'collection', 'standart', 'is_favorite')
+    list_editable = ('is_favorite', )
+    list_filter = ('standart', 'is_favorite')
     search_fields = ['name', 'collections']
 
 
