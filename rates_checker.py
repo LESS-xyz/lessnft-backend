@@ -3,6 +3,7 @@ import sys
 import time
 import requests
 import traceback
+from dds.settings import ERC20_ADDRESS
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dds.settings')
 import django
@@ -57,10 +58,13 @@ if __name__ == '__main__':
                 rate_object = UsdRate.objects.get(symbol=rate["symbol"])
             except UsdRate.DoesNotExist:
                 rate_object = UsdRate(symbol=rate["symbol"])
+                rate_object.coin_node = rate["coin_node"]
+                rate_object.name = rate["name"]
+                rate_object.image = rate["image"]
+                if not rate.get("address"):
+                    rate_object.address = ERC20_ADDRESS
+                else:
+                    rate_object.address = rate["address"]
             rate_object.rate = rate["rate"]
-            rate_object.coin_node = rate["coin_node"]
-            rate_object.name = rate["name"]
-            rate_object.image = rate["image"]
-            rate_object.address = rate["address"]
             rate_object.save()
         time.sleep(RATES_CHECKER_TIMEOUT)
