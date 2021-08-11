@@ -168,6 +168,18 @@ class Collection(models.Model):
             signature
         ).buildTransaction(tx_params)
 
+    def get_contract(self):
+        w3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
+        if self.standart == 'ERC1155':
+            abi = ERC1155_MAIN
+        else:
+            abi = ERC721_MAIN
+        contract = w3.eth.contract(
+            address=Web3.toChecksumAddress(self.address),
+            abi=abi
+        )
+        return contract
+
 
 def collection_created_dispatcher(sender, instance, created, **kwargs):
     if created:
