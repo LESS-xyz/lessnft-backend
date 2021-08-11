@@ -52,7 +52,6 @@ if __name__ == '__main__':
             print('\n'.join(traceback.format_exception(*sys.exc_info())), flush=True)
             time.sleep(RATES_CHECKER_TIMEOUT)
             continue
-
         for rate in usd_rates:
             try:
                 rate_object = UsdRate.objects.get(symbol=rate["symbol"])
@@ -65,6 +64,8 @@ if __name__ == '__main__':
                     rate_object.address = ERC20_ADDRESS
                 else:
                     rate_object.address = rate["address"]
+            if not rate_object.decimal:
+                rate_object.set_decimals()
             rate_object.rate = rate["rate"]
             rate_object.save()
         time.sleep(RATES_CHECKER_TIMEOUT)

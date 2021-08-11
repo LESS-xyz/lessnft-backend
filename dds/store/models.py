@@ -272,9 +272,9 @@ class Token(models.Model):
             if selling == 'true':
                 self.selling = True
             if request.data.get('minimal_bid'):
-                self.minimal_bid = int(float(request.data.get('minimal_bid')) * DECIMALS[self.currency.symbol])
+                self.minimal_bid = int(float(request.data.get('minimal_bid')) * self.currency.get_decimals)
             if price:
-                self.price = int(float(price) * DECIMALS[self.currency.symbol])
+                self.price = int(float(price) * self.currency.get_decimals)
         else:
             self.full_clean()
             self.save()
@@ -287,7 +287,7 @@ class Token(models.Model):
                 ownership.selling = True
                 self.selling=True
             if price:
-                ownership.price = int(float(price) * DECIMALS[self.currency.symbol])
+                ownership.price = int(float(price) * self.currency.get_decimals)
             if self.price:
                 if self.price > ownership.price:
                     self.price = ownership.price
@@ -299,7 +299,7 @@ class Token(models.Model):
                 self.save()
             minimal_bid = request.data.get('minimal_bid')
             if minimal_bid:
-                minimal_bid = int(float(minimal_bid) * DECIMALS[self.currency.symbol])
+                minimal_bid = int(float(minimal_bid) * self.currency.get_decimals)
                 ownership.minimal_bid = minimal_bid
                 if self.minimal_bid:
                     if self.minimal_bid > minimal_bid:

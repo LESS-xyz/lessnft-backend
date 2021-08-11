@@ -34,6 +34,7 @@ from contracts import (
     EXCHANGE,
     WETH_CONTRACT
 )
+from dds.rates.api import get_decimals
 
 
 transfer_tx = openapi.Response(
@@ -390,10 +391,10 @@ class GetView(APIView):
                 return Response({'error': "this token doesn't belong to you"}, status=status.HTTP_400_BAD_REQUEST)
 
         if request_data.get('price'):
-            request_data['price'] = int(request_data['price'] * DECIMALS[request_data.get('currency')])
+            request_data['price'] = int(request_data['price'] * get_decimals(request_data.get('currency')))
 
         if request_data.get('minimal_bid'):
-            request_data['minimal_bid'] = int(float(request_data['minimal_bid']) * DECIMALS[request_data.get('currency')])
+            request_data['minimal_bid'] = int(float(request_data['minimal_bid']) * get_decimals(request_data.get('currency')))
             print('minimal bid 1:', request_data['minimal_bid'])
 
         if token.standart == 'ERC1155':

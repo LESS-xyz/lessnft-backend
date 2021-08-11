@@ -2,6 +2,10 @@ from django.db import models
 
 from dds.consts import MAX_AMOUNT_LEN
 
+from web3 import Web3, HTTPProvider
+from dds.settings import NETWORK_SETTINGS
+from contracts import WETH_CONTRACT
+
 
 class UsdRate(models.Model):
     '''
@@ -14,24 +18,18 @@ class UsdRate(models.Model):
     image = models.CharField(max_length=500, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     address = models.CharField(max_length=128)
+    decimal = models.PositiveSmallIntegerField(null=True)
 
     def __str__(self):
         return self.symbol
 
+    @property
+    def get_decimals(self) -> None:
+        return 10 ** self.decimal
 
-class CoinPlatform(models.Model):
-    """Store platform specific data for coins, but allows direct access to Coin fields."""
-    class NetworkEnum(models.TextChoices):
-        """Store enum with network name in pair with CoinGecko platform id"""
-        BSC = 'binance-smart-chain'
-        MATIC = 'polygon-pos'
-        ETH = 'ethereum'
-    coin = models.ForeignKey(UsdRate, on_delete=models.CASCADE, related_name='platforms')
-    network = models.CharField(max_length=32, choices=NetworkEnum.choices)
-
-    class Meta:
-        ...
-        # unique_together = [['address', 'network']]
-
-    def __str__(self):
-        return self.address
+    def set_decimals(self) -> None:
+        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
+        address = web3.toChecksumAddress(self.address)
+        contract = web3.eth.contract(address=address, abi=WETH_CONTRACT)
+        self.decimal = contract.functions.decimals().call()
+        self.save()

@@ -111,7 +111,7 @@ class BidSerializer(serializers.ModelSerializer):
         return obj.user.id
 
     def get_amount(self, obj):
-        return obj.amount / DECIMALS[obj.token.currency.symbol]
+        return obj.amount / obj.token.currency.get_decimals
 
     def get_currency(self, obj):
         return CurrencySerializer(obj.token.currency).data
@@ -200,7 +200,7 @@ class TokenSerializer(serializers.ModelSerializer):
 
     def get_price(self, obj):
         if obj.price:
-            return obj.price / DECIMALS[obj.currency.symbol]
+            return obj.price / obj.currency.get_decimals
 
     def get_USD_price(self, obj):
         if obj.price:
@@ -323,7 +323,7 @@ class TokenFullSerializer(TokenSerializer):
 
     def get_minimal_bid(self, obj):
         if obj.minimal_bid:
-            return obj.minimal_bid / DECIMALS[obj.currency.symbol]
+            return obj.minimal_bid / obj.currency.get_decimals
 
     def get_highest_bid(self, obj):
         bids = obj.bid_set.filter(state=Status.COMMITTED).order_by(
