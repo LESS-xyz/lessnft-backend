@@ -13,6 +13,7 @@ class UsdRate(models.Model):
     name = models.CharField(max_length=100)
     image = models.CharField(max_length=500, null=True)
     updated_at = models.DateTimeField(auto_now=True)
+    address = models.CharField(max_length=128)
 
     def __str__(self):
         return self.symbol
@@ -25,10 +26,8 @@ class CoinPlatform(models.Model):
         BSC = 'binance-smart-chain'
         MATIC = 'polygon-pos'
         ETH = 'ethereum'
-    address = models.CharField(max_length=128)
     coin = models.ForeignKey(UsdRate, on_delete=models.CASCADE, related_name='platforms')
     network = models.CharField(max_length=32, choices=NetworkEnum.choices)
-    decimal = models.IntegerField(null=True)
 
     class Meta:
         unique_together = [['address', 'network']]

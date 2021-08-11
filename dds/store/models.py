@@ -338,11 +338,6 @@ class Token(models.Model):
 
         id_order = '0x%s' % secrets.token_hex(32)
 
-        types_list = [
-            'bytes32', 'address', 'address', 'uint256', 'uint256',
-            'address', 'uint256', 'address[]', 'uint256[]', 'address'
-        ]
-
         if seller:
             seller_address = seller.username
         else:
@@ -353,17 +348,35 @@ class Token(models.Model):
             else:
                 price = Ownership.objects.get(token=self, owner=seller, selling=True).price
 
+        types_list = [
+            'bytes32', 
+            'address', 
+            'address', 
+            'uint256', 
+            'uint256',
+            'address', 
+            'uint256', 
+            'address[]', 
+            'uint256[]', 
+            'address',
+        ]
+
         values_list = [
             id_order,
             Web3.toChecksumAddress(seller_address),
             Web3.toChecksumAddress(self.collection.address),
             self.internal_id,
             token_amount,
-            Web3.toChecksumAddress(ERC20_ADDRESS),
+            Web3.toChecksumAddress(self.currency.address),
             int(price),
-            [Web3.toChecksumAddress(self.creator.username), Web3.toChecksumAddress(master_account.address)],
-            [(int(self.creator_royalty / 100 * float(price))), 
-            (int(master_account.commission / 100 * float(price)))],
+            [
+                Web3.toChecksumAddress(self.creator.username), 
+                Web3.toChecksumAddress(master_account.address),
+            ],
+            [
+                (int(self.creator_royalty / 100 * float(price))), 
+                (int(master_account.commission / 100 * float(price))),
+            ],
             Web3.toChecksumAddress(buyer.username)
         ]
         print(values_list)
@@ -372,9 +385,7 @@ class Token(models.Model):
             values_list
         )
 
-        method = 'makeExchangeERC721'
-        if self.standart == 'ERC1155':
-            method = 'makeExchangeERC1155'
+        method = 'makeExchange{standart}'.format(standart=self.standart)
 
         data = {
             'idOrder': id_order,

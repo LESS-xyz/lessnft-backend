@@ -621,6 +621,15 @@ class BuyTokenView(APIView):
                             'please contact us through support form', status=status.HTTP_400_BAD_REQUEST)
         token_amount = int(request.data.get('tokenAmount'))
 
+        if tradable_token.selling is False:
+            return Response('token not selling', status=status.HTTP_403_FORBIDDEN)
+        
+        if tradable_token.standart == 'ERC721' and token_amount != 0:
+            return Response('wrong token amount', status=status.HTTP_400_BAD_REQUEST)
+            
+        elif tradable_token.standart == 'ERC1155' and token_amount == 0:
+            return Response('wrong token amount', status=status.HTTP_400_BAD_REQUEST) 
+
         buyer = request.user
         try:
             if seller_id:
@@ -637,15 +646,6 @@ class BuyTokenView(APIView):
             return Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
 
         master_account = MasterUser.objects.get()
-
-        if tradable_token.selling is False:
-            return Response('token not selling', status=status.HTTP_403_FORBIDDEN)
-        
-        if tradable_token.standart == 'ERC721' and token_amount != 0:
-            return Response('wrong token amount', status=status.HTTP_400_BAD_REQUEST)
-            
-        elif tradable_token.standart == 'ERC1155' and token_amount == 0:
-            return Response('wrong token amount', status=status.HTTP_400_BAD_REQUEST) 
     
         buy = tradable_token.buy_token(token_amount, buyer, master_account, seller)
 

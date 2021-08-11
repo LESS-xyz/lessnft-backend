@@ -36,6 +36,7 @@ def get_rate(tsym):
         "symbol": response.get("symbol"),
         "name": response.get("name"),
         "image": response.get("image", {}).get("small"),
+        "address": response.get("contract_address"),
     }
 
 
@@ -60,5 +61,6 @@ if __name__ == '__main__':
             rate_object.coin_node = rate["coin_node"]
             rate_object.name = rate["name"]
             rate_object.image = rate["image"]
+            rate_object.address = rate["address"]
             rate_object.save()
         time.sleep(RATES_CHECKER_TIMEOUT)
