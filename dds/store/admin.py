@@ -22,7 +22,7 @@ class TokenAdmin(admin.ModelAdmin):
         # ex. the name of column is "image"
         if obj.media:
             return mark_safe(
-                '<img src="{0}" width="400" height="400" style="object-fit:contain" />'.format(obj.media.url))
+                '<img src="{0}" width="400" height="400" style="object-fit:contain" />'.format(obj.ipfs))
         else:
             return '(No image)'
 
