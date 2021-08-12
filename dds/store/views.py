@@ -484,6 +484,10 @@ class GetHotView(APIView):
     @swagger_auto_schema(
         operation_description="get hot tokens",
         responses={200: TokenFullSerializer(many=True)},
+        manual_parameters=[
+        openapi.Parameter('sort', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        openapi.Parameter('tag', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        ]
     )
     def get(self, request, page):
         sort = request.query_params.get('sort', 'recent')
@@ -669,7 +673,6 @@ class MakeBid(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'auth_token': openapi.Schema(type=openapi.TYPE_STRING),
                 'token_id': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'amount': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'quantity': openapi.Schema(type=openapi.TYPE_NUMBER)
@@ -859,7 +862,8 @@ class ReportView(APIView):
             type=openapi.TYPE_OBJECT,
             properties={
                 'page': openapi.Schema(type=openapi.TYPE_STRING),
-                'message': openapi.Schema(type=openapi.TYPE_STRING)
+                'message': openapi.Schema(type=openapi.TYPE_STRING),
+                'token': openapi.Schema(type=openapi.TYPE_STRING)
             }
         ),
         responses={200: 'your report sent to admin', 400: 'report not sent to admin'}
@@ -903,7 +907,6 @@ class SetCoverView(APIView):
             type=openapi.TYPE_OBJECT,
             properties={
                 'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'auth_token': openapi.Schema(type=openapi.TYPE_STRING),
                 'cover': openapi.Schema(type=openapi.TYPE_OBJECT)
             }
         ),
@@ -957,7 +960,8 @@ class SupportView(APIView):
             type=openapi.TYPE_OBJECT,
             properties={
                 'email': openapi.Schema(type=openapi.TYPE_STRING),
-                'message': openapi.Schema(type=openapi.TYPE_STRING)
+                'message': openapi.Schema(type=openapi.TYPE_STRING),
+                'token': openapi.Schema(type=openapi.TYPE_STRING)
             }
         ),
         responses={200: 'your report sent to admin', 400: 'report not sent to admin'}

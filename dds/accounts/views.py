@@ -262,7 +262,7 @@ class GetUserCollections(APIView):
         operation_description="get collections by user",
         resposnes={200: UserCollectionSerializer, 401: not_found_response}
     )
-    def get(self, request, string):
+    def get(self, request, param):
         try:
             if string[:2] == '0x':
                 user = AdvUser.objects.get(username=string)
@@ -336,7 +336,6 @@ class VerificationView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'auth_token': openapi.Schema(type=openapi.TYPE_STRING),
                 'url': openapi.Schema(type=openapi.TYPE_STRING),
                 'address': openapi.Schema(type=openapi.TYPE_STRING),
                 'role': openapi.Schema(type=openapi.TYPE_STRING),
@@ -385,7 +384,6 @@ class SetUserCoverView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'auth_token': openapi.Schema(type=openapi.TYPE_STRING),
                 'cover': openapi.Schema(type=openapi.TYPE_OBJECT)
             }
         ),

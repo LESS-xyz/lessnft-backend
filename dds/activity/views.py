@@ -24,7 +24,10 @@ class GetActivityView(APIView):
             properties={
                 'address': openapi.Schema(type=openapi.TYPE_STRING)
             }
-        )
+        ),
+        manual_parameters=[
+            openapi.Parameter('type', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        ]
     )
     def post(self, request, page):
 
