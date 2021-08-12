@@ -11,6 +11,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from dds.consts import MAX_AMOUNT_LEN
 from dds.utilities import sign_message, get_media_from_ipfs
 from dds.accounts.models import AdvUser
+from dds.rates.models import UsdRate
 from dds.consts import DECIMALS
 from dds.settings import (
     NETWORK_SETTINGS,
@@ -208,7 +209,7 @@ class Token(models.Model):
                                 null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
     minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
                                       null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
-    currency = models.CharField(max_length=20, default='ETH')
+    currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None)
     owner = models.ForeignKey('accounts.AdvUser', on_delete=models.PROTECT, related_name='%(class)s_owner', null=True, blank=True)
     owners = models.ManyToManyField('accounts.AdvUser', through='Ownership', null=True)
     creator = models.ForeignKey('accounts.AdvUser', on_delete=models.PROTECT, related_name='%(class)s_creator')
@@ -233,8 +234,9 @@ class Token(models.Model):
             return self.ownership_set.filter(
                 selling=True, 
                 price__isnull=False,
+                currency__isnull=False,
             ).exists()
-        return self.sellng and self.price
+        return self.selling and self.price and self.currency
 
     @property
     def is_auc_selling(self):
@@ -242,8 +244,9 @@ class Token(models.Model):
             return self.ownership_set.filter(
                 selling=True, 
                 price__isnull=True,
+                currency__isnull=False,
             ).exists()
-        return self.sellng and not self.price
+        return self.selling and not self.price and self.currency
 
 
     def __str__(self):
@@ -254,7 +257,6 @@ class Token(models.Model):
         self.standart = request.data.get('standart')
         self.status = Status.PENDING
         self.total_supply = request.data.get('total_supply')
-        self.currency = request.data.get('currency')
         self.details = request.data.get('details')
         self.ipfs = ipfs
         self.description = request.data.get('description')
@@ -269,16 +271,23 @@ class Token(models.Model):
         self.collection = Collection.objects.get(
             Q(id=collection_id) | Q(short_url=collection)
         )
+        currency_symbol = request.data.get("currency")
+        if currency_symbol:
+            cur = UsdRate.objects.filter(symbol=currency_symbol)
+            currency = None
+            if cur:
+                currency = cur
 
         if self.standart == 'ERC721':
+            self.currency = currency
             self.total_supply = 1
             self.owner = self.creator
             if selling == 'true':
                 self.selling = True
             if request.data.get('minimal_bid'):
-                self.minimal_bid = int(float(request.data.get('minimal_bid')) * DECIMALS[self.currency])
+                self.minimal_bid = int(float(request.data.get('minimal_bid')) * self.currency.get_decimals)
             if price:
-                self.price = int(float(price) * DECIMALS[self.currency])
+                self.price = int(float(price) * self.currency.get_decimals)
         else:
             self.full_clean()
             self.save()
@@ -286,11 +295,12 @@ class Token(models.Model):
             self.save()
             ownership = Ownership.objects.get(owner=creator, token=self)
             ownership.quantity = self.total_supply
+            ownership.currency = currency
             if selling == 'true':
                 ownership.selling = True
                 self.selling=True
             if price:
-                ownership.price = int(float(price) * DECIMALS[self.currency])
+                ownership.price = int(float(price) * self.currency.get_decimals)
             if self.price:
                 if self.price > ownership.price:
                     self.price = ownership.price
@@ -302,7 +312,7 @@ class Token(models.Model):
                 self.save()
             minimal_bid = request.data.get('minimal_bid')
             if minimal_bid:
-                minimal_bid = int(float(minimal_bid) * DECIMALS[self.currency])
+                minimal_bid = int(float(minimal_bid) * self.currency.get_decimals)
                 ownership.minimal_bid = minimal_bid
                 if self.minimal_bid:
                     if self.minimal_bid > minimal_bid:
@@ -341,11 +351,6 @@ class Token(models.Model):
 
         id_order = '0x%s' % secrets.token_hex(32)
 
-        types_list = [
-            'bytes32', 'address', 'address', 'uint256', 'uint256',
-            'address', 'uint256', 'address[]', 'uint256[]', 'address'
-        ]
-
         if seller:
             seller_address = seller.username
         else:
@@ -356,17 +361,35 @@ class Token(models.Model):
             else:
                 price = Ownership.objects.get(token=self, owner=seller, selling=True).price
 
+        types_list = [
+            'bytes32', 
+            'address', 
+            'address', 
+            'uint256', 
+            'uint256',
+            'address', 
+            'uint256', 
+            'address[]', 
+            'uint256[]', 
+            'address',
+        ]
+
         values_list = [
             id_order,
             Web3.toChecksumAddress(seller_address),
             Web3.toChecksumAddress(self.collection.address),
             self.internal_id,
             token_amount,
-            Web3.toChecksumAddress(ERC20_ADDRESS),
+            Web3.toChecksumAddress(self.currency.address),
             int(price),
-            [Web3.toChecksumAddress(self.creator.username), Web3.toChecksumAddress(master_account.address)],
-            [(int(self.creator_royalty / 100 * float(price))), 
-            (int(master_account.commission / 100 * float(price)))],
+            [
+                Web3.toChecksumAddress(self.creator.username), 
+                Web3.toChecksumAddress(master_account.address),
+            ],
+            [
+                (int(self.creator_royalty / 100 * float(price))), 
+                (int(master_account.commission / 100 * float(price))),
+            ],
             Web3.toChecksumAddress(buyer.username)
         ]
         print(values_list)
@@ -375,9 +398,7 @@ class Token(models.Model):
             values_list
         )
 
-        method = 'makeExchangeERC721'
-        if self.standart == 'ERC1155':
-            method = 'makeExchangeERC1155'
+        method = 'makeExchange{standart}'.format(standart=self.standart)
 
         data = {
             'idOrder': id_order,
@@ -460,6 +481,7 @@ post_save.connect(token_save_dispatcher, sender=Token)
 class Ownership(models.Model):
     token = models.ForeignKey('Token', on_delete=models.CASCADE)
     owner = models.ForeignKey('accounts.AdvUser', on_delete=models.CASCADE)
+    currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None)
     quantity = models.PositiveIntegerField(null=True)
     selling = models.BooleanField(default=False)
     price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,

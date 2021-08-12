@@ -1,9 +1,9 @@
 import os
 import sys
 import time
-import json
 import requests
 import traceback
+from dds.settings import ERC20_ADDRESS
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dds.settings')
 import django
@@ -13,51 +13,50 @@ django.setup()
 from dds.rates.models import UsdRate
 from dds.settings import RATES_CHECKER_TIMEOUT
 
+
 API_URL = 'https://api.coingecko.com/api/v3/coins/{coin_code}'
 
-QUERY_TSYMS = {
-    'ETH': 'ethereum',
-}
+
 QUERY_FSYM = 'usd'
 
 
-def get_rates(fsym, tsym, reverse=False):
+def get_rate(tsym):
     res = requests.get(API_URL.format(coin_code=tsym))
     if res.status_code != 200:
-        raise Exception('cannot get exchange rate for {}'.format(fsym))
-    answer = json.loads(res.text)
-    if reverse:
-        answer = answer['market_data']['current_price'][fsym]
-
-    return answer
+        raise Exception('cannot get exchange rate for {}'.format(QUERY_FSYM))
+    response = res.json()
+    return {
+        "rate": response['market_data']['current_price'][QUERY_FSYM],
+        "coin_node": response.get("id"),
+        "symbol": response.get("symbol"),
+        "name": response.get("name"),
+        "image": response.get("image", {}).get("small"),
+        "address": response.get("contract_address"),
+    }
 
 
 if __name__ == '__main__':
     while True:
-        usd_prices = {}
+        usd_rates = []
 
         try:
-            for tsym, tsym_code in QUERY_TSYMS.items():
-                usd_prices[tsym] = get_rates(QUERY_FSYM, tsym_code, reverse=True)
+            for rate in UsdRate.objects.all():
+                usd_rates.append(get_rate(rate.coin_node))
         except Exception as e:
-            # print('\n'.join(traceback.format_exception(*sys.exc_info())), flush=True)
+            print('\n'.join(traceback.format_exception(*sys.exc_info())), flush=True)
             time.sleep(RATES_CHECKER_TIMEOUT)
             continue
-
-        # Lock usdt prices to USD cause here cause idk where else
-        usd_prices['USDT'] = 1
-
-        # print('new usd prices', usd_prices, flush=True)
-
-        for currency, price in usd_prices.items():
+        for rate in usd_rates:
             try:
-                rate_object = UsdRate.objects.get(currency=currency)
+                rate_object = UsdRate.objects.get(symbol=rate["symbol"])
             except UsdRate.DoesNotExist:
-                rate_object = UsdRate(currency=currency)
-
-            rate_object.rate = price
+                rate_object = UsdRate(symbol=rate["symbol"])
+                rate_object.coin_node = rate["coin_node"]
+                rate_object.name = rate["name"]
+                rate_object.image = rate["image"]
+                rate_object.address = rate["address"]
+            rate_object.rate = rate["rate"]
             rate_object.save()
-
-        # print('saved ok', flush=True)
-
+            if not rate_object.decimal:
+                rate_object.set_decimals()
         time.sleep(RATES_CHECKER_TIMEOUT)

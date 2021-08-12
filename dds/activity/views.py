@@ -188,7 +188,7 @@ class GetActivityView(APIView):
                 price = ''
 
             if price:
-                price = price / DECIMALS[activ.token.currency]
+                price = price / activ.token.currency.get_decimals
 
             try:
                 quantity = getattr(activ, 'quantity')
