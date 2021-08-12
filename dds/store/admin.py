@@ -20,15 +20,16 @@ class TokenAdmin(admin.ModelAdmin):
 
     def image_preview(self, obj):
         # ex. the name of column is "image"
-        if obj.media:
+        if obj.ipfs:
             return mark_safe(
-                '<img src="{0}" width="400" height="400" style="object-fit:contain" />'.format(obj.media.url))
+                '<img src="{0}" width="400" height="400" style="object-fit:contain" />'.format(obj.ipfs))
         else:
             return '(No image)'
 
     image_preview.short_description = 'Preview'
-    list_display = ('name', 'collection', 'standart')
-    list_filter = ('standart',)
+    list_display = ('name', 'collection', 'standart', 'is_favorite')
+    list_editable = ('is_favorite', )
+    list_filter = ('standart', 'is_favorite')
     search_fields = ['name', 'collections']
 
 

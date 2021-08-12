@@ -24,7 +24,10 @@ class GetActivityView(APIView):
             properties={
                 'address': openapi.Schema(type=openapi.TYPE_STRING)
             }
-        )
+        ),
+        manual_parameters=[
+            openapi.Parameter('type', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        ]
     )
     def post(self, request, page):
 
@@ -185,7 +188,7 @@ class GetActivityView(APIView):
                 price = ''
 
             if price:
-                price = price / DECIMALS[activ.token.currency]
+                price = price / activ.token.currency.get_decimals
 
             try:
                 quantity = getattr(activ, 'quantity')

@@ -24,5 +24,6 @@ urlpatterns = [
     path('report/', ReportView.as_view()),
     path('set_cover/', SetCoverView.as_view()),
     path('fee/', get_fee),
+    path('favorites/', get_favorites),
     path('support/', SupportView.as_view()),
 ]

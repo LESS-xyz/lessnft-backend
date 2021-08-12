@@ -9,7 +9,7 @@ urlpatterns = [
     path('self/unfollow/', UnfollowView.as_view()),
     path('self/like/', LikeView.as_view()),
     path('self/', GetView.as_view()),
-    path('self/<str:string>/collections/', GetUserCollections.as_view()),
+    path('<str:param>/collections/', GetUserCollections.as_view()),
     path('following/<str:address>/<int:page>/', GetFollowingView.as_view()),
     path('followers/<str:address>/<int:page>/', GetFollowersView.as_view()),
     path('verification/', VerificationView.as_view()),

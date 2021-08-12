@@ -4,21 +4,22 @@ from rest_framework import status
 
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from dds.rates.api import get_usd_prices
+from dds.rates.serializers import UsdRateSerializer
+from dds.rates.models import UsdRate
 
 
 rates_response = openapi.Response(
-    description='ETH, BTC, USDC rates',
+    description='WETH, ETC, USDC, LESS rates',
     schema=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
-            'ETH': openapi.Schema(type=openapi.TYPE_STRING),
-            'BTC': openapi.Schema(type=openapi.TYPE_STRING),
-            'USDC': openapi.Schema(type=openapi.TYPE_STRING)
-            },
+            'WETH': openapi.Schema(type=openapi.TYPE_STRING),
+            'ETC': openapi.Schema(type=openapi.TYPE_STRING),
+            'USDC': openapi.Schema(type=openapi.TYPE_STRING),
+            'LESS': openapi.Schema(type=openapi.TYPE_STRING),
+        },
     )
 )
-
 
 class RateRequest(APIView):
     @swagger_auto_schema(
@@ -26,4 +27,6 @@ class RateRequest(APIView):
         responses={200: rates_response}
     )
     def get(self, request):
-        return Response(get_usd_prices(), status=status.HTTP_200_OK)
+        rates = UsdRate.objects.all()
+        response_data = UsdRateSerializer(rates, many=True).data
+        return Response(response_data, status=status.HTTP_200_OK)

@@ -4,14 +4,6 @@ from web3 import Web3, HTTPProvider
 from utils import get_last_block, save_last_block
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F
-from contracts import (
-    EXCHANGE,
-    ERC721_FABRIC,
-    ERC1155_FABRIC,
-    ERC721_MAIN,
-    ERC1155_MAIN,
-    WETH_CONTRACT
-)
 
 from local_settings import (
     HOLDERS_CHECK_CHAIN_LENGTH,
@@ -23,9 +15,10 @@ from dds.store.models import *
 from dds.store.services.ipfs import get_ipfs
 from dds.activity.models import BidsHistory, TokenHistory
 from dds.accounts.models import AdvUser
+from dds.settings import NETWORK_SETTINGS
 
 
-def scan_deploy(latest_block, dds_contract, smart_contract):
+def scan_deploy(latest_block, smart_contract):
     '''
     requests deployment events from the contract and updates the database
     '''
@@ -38,7 +31,7 @@ def scan_deploy(latest_block, dds_contract, smart_contract):
 
     # check all events for next 20 blocks and saves new addres
     block_count = HOLDERS_CHECK_CHAIN_LENGTH + HOLDERS_CHECK_COMMITMENT_LENGTH
-    block = get_last_block(f'DEPLOY_LAST_BLOCK_{smart_contract["address"]}')
+    block = get_last_block(f'DEPLOY_LAST_BLOCK_{smart_contract.address}')
     
     logging.info(f'latest_block: {latest_block} \n block: {block} \n block count: {block_count}')
 
@@ -47,14 +40,14 @@ def scan_deploy(latest_block, dds_contract, smart_contract):
         time.sleep(HOLDERS_CHECK_TIMEOUT)
         return 
 
-    if smart_contract == ERC721_FABRIC:
-        event_filter = dds_contract.events.ERC721Made.createFilter(
+    if smart_contract.address.lower() == ERC721_FABRIC_ADDRESS.lower():
+        event_filter = smart_contract.events.ERC721Made.createFilter(
             fromBlock=block,
             toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
         )
         logging.info('collection is 721_FABRIC')
     else:
-        event_filter = dds_contract.events.ERC1155Made.createFilter(
+        event_filter = smart_contract.events.ERC1155Made.createFilter(
             fromBlock=block,
             toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
         )
@@ -67,7 +60,7 @@ def scan_deploy(latest_block, dds_contract, smart_contract):
         logging.info('filter not found \n')
         save_last_block(
             latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH, 
-            f'DEPLOY_LAST_BLOCK_{smart_contract["address"]}',
+            f'DEPLOY_LAST_BLOCK_{smart_contract.address}',
         )
         time.sleep(HOLDERS_CHECK_TIMEOUT)
         return 
@@ -94,20 +87,21 @@ def scan_deploy(latest_block, dds_contract, smart_contract):
 
     save_last_block(
         latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH, 
-        f'DEPLOY_LAST_BLOCK_{smart_contract["address"]}',
+        f'DEPLOY_LAST_BLOCK_{smart_contract.address}',
     )
     time.sleep(HOLDERS_CHECK_TIMEOUT)
 
 
-def mint_transfer(latest_block, dds_contract, smart_contract):
+def mint_transfer(latest_block, smart_contract):
+    collection = Collection.objects.get(address=smart_contract.address)
     logging.basicConfig(
         level=logging.INFO, 
-        filename=f'logs/scaner_{smart_contract.name}.log',
+        filename=f'logs/scaner_{collection.name}.log',
         format='%(asctime)s %(levelname)s:%(message)s',
     )
     logging.info('start mint/transfer scan')
     block_count = HOLDERS_CHECK_CHAIN_LENGTH + HOLDERS_CHECK_COMMITMENT_LENGTH
-    block = get_last_block(f'MINT_TRANSFER_LAST_BLOCK_{smart_contract.name}')
+    block = get_last_block(f'MINT_TRANSFER_LAST_BLOCK_{collection.name}')
     logging.info(f' last block: {latest_block} \n block: {block}')
 
     if not (latest_block - block > block_count):
@@ -117,15 +111,15 @@ def mint_transfer(latest_block, dds_contract, smart_contract):
     logging.info('go ahead!')
 
     # get all events with name 'Transfer'
-    contract_standart = smart_contract.standart
+    contract_standart = collection.standart
     logging.info(f'contract is {contract_standart}')
     if contract_standart == 'ERC721':
-        event_filter = dds_contract.events.Transfer.createFilter(
+        event_filter = smart_contract.events.Transfer.createFilter(
             fromBlock=block,
             toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
         )
     elif contract_standart == 'ERC1155':
-        event_filter = dds_contract.events.TransferSingle().createFilter(
+        event_filter = smart_contract.events.TransferSingle().createFilter(
             fromBlock=block,
             toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
         )
@@ -139,7 +133,7 @@ def mint_transfer(latest_block, dds_contract, smart_contract):
         logging.info('filter not found')
         save_last_block(
             latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH, 
-            f'MINT_TRANSFER_LAST_BLOCK_{smart_contract.name}',
+            f'MINT_TRANSFER_LAST_BLOCK_{collection.name}',
         )
         time.sleep(HOLDERS_CHECK_TIMEOUT)
         return
@@ -154,8 +148,7 @@ def mint_transfer(latest_block, dds_contract, smart_contract):
             token_id = event['args'].get('id')
         logging.info('token id:', token_id)
         
-        coll_addr = event['address']
-        logging.info(f'collection address: {coll_addr} \n token id: {token_id}')
+        logging.info(f'collection address: {collection.address} \n token id: {token_id}')
 
         new_owner_address = event['args']['to'].lower()
 
@@ -166,7 +159,7 @@ def mint_transfer(latest_block, dds_contract, smart_contract):
         
         token = Token.objects.filter(
             ipfs=ipfs, 
-            collection__address=coll_addr,
+            collection=collection,
         )
         if not token.exists():
             logging.warning('token 404!')
@@ -182,7 +175,7 @@ def mint_transfer(latest_block, dds_contract, smart_contract):
                 tx_hash=tx_hash,
             )
             TokenHistory.objects.get_or_create(
-                token = token[0],
+                token=token[0],
                 tx_hash=tx_hash,
                 method='Mint',
                 new_owner=new_owner[0],
@@ -198,7 +191,7 @@ def mint_transfer(latest_block, dds_contract, smart_contract):
             if event['args']['to'] == empty_address:
                 logging.info('Burn!')
                 TokenHistory.objects.get_or_create(
-                    token = token[0],
+                    token=token[0],
                     tx_hash=tx_hash,
                     method='Burn',
                     new_owner=None,
@@ -230,7 +223,7 @@ def mint_transfer(latest_block, dds_contract, smart_contract):
                         continue
                 else:
                     TokenHistory.objects.get_or_create(
-                        token = token.first(),
+                        token=token.first(),
                         tx_hash=tx_hash,
                         method='Transfer',
                         new_owner=new_owner[0],
@@ -248,13 +241,13 @@ def mint_transfer(latest_block, dds_contract, smart_contract):
                     logging.info('old_owner is not exist!')
                 else:
                     if owner.first().quantity:
-                        owner.update(quantity = F('quantity')-event['args']['value'])
+                        owner.update(quantity=F('quantity')-event['args']['value'])
                     else:
                         owner.delete()
 
                 owner = Ownership.objects.filter(owner=new_owner[0], token=token.first())
                 if owner.exists():
-                    owner.update(quantity = F('quantity')+event['args']['value'])
+                    owner.update(quantity=F('quantity')+event['args']['value'])
                 else:
                     if not new_owner[0]:
                         continue
@@ -277,8 +270,14 @@ def mint_transfer(latest_block, dds_contract, smart_contract):
 
 
 
-def buy_scanner(latest_block, dds_contract, standart):
-    logging.info('buy scanner!') 
+def buy_scanner(latest_block, smart_contract, standart):
+
+    logging.basicConfig(
+    level = logging.INFO,
+    filename = f'logs/buy_{standart}.log',
+    format = '%(asctime)s %(levelname)s:%(message)s',
+    )
+    logging.info('buy scanner!')
     block_count = HOLDERS_CHECK_CHAIN_LENGTH + HOLDERS_CHECK_COMMITMENT_LENGTH
     block = get_last_block(f'BUY_LAST_BLOCK_{standart}')
 
@@ -290,12 +289,12 @@ def buy_scanner(latest_block, dds_contract, standart):
     logging.info('lets go!')
     logging.info(f'it is {standart}!')
     if standart == 'ERC_721':
-        event_filter = dds_contract.events.ExchangeMadeErc721.createFilter(
+        event_filter = smart_contract.events.ExchangeMadeErc721.createFilter(
             fromBlock=block,
             toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
         )
     elif standart == 'ERC_1155':
-        event_filter = dds_contract.events.ExchangeMadeErc1155.createFilter(
+        event_filter = smart_contract.events.ExchangeMadeErc1155.createFilter(
             fromBlock=block,
             toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
         )
@@ -403,7 +402,7 @@ def buy_scanner(latest_block, dds_contract, standart):
     time.sleep(HOLDERS_CHECK_TIMEOUT)
 
 
-def aproove_bet_scaner(latest_block, dds_contract):
+def aproove_bet_scaner(latest_block, smart_contract):
     logging.basicConfig(
         level=logging.INFO, 
         filename=f'logs/scaner_bet.log',
@@ -418,7 +417,7 @@ def aproove_bet_scaner(latest_block, dds_contract):
         time.sleep(HOLDERS_CHECK_TIMEOUT)
         return 
 
-    event_filter = dds_contract.events.Approval.createFilter(
+    event_filter = smart_contract.events.Approval.createFilter(
         fromBlock=block,
         toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH
     )
@@ -470,40 +469,37 @@ def aproove_bet_scaner(latest_block, dds_contract):
     time.sleep(HOLDERS_CHECK_TIMEOUT)
 
 
-def scaner(smart_contract, standart=None):
+def scaner(smart_contract, standart=None, type=None):
     '''
     connects to the contract and calls scaners
 
     attributes:
-        smart_contract - takes constant contract from local settigs
+        smart_contract - takes dict with address and abi or Collection instance
+    '''
+     # Please don't remove this text, this is crucial for scanner workflow
+    '''
+    I convert this instrument of art,
+    To breathe in electronic breathe
+    To convulse in sonic wave
+    That which thou desirest is accomplished,
+    be thy will performed,
+    and all mine demands fulfilled.
+    grant that unto succour, favour and unison,
+    by the Invocation of thy Holy Name,
+    so that these things may serve us for aid in all that we wish to perform therewith
     '''
 
-    # connect to provider and smart contract
-    w3 = Web3(HTTPProvider('https://kovan.infura.io/v3/7b0399b88fc74f07ac9318ce9fc7f855'))
-    dict_check = isinstance(smart_contract, dict)
-    if dict_check:
-        dds_contract = w3.eth.contract(
-                        address=Web3.toChecksumAddress(smart_contract['address']),
-                        abi=smart_contract['abi']
-                )
-    else:
-        if smart_contract.standart == 'ERC721':
-            abi = ERC721_MAIN
-        elif smart_contract.standart == 'ERC1155':
-            abi = ERC1155_MAIN
-        dds_contract = w3.eth.contract(
-            address=Web3.toChecksumAddress(smart_contract.address),
-            abi=abi
-        )
+
+    w3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
 
     while True:
         latest_block = w3.eth.blockNumber
         
-        if smart_contract == ERC721_FABRIC or smart_contract == ERC1155_FABRIC:
-            scan_deploy(latest_block, dds_contract, smart_contract)
-        elif smart_contract == EXCHANGE:
-            buy_scanner(latest_block, dds_contract, standart)
-        elif smart_contract == WETH_CONTRACT:
-            aproove_bet_scaner(latest_block, dds_contract)
-        elif smart_contract.standart == 'ERC721' or smart_contract.standart == 'ERC1155':
-            mint_transfer(latest_block, dds_contract, smart_contract)
+        if type == 'fabric':
+            scan_deploy(latest_block, smart_contract)
+        elif type == 'exchange':
+            buy_scanner(latest_block, smart_contract, standart)
+        elif type == 'currency':
+            aproove_bet_scaner(latest_block, smart_contract)
+        else:
+            mint_transfer(latest_block, smart_contract)

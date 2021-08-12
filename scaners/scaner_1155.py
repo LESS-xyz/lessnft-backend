@@ -7,26 +7,28 @@ django.setup()
 
 from multiprocessing import Process
 from scaners import scaner
-from contracts import ERC1155_FABRIC
+from contracts import ERC1155_FABRIC_CONTRACT
 from dds.store.models import Collection
 import time
 
 
 if __name__ == '__main__':
 
-    Process(target=scaner, args=(ERC1155_FABRIC,)).start()
+    Process(target=scaner, args=(ERC1155_FABRIC_CONTRACT, None, 'fabric')).start()
 
-    c = Collection.objects.filter(standart='ERC1155')
-    for i in c:
-        Process(target=scaner, args=(i,)).start()
+    collections = Collection.objects.filter(standart='ERC1155')
+    for i in collections:
+        contract = i.get_contract()
+        Process(target=scaner, args=(contract,)).start()
 
     while True:
         time.sleep(60)
-        new_c = Collection.objects.filter(standart='ERC1155', address__isnull=False)
+        updated_collections = Collection.objects.filter(standart='ERC1155', address__isnull=False)
 
-        diff_c = list(set(new_c) - set(c))
-        if diff_c:
-            for i in diff_c:
-                Process(target=scaner, args=(i,)).start()
-            c = new_c
+        new_collections = list(set(updated_collections) - set(collections))
+        if new_collections:
+            for i in new_collections:
+                contract = i.get_contract()
+                Process(target=scaner, args=(contract,)).start()
+            collections = updated_collections
 

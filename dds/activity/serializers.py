@@ -10,7 +10,7 @@ class TokenHistorySerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
 
     class Meta:
-        modle = TokenHistory
+        model = TokenHistory
         fields = (
             'id',
             'name',
@@ -28,5 +28,5 @@ class TokenHistorySerializer(serializers.ModelSerializer):
 
     def get_price(self, obj):
         if obj.price:
-            return obj.price / DECIMALS[obj.token.currency]
+            return obj.price / obj.token.currency.get_decimals
         return None

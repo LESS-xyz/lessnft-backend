@@ -15,6 +15,7 @@ from dds.activity.models import UserAction
 from dds.settings import *
 from dds.store.models import Collection, Token
 from dds.store.serializers import UserCollectionSerializer
+from dds.store.services.ipfs import send_to_ipfs
 
 from django.core.mail import send_mail 
 from django.core.exceptions import ObjectDoesNotExist
@@ -94,7 +95,7 @@ class GetView(APIView):
             request_data.pop('instagram')
         if request_data.get('site')=='':
             request_data.pop('site')
-        if request_data.get('displey_name')=='':
+        if request_data.get('display_name')=='':
             request_data.pop('display_name')
         
 
@@ -261,7 +262,7 @@ class GetUserCollections(APIView):
         operation_description="get collections by user",
         resposnes={200: UserCollectionSerializer, 401: not_found_response}
     )
-    def get(self, request, string):
+    def get(self, request, param):
         try:
             if string[:2] == '0x':
                 user = AdvUser.objects.get(username=string)
@@ -335,7 +336,6 @@ class VerificationView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'auth_token': openapi.Schema(type=openapi.TYPE_STRING),
                 'url': openapi.Schema(type=openapi.TYPE_STRING),
                 'address': openapi.Schema(type=openapi.TYPE_STRING),
                 'role': openapi.Schema(type=openapi.TYPE_STRING),
@@ -384,7 +384,6 @@ class SetUserCoverView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'auth_token': openapi.Schema(type=openapi.TYPE_STRING),
                 'cover': openapi.Schema(type=openapi.TYPE_OBJECT)
             }
         ),

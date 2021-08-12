@@ -35,6 +35,7 @@ from contracts import (
     EXCHANGE,
     WETH_CONTRACT
 )
+from dds.rates.api import get_decimals
 
 
 transfer_tx = openapi.Response(
@@ -251,7 +252,10 @@ class SaveCollectionView(APIView):
     def post(self, request):
         collection = Collection()
         media = request.FILES.get('avatar')
-        ipfs = send_to_ipfs(media)
+        if media:
+            ipfs = send_to_ipfs(media)
+        else:
+            ipfs = None
         collection.save_in_db(request, ipfs)
         response_data = CollectionSlimSerializer(collection).data
         return Response(response_data, status=status.HTTP_200_OK)
@@ -388,10 +392,10 @@ class GetView(APIView):
                 return Response({'error': "this token doesn't belong to you"}, status=status.HTTP_400_BAD_REQUEST)
 
         if request_data.get('price'):
-            request_data['price'] = int(request_data['price'] * DECIMALS[request_data.get('currency')])
+            request_data['price'] = int(request_data['price'] * get_decimals(request_data.get('currency')))
 
         if request_data.get('minimal_bid'):
-            request_data['minimal_bid'] = int(float(request_data['minimal_bid']) * DECIMALS[request_data.get('currency')])
+            request_data['minimal_bid'] = int(float(request_data['minimal_bid']) * get_decimals(request_data.get('currency')))
             print('minimal bid 1:', request_data['minimal_bid'])
 
         if token.standart == 'ERC1155':
@@ -482,6 +486,10 @@ class GetHotView(APIView):
     @swagger_auto_schema(
         operation_description="get hot tokens",
         responses={200: TokenFullSerializer(many=True)},
+        manual_parameters=[
+        openapi.Parameter('sort', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        openapi.Parameter('tag', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        ]
     )
     def get(self, request, page):
         sort = request.query_params.get('sort', 'recent')
@@ -619,6 +627,15 @@ class BuyTokenView(APIView):
                             'please contact us through support form', status=status.HTTP_400_BAD_REQUEST)
         token_amount = int(request.data.get('tokenAmount'))
 
+        if tradable_token.selling is False:
+            return Response('token not selling', status=status.HTTP_403_FORBIDDEN)
+        
+        if tradable_token.standart == 'ERC721' and token_amount != 0:
+            return Response('wrong token amount', status=status.HTTP_400_BAD_REQUEST)
+            
+        elif tradable_token.standart == 'ERC1155' and token_amount == 0:
+            return Response('wrong token amount', status=status.HTTP_400_BAD_REQUEST) 
+
         buyer = request.user
         try:
             if seller_id:
@@ -635,15 +652,6 @@ class BuyTokenView(APIView):
             return Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
 
         master_account = MasterUser.objects.get()
-
-        if tradable_token.selling is False:
-            return Response('token not selling', status=status.HTTP_403_FORBIDDEN)
-        
-        if tradable_token.standart == 'ERC721' and token_amount != 0:
-            return Response('wrong token amount', status=status.HTTP_400_BAD_REQUEST)
-            
-        elif tradable_token.standart == 'ERC1155' and token_amount == 0:
-            return Response('wrong token amount', status=status.HTTP_400_BAD_REQUEST) 
     
         buy = tradable_token.buy_token(token_amount, buyer, master_account, seller)
 
@@ -667,7 +675,6 @@ class MakeBid(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'auth_token': openapi.Schema(type=openapi.TYPE_STRING),
                 'token_id': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'amount': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'quantity': openapi.Schema(type=openapi.TYPE_NUMBER)
@@ -678,12 +685,12 @@ class MakeBid(APIView):
     def post(self, request):
         request_data = request.data
         token_id = request_data.get('token_id')
-        amount = request_data.get('amount')
-        quantity = request_data.get('quantity')
+        amount = int(request_data.get('amount'))
+        quantity = int(request_data.get('quantity'))
 
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
         weth_contract = web3.eth.contract(
-            address=web3.toChecksumAddress(WETH_CONTRACT_ADDRESS), abi=WETH_CONTRACT)
+            address=web3.toChecksumAddress(WETH_ADDRESS), abi=WETH_CONTRACT)
 
         user = request.user
 
@@ -739,7 +746,7 @@ def get_bids(request, token_id):
         token = Token.objects.get(id=token_id)
     except ObjectDoesNotExist:
         return Response({'error': 'token not found'}, status=status.HTTP_400_BAD_REQUEST)
-    if token.sell_status != token.SellStatus.AUCTION:
+    if token.is_auc_selling:
         return Response({'error': 'token is not set on auction'}, status=status.HTTP_400_BAD_REQUEST)
     user = request.user
     if token.owner != user:
@@ -857,7 +864,8 @@ class ReportView(APIView):
             type=openapi.TYPE_OBJECT,
             properties={
                 'page': openapi.Schema(type=openapi.TYPE_STRING),
-                'message': openapi.Schema(type=openapi.TYPE_STRING)
+                'message': openapi.Schema(type=openapi.TYPE_STRING),
+                'token': openapi.Schema(type=openapi.TYPE_STRING)
             }
         ),
         responses={200: 'your report sent to admin', 400: 'report not sent to admin'}
@@ -901,7 +909,6 @@ class SetCoverView(APIView):
             type=openapi.TYPE_OBJECT,
             properties={
                 'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'auth_token': openapi.Schema(type=openapi.TYPE_STRING),
                 'cover': openapi.Schema(type=openapi.TYPE_OBJECT)
             }
         ),
@@ -933,6 +940,13 @@ def get_fee(request):
 
 
 @api_view(http_method_names=['GET'])
+def get_favorites(request):
+    token_list = Token.objects.filter(is_favorite=True).order_by("-updated_at")
+    response_data = TokenSerializer(token_list, many=True).data
+    return Response(response_data, status=status.HTTP_200_OK)
+
+
+@api_view(http_method_names=['GET'])
 def get_hot_bids(request):
     bids = Bid.objects.filter(state=Status.COMMITTED).order_by('-id')[:6]
     token_list= [bid.token for bid in bids]
@@ -948,7 +962,8 @@ class SupportView(APIView):
             type=openapi.TYPE_OBJECT,
             properties={
                 'email': openapi.Schema(type=openapi.TYPE_STRING),
-                'message': openapi.Schema(type=openapi.TYPE_STRING)
+                'message': openapi.Schema(type=openapi.TYPE_STRING),
+                'token': openapi.Schema(type=openapi.TYPE_STRING)
             }
         ),
         responses={200: 'your report sent to admin', 400: 'report not sent to admin'}
