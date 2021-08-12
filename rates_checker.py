@@ -17,12 +17,6 @@ from dds.settings import RATES_CHECKER_TIMEOUT
 API_URL = 'https://api.coingecko.com/api/v3/coins/{coin_code}'
 
 
-QUERY_TSYMS = {
-    "WETH": "weth",
-    "ETC": "ethereum-chain-token",
-    "USDC": "usd-coin",
-    "LESS": "less-network",
-}
 QUERY_FSYM = 'usd'
 
 
@@ -46,8 +40,8 @@ if __name__ == '__main__':
         usd_rates = []
 
         try:
-            for tsym, tsym_code in QUERY_TSYMS.items():
-                usd_rates.append(get_rate(tsym_code))
+            for rate in UsdRate.objects.all():
+                usd_rates.append(get_rate(rate.coin_node))
         except Exception as e:
             print('\n'.join(traceback.format_exception(*sys.exc_info())), flush=True)
             time.sleep(RATES_CHECKER_TIMEOUT)
