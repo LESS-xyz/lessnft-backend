@@ -19,14 +19,9 @@ class ActivityView(APIView):
     '''
     @swagger_auto_schema(
         operation_description="get activity",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'address': openapi.Schema(type=openapi.TYPE_STRING)
-            }
-        ),
         manual_parameters=[
             openapi.Parameter('type', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter('page', openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
         ]
     )
     def get(self, request):
@@ -84,7 +79,7 @@ class ActivityView(APIView):
 
 class UserActivityView(APIView):
     '''
-    View for get activities and filter by types
+    View for get users activities and filter by types
     '''
     @swagger_auto_schema(
         operation_description="get user activity",
@@ -96,6 +91,7 @@ class UserActivityView(APIView):
         ),
         manual_parameters=[
             openapi.Parameter('type', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter('page', openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
         ]
     )
     def get(self, request, address):
@@ -125,7 +121,6 @@ class UserActivityView(APIView):
         activities = list()
 
         if types:
-            activities = list()
             for param, method in token_transfer_methods.items():
                 if param in types:
                     items  = TokenHistory.objects.filter(
