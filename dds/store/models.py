@@ -209,7 +209,7 @@ class Token(models.Model):
                                 null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
     minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
                                       null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
-    currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None)
+    currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None, blank=True)
     owner = models.ForeignKey('accounts.AdvUser', on_delete=models.PROTECT, related_name='%(class)s_owner', null=True, blank=True)
     owners = models.ManyToManyField('accounts.AdvUser', through='Ownership', null=True)
     creator = models.ForeignKey('accounts.AdvUser', on_delete=models.PROTECT, related_name='%(class)s_creator')
@@ -272,10 +272,7 @@ class Token(models.Model):
         )
         currency_symbol = request.data.get("currency")
         if currency_symbol:
-            cur = UsdRate.objects.filter(symbol=currency_symbol)
-            currency = None
-            if cur:
-                currency = cur
+            currency = UsdRate.objects.filter(symbol=currency_symbol).first()
 
         if self.standart == 'ERC721':
             self.currency = currency
