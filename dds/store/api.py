@@ -18,6 +18,15 @@ from dds.store.models import Token, Collection, Ownership
 from dds.store.serializers import TokenSerializer, CollectionSearchSerializer
 
 
+def token_is_selling(token) -> bool:
+    if token.standart=="ERC721":
+        return token.is_selling or token.is_auc_selling
+    return Ownership.objects.filter(token=token).filter(
+        Q(is_selling=True) |
+        Q(is_auc_selling=True)
+    ).exists()
+
+
 def token_sort_price(token, reverse=False):
     if token.standart=="ERC721":
         return token.price if token.price else token.minimal_bid
@@ -31,7 +40,6 @@ def token_sort_likes(token, reverse=False):
 
 
 def token_search(words, page, **kwargs):
-    # TODO: move filters to custom QuerySet
     words = words.split(' ')
     is_verified = kwargs.get("is_verified")
     max_price = kwargs.get("max_price")
@@ -51,17 +59,7 @@ def token_search(words, page, **kwargs):
         ) 
 
     if on_sale:
-        new_tokens = set()
-        for token in tokens:
-            if token.standart=="ERC721":
-                if token.is_selling or token.is_auc_selling:
-                    new_tokens.add(token)
-            elif Ownership.objects.filter(token=token).filter(
-                Q(is_selling=True) |
-                Q(is_auc_selling=True)
-            ).exists():
-                new_tokens.add(token)
-        tokens = list(new_tokens)
+        tokens = filter(token_is_selling, tokens)
 
     if max_price:
         ownerships = Ownership.objects.filter(token__in=tokens)
@@ -70,7 +68,11 @@ def token_search(words, page, **kwargs):
             Q(minimal_bid__lte=max_price)
         )
         token_ids = ownerships.values_list("token").distinct()
-        token_ids.extend(tokens.values_list("id").distinct())
+        token_list = tokens.filter(
+            Q(price__lte=max_price) |
+            Q(minimal_bid__lte=max_price)
+        )
+        token_ids.extend(token_list.values_list("id").distinct())
         tokens = Token.objects.filter(token_id__in=token_ids)
     
     if order_by is not None:
