@@ -3,6 +3,7 @@ import requests
 from web3 import Web3
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import get_connection
+from django.db.models import Q
 
 from dds.settings import (
     EMAIL_HOST, 
@@ -13,18 +14,84 @@ from dds.settings import (
     CAPTCHA_SECRET, 
     CAPTCHA_URL
 )
-from dds.store.models import Token, Collection
+from dds.store.models import Token, Collection, Ownership
 from dds.store.serializers import TokenSerializer, CollectionSearchSerializer
 
 
-def token_search(words, page):
+def token_is_selling(token) -> bool:
+    if token.standart=="ERC721":
+        return token.is_selling or token.is_auc_selling
+    return Ownership.objects.filter(token=token).filter(
+        Q(is_selling=True) |
+        Q(is_auc_selling=True)
+    ).exists()
+
+
+def token_sort_price(token, reverse=False):
+    if token.standart=="ERC721":
+        return token.price if token.price else token.minimal_bid
+    if reverse:
+        return max(token.ownership_set.values_list("get_price", flat=True))
+    return min(token.ownership_set.values_list("get_price", flat=True))
+
+
+def token_sort_likes(token, reverse=False):
+    return token.useraction_set.filter(method="like").count()
+
+
+def token_search(words, page, **kwargs):
     words = words.split(' ')
+    is_verified = kwargs.get("is_verified")
+    max_price = kwargs.get("max_price")
+    order_by = kwargs.get("order_by")
+    on_sale = kwargs.get("on_sale")
 
     tokens = Token.objects.all()
 
     for word in words:
         tokens = tokens.filter(name__icontains=word)
+    
+    if is_verified is not None:
+        is_verified = is_verified[0]
+        tokens = tokens.filter(
+            Q(owner__is_verificated=is_verified) | 
+            Q(owners__is_verificated=is_verified)
+        ) 
 
+    if on_sale:
+        tokens = filter(token_is_selling, tokens)
+
+    if max_price:
+        ownerships = Ownership.objects.filter(token__in=tokens)
+        ownerships = ownerships.filter(
+            Q(price__lte=max_price) |
+            Q(minimal_bid__lte=max_price)
+        )
+        token_ids = ownerships.values_list("token").distinct()
+        token_list = tokens.filter(
+            Q(price__lte=max_price) |
+            Q(minimal_bid__lte=max_price)
+        )
+        token_ids.extend(token_list.values_list("id").distinct())
+        tokens = Token.objects.filter(token_id__in=token_ids)
+    
+    if order_by is not None:
+        order_by = order_by[0]
+    reverse = False
+    if order_by.startswith("-"):
+        order_by = order_by[1:]
+        reverse = True
+    
+    if order_by == "date":
+        tokens = tokens.order_by("updated_at")
+        if reverse:
+            tokens = tokens.reverse()
+    elif order_by == "price":
+        tokens = sorted(tokens, key=token_sort_price, reverse=reverse)
+    elif order_by == "likes":
+        tokens = sorted(tokens, key=token_sort_likes, reverse=reverse)
+
+    page = int(page)
     start = (page - 1) * 50
     end = page * 50 if len(tokens) >= page * 50 else None
     return TokenSerializer(tokens[start:end], many=True).data

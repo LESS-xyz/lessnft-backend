@@ -193,6 +193,7 @@ class TokenSerializer(serializers.ModelSerializer):
             "details",
             "royalty",
             "selling",
+            "updated_at",
         )
         
     def get_royalty(self, obj):

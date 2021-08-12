@@ -248,7 +248,6 @@ class Token(models.Model):
             ).exists()
         return self.selling and not self.price and self.currency
 
-
     def __str__(self):
         return self.name
 
@@ -488,6 +487,12 @@ class Ownership(models.Model):
                                 null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
     minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
                                 null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
+
+    @property
+    def get_price(self):
+        if self.price:
+            return self.price
+        return self.minimal_bid
 
 
 class Tags(models.Model):

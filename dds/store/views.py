@@ -2,7 +2,7 @@ from dds.accounts.models import AdvUser, MasterUser
 from dds.activity.models import BidsHistory, ListingHistory, UserAction
 from dds.consts import DECIMALS
 from dds.settings import *
-from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid)
+from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid, token_search, collection_search)
 from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs
 
 from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token
@@ -29,6 +29,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from web3 import HTTPProvider, Web3
 
+from dds.accounts.api import user_search
 from dds.settings import NETWORK_SETTINGS, WETH_ADDRESS
 from contracts import (
     EXCHANGE,
@@ -123,10 +124,10 @@ class SearchView(APIView):
         request_data = request.data
         words = request_data.get('text')
         page = request_data.get('page')
-        sort = request.query_params.get('type', 'items')
+        params = request.query_params
+        sort = params.get('type', 'items')
 
-
-        search_result = globals()[SEARCH_TYPES[sort] + '_search'](words, page)
+        search_result = globals()[SEARCH_TYPES[sort] + '_search'](words, page, **params)
 
         return Response(search_result, status=status.HTTP_200_OK)
 
