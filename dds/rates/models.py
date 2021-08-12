@@ -4,7 +4,7 @@ from dds.consts import MAX_AMOUNT_LEN
 
 from web3 import Web3, HTTPProvider
 from dds.settings import NETWORK_SETTINGS
-from contracts import WETH_CONTRACT
+from contracts import WETH_ABI
 
 
 class UsdRate(models.Model):
@@ -30,6 +30,6 @@ class UsdRate(models.Model):
     def set_decimals(self) -> None:
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
         address = web3.toChecksumAddress(self.address)
-        contract = web3.eth.contract(address=address, abi=WETH_CONTRACT)
+        contract = web3.eth.contract(address=address, abi=WETH_ABI)
         self.decimal = contract.functions.decimals().call()
         self.save()
