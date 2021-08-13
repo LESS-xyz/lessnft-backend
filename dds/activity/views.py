@@ -54,30 +54,30 @@ class ActivityView(APIView):
                 if param in types:
                     items = TokenHistory.objects.filter(method=method).order_by(
                         "-date"
-                    )[start:end]
+                    )[:end]
                     activities.extend(items)
             for param, method in action_methods.items():
                 if param in types:
                     items = UserAction.objects.filter(method=method).order_by("-date")[
-                        start:end
+                        :end
                     ]
                     activities.extend(items)
             for param, method in bids_methods.items():
                 if param in types:
                     items = BidsHistory.objects.filter(method=method).order_by("-date")[
-                        start:end
+                        :end
                     ]
                     activities.extend(items)
         else:
-            actions = UserAction.objects.all().order_by("-date")[start:end]
+            actions = UserAction.objects.all().order_by("-date")[:end]
             activities.extend(actions)
             history = TokenHistory.objects.exclude(
                 Q(method="Burn") | Q(method="Transfer")
-            ).order_by("-date")[start:end]
+            ).order_by("-date")[:end]
             activities.extend(history)
-            bit = BidsHistory.objects.all().order_by("-date")[start:end]
+            bit = BidsHistory.objects.all().order_by("-date")[:end]
             activities.extend(bit)
-            listing = ListingHistory.objects.all().order_by("-date")[start:end]
+            listing = ListingHistory.objects.all().order_by("-date")[:end]
             activities.extend(listing)
 
         quick_sort(activities)
@@ -133,45 +133,45 @@ class UserActivityView(APIView):
                     items = TokenHistory.objects.filter(
                         Q(new_owner__username=address) | Q(old_owner__username=address),
                         method=method,
-                    ).order_by("-date")[start:end]
+                    ).order_by("-date")[:end]
                     activities.extend(items)
             for param, method in action_methods.items():
                 if param in types:
                     items = UserAction.objects.filter(
                         Q(user__username=address) | Q(whom_follow__username=address),
                         method=method,
-                    ).order_by("-date")[start:end]
+                    ).order_by("-date")[:end]
                     activities.extend(items)
             for param, method in token_methods.items():
                 if param in types:
                     items = TokenHistory.objects.filter(
                         Q(new_owner__username=address),
                         method=method,
-                    ).order_by("-date")[start:end]
+                    ).order_by("-date")[:end]
                     activities.extend(items)
             for param, method in bids_methods.items():
                 if param in types:
                     items = BidsHistory.objects.filter(
                         user__username=address,
                         method=method,
-                    ).order_by("-date")[start:end]
+                    ).order_by("-date")[:end]
                     activities.extend(items)
         else:
             actions = UserAction.objects.filter(
                 Q(user__username=address) | Q(whom_follow__username=address)
-            ).order_by("-date")[start:end]
+            ).order_by("-date")[:end]
             activities.extend(actions)
             history = (
                 TokenHistory.objects.filter(
                     Q(new_owner__username=address) | Q(old_owner__username=address)
                 )
                 .exclude(Q(method="Burn") | Q(method="Transfer"))
-                .order_by("-date")[start:end]
+                .order_by("-date")[:end]
             )
             activities.extend(history)
             listing = ListingHistory.objects.filter(user__username=address).order_by(
                 "-date"
-            )[start:end]
+            )[:end]
             activities.extend(listing)
 
         quick_sort(activities)
@@ -233,7 +233,7 @@ class FollowingActivityView(APIView):
                         Q(new_owner__id__in=following_ids)
                         | Q(old_owner__id__in=following_ids),
                         method=method,
-                    ).order_by("-date")[start:end]
+                    ).order_by("-date")[:end]
                     activities.extend(items)
             for param, method in action_methods.items():
                 if param in types:
@@ -241,26 +241,26 @@ class FollowingActivityView(APIView):
                         Q(user__id__in=following_ids)
                         | Q(whom_follow__id__in=following_ids),
                         method=method,
-                    ).order_by("-date")[start:end]
+                    ).order_by("-date")[:end]
                     activities.extend(items)
             for param, method in token_methods.items():
                 if param in types:
                     items = TokenHistory.objects.filter(
                         Q(new_owner__id__in=following_ids),
                         method=method,
-                    ).order_by("-date")[start:end]
+                    ).order_by("-date")[:end]
                     activities.extend(items)
             for param, method in bids_methods.items():
                 if param in types:
                     items = BidsHistory.objects.filter(
                         user__id__in=following_ids,
                         method=method,
-                    ).order_by("-date")[start:end]
+                    ).order_by("-date")[:end]
                     activities.extend(items)
         else:
             actions = UserAction.objects.filter(
                 Q(user__id__in=following_ids) | Q(whom_follow__id__in=following_ids)
-            ).order_by("-date")[start:end]
+            ).order_by("-date")[:end]
             activities.extend(actions)
             history = (
                 TokenHistory.objects.filter(
@@ -268,12 +268,12 @@ class FollowingActivityView(APIView):
                     | Q(old_owner__id__in=following_ids)
                 )
                 .exclude(Q(method="Burn") | Q(method="Transfer"))
-                .order_by("-date")[start:end]
+                .order_by("-date")[:end]
             )
             activities.extend(history)
             listing = ListingHistory.objects.filter(
                 user__id__in=following_ids
-            ).order_by("-date")[start:end]
+            ).order_by("-date")[:end]
             activities.extend(listing)
 
         quick_sort(activities)
