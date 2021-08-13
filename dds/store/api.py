@@ -37,6 +37,16 @@ def token_selling_filter(is_selling) -> bool:
    return token_filter 
 
 
+def token_currency_filter(currencies) -> bool:
+   def token_filter(token):
+        if token.standart=="ERC721":
+            return token.currency.symbol in currencies
+        return token.ownership_set.filter(
+            currency_symbol__in=currencies
+        ).exists()
+   return token_filter 
+
+
 def token_sort_price(token, reverse=False):
     if token.standart=="ERC721":
         return token.price if token.price else token.minimal_bid
@@ -55,6 +65,7 @@ def token_search(words, page, **kwargs):
     max_price = kwargs.get("max_price")
     order_by = kwargs.get("order_by")
     on_sale = kwargs.get("on_sale")
+    currencies = kwargs.get("currency")
 
     tokens = Token.objects.all()
 
@@ -68,6 +79,12 @@ def token_search(words, page, **kwargs):
             Q(owner__is_verificated=is_verified) | 
             Q(owners__is_verificated=is_verified)
         ) 
+
+    if currencies is not None:
+        currencies = currencies.split(",")
+        currency_filter = token_currency_filter(currencies)
+        tokens = filter(currency_filter, tokens)
+        tokens = list(tokens)
 
     if on_sale is not None:
         on_sale = on_sale[0]
