@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
     Process(target=scaner, args=(ERC1155_FABRIC_CONTRACT, None, 'fabric')).start()
 
-    collections = Collection.objects.filter(standart='ERC1155')
+    collections = Collection.objects.filter(standart='ERC1155', address__isnull=False)
     for i in collections:
         contract = i.get_contract()
         Process(target=scaner, args=(contract,)).start()

@@ -176,7 +176,6 @@ class CreateView(APIView):
             return Response({'name': 'name already used'}, status=status.HTTP_400_BAD_REQUEST)
 
         ipfs = create_ipfs(request)
-        ipfs = get_ipfs_by_hash(ipfs)["media"]
         if standart == 'ERC721':
             signature = sign_message(['address', 'string'], [token_collection.address, ipfs])
             amount = 1

@@ -112,6 +112,13 @@ class Collection(models.Model):
             initial_tx = myContract.functions.mint( ipfs, signature).buildTransaction(tx_params)
         else:
             initial_tx = myContract.functions.mint( int(amount), ipfs, signature).buildTransaction(tx_params)
+        #Just for tests
+        '''
+        signed_tx = web3.eth.account.sign_transaction(initial_tx,'92cf3cee409da87ce5eb2137f2befce69d4ebaab14f898a8211677d77f91e6b0')
+        tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
+        return tx_hash.hex()
+        '''
+        
         return initial_tx
 
     @classmethod

@@ -264,10 +264,10 @@ class GetUserCollections(APIView):
     )
     def get(self, request, param):
         try:
-            if string[:2] == '0x':
-                user = AdvUser.objects.get(username=string)
+            if param[:2] == '0x':
+                user = AdvUser.objects.get(username=param)
             else:
-                user = AdvUser.objects.get(auth_token=string)
+                user = AdvUser.objects.get(auth_token=param)
 
         except:
             return Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)

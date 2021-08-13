@@ -12,7 +12,7 @@ from local_settings import (
 )
 
 from dds.store.models import *
-from dds.store.services.ipfs import get_ipfs
+from dds.store.services.ipfs import get_ipfs, get_ipfs_by_hash
 from dds.activity.models import BidsHistory, TokenHistory
 from dds.accounts.models import AdvUser
 from dds.settings import NETWORK_SETTINGS
@@ -155,7 +155,12 @@ def mint_transfer(latest_block, smart_contract):
         new_owner = AdvUser.objects.filter(username=new_owner_address)
         if not new_owner.exists():
             new_owner = [None]
-        ipfs = get_ipfs(token_id, coll_addr, contract_standart)["media"]
+        ipfs = get_ipfs(token_id, collection.address, contract_standart)
+        try:
+            ipfs = get_ipfs_by_hash(ipfs[6:])
+            ipfs=ipfs['media']
+        except:
+            continue
         
         token = Token.objects.filter(
             ipfs=ipfs, 
@@ -264,7 +269,7 @@ def mint_transfer(latest_block, smart_contract):
 
     save_last_block(
         latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH, 
-        f'MINT_TRANSFER_LAST_BLOCK_{smart_contract.name}',
+        f'MINT_TRANSFER_LAST_BLOCK_{collection.name}',
     )
     time.sleep(HOLDERS_CHECK_TIMEOUT)
 

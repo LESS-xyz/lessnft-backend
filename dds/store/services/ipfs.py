@@ -33,12 +33,12 @@ def get_ipfs(token_id, address, standart) -> dict:
     :param address: contract address
     :param standart: token standart
     """
-    if token_id:
+    if token_id != None:
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS["ETH"]["endpoint"]))
         if standart == "ERC721":
-            abi = ERC721_MAIN["abi"]
+            abi = ERC721_MAIN
         else:
-            abi = ERC1155_MAIN["abi"]
+            abi = ERC1155_MAIN
         myContract = web3.eth.contract(
             address=web3.toChecksumAddress(address),
             abi=abi,
