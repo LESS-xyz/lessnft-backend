@@ -68,6 +68,10 @@ class ActivityView(APIView):
                         :end
                     ]
                     activities.extend(items)
+            if "list" in types:
+                listing = ListingHistory.objects.all() \
+                    .order_by("-date")[start:end]
+                activities.extend(listing)
         else:
             actions = UserAction.objects.all().order_by("-date")[:end]
             activities.extend(actions)
@@ -156,6 +160,10 @@ class UserActivityView(APIView):
                         method=method,
                     ).order_by("-date")[:end]
                     activities.extend(items)
+            if "list" in types:
+                listing = ListingHistory.objects.filter(
+                    user__address=address,
+                ).order_by("-date")[:end]
         else:
             actions = UserAction.objects.filter(
                 Q(user__username=address) | Q(whom_follow__username=address)
@@ -173,6 +181,8 @@ class UserActivityView(APIView):
                 "-date"
             )[:end]
             activities.extend(listing)
+            bit = BidsHistory.objects.filter(user__username=address).order_by("-date")[:end]
+            activities.extend(bit)
 
         quick_sort(activities)
         response_data = get_activity_response(activities)[start:end]
@@ -257,6 +267,10 @@ class FollowingActivityView(APIView):
                         method=method,
                     ).order_by("-date")[:end]
                     activities.extend(items)
+            if "list" in types:
+                listing = ListingHistory.objects.filter(
+                    user__id__in=following_ids,
+                ).order_by("-date")[:end]
         else:
             actions = UserAction.objects.filter(
                 Q(user__id__in=following_ids) | Q(whom_follow__id__in=following_ids)
@@ -275,6 +289,8 @@ class FollowingActivityView(APIView):
                 user__id__in=following_ids
             ).order_by("-date")[:end]
             activities.extend(listing)
+            bit = BidsHistory.objects.filter(user__id__in=following_ids).order_by("-date")[:end]
+            activities.extend(bit)
 
         quick_sort(activities)
         response_data = get_activity_response(activities)[start:end]
