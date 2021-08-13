@@ -167,6 +167,100 @@ class UserActivityView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
+class FollowingActivityView(APIView):
+    '''
+    View for get user following activities and filter by types
+    '''
+    @swagger_auto_schema(
+        operation_description="get user activity",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'address': openapi.Schema(type=openapi.TYPE_STRING)
+            }
+        ),
+        manual_parameters=[
+            openapi.Parameter('type', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter('page', openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
+        ]
+    )
+    def get(self, request, address):
+        types = request.query_params.get("type")
+        page = int(request.query_params.get("page"))
+
+        start = (page - 1) * 50
+        end = page * 50
+
+        token_transfer_methods = {
+            'purchase': 'Buy',
+            'sale': 'Buy',
+            'transfer': 'Transfer',
+        }
+        action_methods = {
+            'like': 'like',
+            'follow': 'follow',
+        }
+        token_methods = {
+            'mint': 'Mint',
+            'burn': 'Burn',
+        }
+        bids_methods = {
+            'bids': 'Bet',
+        }
+
+        activities = list()
+
+        following = UserAction.objects.filter(
+            method="follow", 
+            user__username=address,
+        ).values("whom_follow")
+
+        if types:
+            for param, method in token_transfer_methods.items():
+                if param in types:
+                    items  = TokenHistory.objects.filter(
+                        Q(new_owner__username__in=following) | Q(old_owner__username__in=following),
+                        method=method,
+                    )
+                    activities.extend(items)
+            for param, method in action_methods.items():
+                if param in types:
+                    items  = UserAction.objects.filter(
+                        Q(user__username__in=following) | Q(whom_follow__username__in=following),
+                        method=method,
+                    )
+                    activities.extend(items)
+            for param, method in token_methods.items():
+                if param in types:
+                    items  = TokenHistory.objects.filter(
+                        Q(new_owner__username__in=following),
+                        method=method,
+                    )
+                    activities.extend(items)
+            for param, method in bids_methods.items():
+                if param in types:
+                    items  = BidsHistory.objects.filter(
+                    user__username__in=following,
+                        method=method,
+                    )
+                    activities.extend(items)
+        else:
+            actions = UserAction.objects.filter(
+                Q(user__username__in=following) | Q(whom_follow__username__in=following)
+            )
+            activities.extend(actions)
+            history = TokenHistory.objects.filter(
+                Q(new_owner__username__in=following) | Q(old_owner__username__in=following)
+            ).exclude(Q(method='Burn') | Q(method='Transfer'))
+            activities.extend(history)
+            listing = ListingHistory.objects.filter(user__username__in=following)
+            activities.extend(listing)
+
+        quick_sort(activities)
+        response_data = get_activity_response(activities)[start:end]
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
 class GetBestDealView(APIView):
 
     def get(self, request, days):
