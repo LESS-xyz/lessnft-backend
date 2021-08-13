@@ -96,10 +96,6 @@ class UserActivityView(APIView):
 
     @swagger_auto_schema(
         operation_description="get user activity",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={"address": openapi.Schema(type=openapi.TYPE_STRING)},
-        ),
         manual_parameters=[
             openapi.Parameter("type", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
@@ -195,10 +191,6 @@ class FollowingActivityView(APIView):
 
     @swagger_auto_schema(
         operation_description="get user activity",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={"address": openapi.Schema(type=openapi.TYPE_STRING)},
-        ),
         manual_parameters=[
             openapi.Parameter("type", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
