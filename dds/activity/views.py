@@ -221,58 +221,58 @@ class FollowingActivityView(APIView):
 
         activities = list()
 
-        following = UserAction.objects.filter(
+        following_ids = UserAction.objects.filter(
             method="follow",
             user__username=address,
-        ).values("whom_follow")
+        ).values_list("whom_follow_id", flat=True)
 
         if types:
             for param, method in token_transfer_methods.items():
                 if param in types:
                     items = TokenHistory.objects.filter(
-                        Q(new_owner__username__in=following)
-                        | Q(old_owner__username__in=following),
+                        Q(new_owner__id__in=following_ids)
+                        | Q(old_owner__id__in=following_ids),
                         method=method,
                     ).order_by("-date")[start:end]
                     activities.extend(items)
             for param, method in action_methods.items():
                 if param in types:
                     items = UserAction.objects.filter(
-                        Q(user__username__in=following)
-                        | Q(whom_follow__username__in=following),
+                        Q(user__id__in=following_ids)
+                        | Q(whom_follow__id__in=following_ids),
                         method=method,
                     ).order_by("-date")[start:end]
                     activities.extend(items)
             for param, method in token_methods.items():
                 if param in types:
                     items = TokenHistory.objects.filter(
-                        Q(new_owner__username__in=following),
+                        Q(new_owner__id__in=following_ids),
                         method=method,
                     ).order_by("-date")[start:end]
                     activities.extend(items)
             for param, method in bids_methods.items():
                 if param in types:
                     items = BidsHistory.objects.filter(
-                        user__username__in=following,
+                        user__id__in=following_ids,
                         method=method,
                     ).order_by("-date")[start:end]
                     activities.extend(items)
         else:
             actions = UserAction.objects.filter(
-                Q(user__username__in=following) | Q(whom_follow__username__in=following)
+                Q(user__id__in=following_ids) | Q(whom_follow__id__in=following_ids)
             ).order_by("-date")[start:end]
             activities.extend(actions)
             history = (
                 TokenHistory.objects.filter(
-                    Q(new_owner__username__in=following)
-                    | Q(old_owner__username__in=following)
+                    Q(new_owner__id__in=following_ids)
+                    | Q(old_owner__id__in=following_ids)
                 )
                 .exclude(Q(method="Burn") | Q(method="Transfer"))
                 .order_by("-date")[start:end]
             )
             activities.extend(history)
             listing = ListingHistory.objects.filter(
-                user__username__in=following
+                user__id__in=following_ids
             ).order_by("-date")[start:end]
             activities.extend(listing)
 
