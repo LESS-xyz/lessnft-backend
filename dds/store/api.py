@@ -81,7 +81,6 @@ def token_search(words, page, **kwargs):
         ) 
 
     if currencies is not None:
-        currencies = currencies.split(",")
         currency_filter = token_currency_filter(currencies)
         tokens = filter(currency_filter, tokens)
         tokens = list(tokens)
