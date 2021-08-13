@@ -4,6 +4,7 @@ from string import ascii_letters
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from dds.utilities import get_page_slice
 from dds.accounts.models import AdvUser
 from dds.accounts.serializers import UserSearchSerializer, FollowerSerializer
 from dds.activity.models import UserAction
@@ -27,8 +28,7 @@ def user_search(words, page):
         users = users.filter(display_name__icontains=word)
 
     print(users.__dict__)
-    start = (page - 1) * 50
-    end = page * 50 if len(users) >= page * 50 else None
+    start, end = get_page_slice(page, len(users))
     return UserSearchSerializer(users[start:end], many=True).data
 
 

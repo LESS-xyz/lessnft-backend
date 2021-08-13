@@ -16,7 +16,7 @@ from dds.store.serializers import (
     BetSerializer,
     BidSerializer,
 )
-from dds.utilities import sign_message
+from dds.utilities import sign_message, get_page_slice
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
 from django.db.models import Exists, OuterRef, Q
@@ -278,8 +278,7 @@ class GetOwnedView(APIView):
 
         tokens = Token.objects.filter(Q(owner=user) | Q(owners=user)).exclude(status=Status.BURNED).order_by('-id')
 
-        start = (page - 1) * 50
-        end = page * 50 if len(tokens) >= page * 50 else None
+        start, end = get_page_slice(page, len(tokens))
 
         token_list = tokens[start:end]
         response_data = TokenSerializer(token_list, many=True).data
@@ -303,8 +302,7 @@ class GetCreatedView(APIView):
 
         tokens = Token.objects.filter(creator=user).exclude(status=Status.BURNED).order_by('-id')
 
-        start = (page - 1) * 50
-        end = page * 50 if len(tokens) >= page * 50 else None
+        start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
         response_data = TokenSerializer(token_list, many=True).data
         return Response(response_data, status=status.HTTP_200_OK)
@@ -333,8 +331,7 @@ class GetLikedView(APIView):
         
         tokens = [action.token for action in tokens_action]
 
-        start = (page - 1) * 50
-        end = page * 50 if len(tokens) >= page * 50 else None
+        start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
         response_data = TokenSerializer(token_list, many=True).data
         return Response(response_data, status=status.HTTP_200_OK)
@@ -505,8 +502,7 @@ class GetHotView(APIView):
             tokens = tokens.exclude(price=None).exclude(selling=False).exclude(status=Status.BURNED)
         length = tokens.count()
 
-        start = (page - 1) * 50
-        end = page * 50 if len(tokens) >= page * 50 else None
+        start, end = get_page_slice(page, len(tokens))
 
         token_list = tokens[start:end]
         response_data = TokenFullSerializer(token_list, many=True).data
@@ -548,8 +544,7 @@ class GetCollectionView(APIView):
 
         tokens = Token.objects.filter(collection=collection).exclude(status=Status.BURNED)
 
-        start = (page - 1) * 50
-        end = page * 50 if len(tokens) >= page * 50 else None
+        start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
         response_data = CollectionSerializer(collection, context={"tokens": token_list}).data
         return Response(response_data, status=status.HTTP_200_OK)

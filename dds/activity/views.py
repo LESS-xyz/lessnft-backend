@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from dds.utilities import get_page_slice
 from dds.consts import DECIMALS
 from .models import BidsHistory, ListingHistory, TokenHistory, UserAction
 from .utils import quick_sort
@@ -29,8 +30,7 @@ class ActivityView(APIView):
         types = request.query_params.get("type")
         page = int(request.query_params.get("page"))
 
-        start = (page - 1) * 50
-        end = page * 50
+        start, end = get_page_slice(page)
 
         history_methods = {
             "purchase": "Buy",
@@ -109,8 +109,7 @@ class UserActivityView(APIView):
         types = request.query_params.get("type")
         page = int(request.query_params.get("page"))
 
-        start = (page - 1) * 50
-        end = page * 50
+        start, end = get_page_slice(page)
 
         token_transfer_methods = {
             "purchase": "Buy",
@@ -209,8 +208,7 @@ class FollowingActivityView(APIView):
         types = request.query_params.get("type")
         page = int(request.query_params.get("page"))
 
-        start = (page - 1) * 50
-        end = page * 50
+        start, end = get_page_slice(page)
 
         token_transfer_methods = {
             "purchase": "Buy",

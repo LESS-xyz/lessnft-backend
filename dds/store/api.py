@@ -14,6 +14,7 @@ from dds.settings import (
     CAPTCHA_SECRET, 
     CAPTCHA_URL
 )
+from dds.utilities import get_page_slice
 from dds.store.models import Token, Collection, Ownership
 from dds.store.serializers import TokenSerializer, CollectionSearchSerializer
 
@@ -105,8 +106,7 @@ def token_search(words, page, **kwargs):
         tokens = sorted(tokens, key=token_sort_likes, reverse=reverse)
 
     page = int(page)
-    start = (page - 1) * 50
-    end = page * 50 if len(tokens) >= page * 50 else None
+    start, end = get_page_slice(page, len(tokens))
     return TokenSerializer(tokens[start:end], many=True).data
 
 
@@ -118,8 +118,7 @@ def collection_search(words, page):
     for word in words:
         collections = collections.filter(name__icontains=word)
 
-    start = (page - 1) * 50
-    end = page * 50 if len(collections) >= page * 50 else None
+    start, end = get_page_slice(page, len(collections))
     return CollectionSearchSerializer(collections[start:end]).data
     
 
