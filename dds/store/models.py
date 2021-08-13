@@ -243,7 +243,7 @@ class Token(models.Model):
                 price__isnull=False,
                 currency__isnull=False,
             ).exists()
-        return self.selling and self.price and self.currency
+        return bool(self.selling and self.price and self.currency)
 
     @property
     def is_auc_selling(self):
@@ -253,7 +253,7 @@ class Token(models.Model):
                 price__isnull=True,
                 currency__isnull=False,
             ).exists()
-        return self.selling and not self.price and self.currency
+        return bool(self.selling and not self.price and self.currency)
 
     def __str__(self):
         return self.name

@@ -7,215 +7,292 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from dds.utilities import get_page_slice
 from dds.consts import DECIMALS
 from .models import BidsHistory, ListingHistory, TokenHistory, UserAction
 from .utils import quick_sort
+from .api import get_activity_response
 
 
-class GetActivityView(APIView):
-    '''
-    View for activity page
-    '''
+class ActivityView(APIView):
+    """
+    View for get activities and filter by types
+    """
 
     @swagger_auto_schema(
         operation_description="get activity",
+        manual_parameters=[
+            openapi.Parameter("type", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
+        ],
+    )
+    def get(self, request):
+        types = request.query_params.get("type")
+        page = int(request.query_params.get("page"))
+
+        start, end = get_page_slice(page)
+
+        history_methods = {
+            "purchase": "Buy",
+            "sale": "Buy",
+            "transfer": "Transfer",
+            "mint": "Mint",
+            "burn": "Burn",
+        }
+        action_methods = {
+            "like": "like",
+            "follow": "follow",
+        }
+        bids_methods = {
+            "bids": "Bet",
+        }
+
+        activities = list()
+
+        if types:
+            for param, method in history_methods.items():
+                if param in types:
+                    items = TokenHistory.objects.filter(method=method).order_by(
+                        "-date"
+                    )[:end]
+                    activities.extend(items)
+            for param, method in action_methods.items():
+                if param in types:
+                    items = UserAction.objects.filter(method=method).order_by("-date")[
+                        :end
+                    ]
+                    activities.extend(items)
+            for param, method in bids_methods.items():
+                if param in types:
+                    items = BidsHistory.objects.filter(method=method).order_by("-date")[
+                        :end
+                    ]
+                    activities.extend(items)
+            if "list" in types:
+                listing = ListingHistory.objects.all() \
+                    .order_by("-date")[start:end]
+                activities.extend(listing)
+        else:
+            actions = UserAction.objects.all().order_by("-date")[:end]
+            activities.extend(actions)
+            history = TokenHistory.objects.exclude(
+                Q(method="Burn") | Q(method="Transfer")
+            ).order_by("-date")[:end]
+            activities.extend(history)
+            bit = BidsHistory.objects.all().order_by("-date")[:end]
+            activities.extend(bit)
+            listing = ListingHistory.objects.all().order_by("-date")[:end]
+            activities.extend(listing)
+
+        quick_sort(activities)
+        response_data = get_activity_response(activities)[start:end]
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class UserActivityView(APIView):
+    """
+    View for get users activities and filter by types
+    """
+
+    @swagger_auto_schema(
+        operation_description="get user activity",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
-            properties={
-                'address': openapi.Schema(type=openapi.TYPE_STRING)
-            }
+            properties={"address": openapi.Schema(type=openapi.TYPE_STRING)},
         ),
         manual_parameters=[
-            openapi.Parameter('type', openapi.IN_QUERY, type=openapi.TYPE_STRING),
-        ]
+            openapi.Parameter("type", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
+        ],
     )
-    def post(self, request, page):
+    def get(self, request, address):
+        types = request.query_params.get("type")
+        page = int(request.query_params.get("page"))
 
-        address = request.data.get('address')
-        if request.query_params:
-            query = request.query_params['type']
-        else:
-            query = None
+        start, end = get_page_slice(page)
 
-        start = (page - 1) * 50
-        end = page * 50
+        token_transfer_methods = {
+            "purchase": "Buy",
+            "sale": "Buy",
+            "transfer": "Transfer",
+        }
+        action_methods = {
+            "like": "like",
+            "follow": "follow",
+        }
+        token_methods = {
+            "mint": "Mint",
+            "burn": "Burn",
+        }
+        bids_methods = {
+            "bids": "Bet",
+        }
 
-        diff_activity = []
-        print(address)
-        if query:
-            print('query:', query)
-            if 'purchase' in query or 'sale' in query:
-                print('sale!')
-                if address:
-                    buy  = TokenHistory.objects.filter(
+        activities = list()
+
+        if types:
+            for param, method in token_transfer_methods.items():
+                if param in types:
+                    items = TokenHistory.objects.filter(
                         Q(new_owner__username=address) | Q(old_owner__username=address),
-                        method='Buy',
-                    ).order_by('-date')[start:end]
-                else:
-                    buy  = TokenHistory.objects.filter(method='Buy').order_by('-date')[start:end]
-                for item in buy:
-                    diff_activity.append(item)
-
-            if 'transfer' in query:
-                print('transter!')
-                if address:
-                    transfer = TokenHistory.objects.filter(
-                        Q(new_owner__username=address) | Q(old_owner__username=address),
-                        method='Transfer',
-                    ).order_by('-date')[start:end]
-                else:
-                    transfer = TokenHistory.objects.filter(method='Transfer').order_by('-date')[start:end]
-                for item in transfer:
-                    diff_activity.append(item)
-
-            if 'like' in query:
-                print('like!')
-                if address:
-                    print(1)
-                    like = UserAction.objects.filter(
+                        method=method,
+                    ).order_by("-date")[:end]
+                    activities.extend(items)
+            for param, method in action_methods.items():
+                if param in types:
+                    items = UserAction.objects.filter(
                         Q(user__username=address) | Q(whom_follow__username=address),
-                        method='like',
-                    ).order_by('-date')[start:end]
-                    print(like.all())
-                else:
-                    print(2)
-                    like = UserAction.objects.filter(method='like').order_by('-date')[start:end]
-                    print(like.all())
-                for item in like:
-                    diff_activity.append(item)
-
-            if 'follow' in query:
-                print('follow!')
-                if address:
-                    follow = UserAction.objects.filter(
-                        Q(user__username=address) | Q(whom_follow__username=address),
-                        method='follow',
-                    ).order_by('-date')[start:end]
-                else:
-                    follow = UserAction.objects.filter(method='follow').order_by('-date')[start:end]
-                for item in follow:
-                    diff_activity.append(item)
-            if 'mint' in query:
-                print('mint!')
-                if address:
-                    mint = TokenHistory.objects.filter(
+                        method=method,
+                    ).order_by("-date")[:end]
+                    activities.extend(items)
+            for param, method in token_methods.items():
+                if param in types:
+                    items = TokenHistory.objects.filter(
                         Q(new_owner__username=address),
-                        method='Mint',
-                    ).order_by('-date')[start:end]
-                else:
-                    mint = TokenHistory.objects.filter(method='Mint').order_by('-date')[start:end]
-                for item in mint:
-                    diff_activity.append(item)
-            if 'burn' in query:
-                print('burn!')
-                if address:
-                    burn = TokenHistory.objects.filter(
-                        Q(new_owner__username=address),
-                        method='Burn',
-                    ).order_by('-date')[start:end]
-                else:
-                    burn = TokenHistory.objects.filter(method='Burn').order_by('-date')[start:end]
-                for item in burn:
-                    diff_activity.append(item)
-            if 'bids' in query:
-                print('Bid!')
-                if address:
-                    bid = BidsHistory.objects.filter(
+                        method=method,
+                    ).order_by("-date")[:end]
+                    activities.extend(items)
+            for param, method in bids_methods.items():
+                if param in types:
+                    items = BidsHistory.objects.filter(
                         user__username=address,
-                        method='Bet'
-                    ).order_by('-date')[start:end]
-                else:
-                    bid = BidsHistory.objects.filter(
-                        method='Bet'
-                    ).order_by('-date')[start:end]
-                for item in bid:
-                    diff_activity.append(item)
-            if 'list' in query:
-                print('Listing!')
-                if address:
-                    listing = ListingHistory.objects.filter(
-                        user__username=address,
-                    ).order_by('-date')[start:end]
-                else:
-                    listing = ListingHistory.objects.all() \
-                        .order_by('-date')[start:end]
-                for item in listing:
-                    diff_activity.append(item)
+                        method=method,
+                    ).order_by("-date")[:end]
+                    activities.extend(items)
+            if "list" in types:
+                listing = ListingHistory.objects.filter(
+                    user__address=address,
+                ).order_by("-date")[:end]
         else:
-            print('query:', query)
-            if address:
-                actions = UserAction.objects.filter(
-                        Q(user__username=address) | Q(whom_follow__username=address)
-                    )[start:end]
-                diff_activity.extend(actions)
-                history = TokenHistory.objects.filter(
-                        Q(new_owner__username=address) | Q(old_owner__username=address)
-                    ).exclude(Q(method='Burn') | Q(method='Transfer'))[start:end]
-                diff_activity.extend(history)
-                listing = ListingHistory.objects.filter(user__username=address)[start:end]
-                diff_activity.extend(listing)
-            else:
-                actions = UserAction.objects.all().order_by('-date')[start:end]
-                diff_activity.extend(actions)
-                history = TokenHistory.objects.exclude(Q(method='Burn') | Q(method='Transfer')).order_by('-date')[start:end]
-                diff_activity.extend(history)
-                bit = BidsHistory.objects.all().order_by('-date')[start:end]
-                diff_activity.extend(bit)
-                listing = ListingHistory.objects.all().order_by('-date')[start:end]
-                diff_activity.extend(listing)
-        print(len(diff_activity))
-        quick_sort(diff_activity)
-        print(len(diff_activity))
+            actions = UserAction.objects.filter(
+                Q(user__username=address) | Q(whom_follow__username=address)
+            ).order_by("-date")[:end]
+            activities.extend(actions)
+            history = (
+                TokenHistory.objects.filter(
+                    Q(new_owner__username=address) | Q(old_owner__username=address)
+                )
+                .exclude(Q(method="Burn") | Q(method="Transfer"))
+                .order_by("-date")[:end]
+            )
+            activities.extend(history)
+            listing = ListingHistory.objects.filter(user__username=address).order_by(
+                "-date"
+            )[:end]
+            activities.extend(listing)
+            bit = BidsHistory.objects.filter(user__username=address).order_by("-date")[:end]
+            activities.extend(bit)
 
-        sorted_activity = []
+        quick_sort(activities)
+        response_data = get_activity_response(activities)[start:end]
+        return Response(response_data, status=status.HTTP_200_OK)
 
-        for activ in diff_activity:
-            try:
-                user_from = getattr(activ, 'user')
-            except AttributeError:
-                user_from = getattr(activ, 'old_owner')
 
-            try:
-                user_to = getattr(activ, 'whom_follow')
-            except AttributeError:
-                try:
-                    user_to = getattr(activ, 'new_owner')
-                except AttributeError:
-                    user_to = None
-            try:
-                price = getattr(activ, 'price')
-            except AttributeError:
-                price = ''
+class FollowingActivityView(APIView):
+    """
+    View for get user following activities and filter by types
+    """
 
-            if price:
-                price = price / activ.token.currency.get_decimals
+    @swagger_auto_schema(
+        operation_description="get user activity",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={"address": openapi.Schema(type=openapi.TYPE_STRING)},
+        ),
+        manual_parameters=[
+            openapi.Parameter("type", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
+        ],
+    )
+    def get(self, request, address):
+        types = request.query_params.get("type")
+        page = int(request.query_params.get("page"))
 
-            try:
-                quantity = getattr(activ, 'quantity')
-            except AttributeError:
-                quantity = None
+        start, end = get_page_slice(page)
 
-            item = {
-                'token_id': activ.token.id if activ.token else None,
-                'token_image': activ.token.media,
-                'token_name': activ.token.name if activ.token else None,
-                'method': activ.method,
-                'from_id': user_from.id if user_from else None,
-                'from_image': user_from.avatar if user_from else None,
-                'from_address': user_from.username if user_from else None,
-                'from_name': user_from.display_name if user_from else None,
-                'to_id': user_to.id if user_to else None,
-                'to_image': user_to.avatar if user_to else None,
-                'to_address': user_to.username if user_to else None,
-                'to_name': user_to.display_name if user_to else None,
-                'date': activ.date,
-                'price': price,
-                'quantity': quantity
-            }
-            if item not in sorted_activity:
-                sorted_activity.append(item)
-        print(len(sorted_activity))
-        return Response(sorted_activity, status=status.HTTP_200_OK)
+        token_transfer_methods = {
+            "purchase": "Buy",
+            "sale": "Buy",
+            "transfer": "Transfer",
+        }
+        action_methods = {
+            "like": "like",
+            "follow": "follow",
+        }
+        token_methods = {
+            "mint": "Mint",
+            "burn": "Burn",
+        }
+        bids_methods = {
+            "bids": "Bet",
+        }
+
+        activities = list()
+
+        following_ids = UserAction.objects.filter(
+            method="follow",
+            user__username=address,
+        ).values_list("whom_follow_id", flat=True)
+
+        if types:
+            for param, method in token_transfer_methods.items():
+                if param in types:
+                    items = TokenHistory.objects.filter(
+                        Q(new_owner__id__in=following_ids)
+                        | Q(old_owner__id__in=following_ids),
+                        method=method,
+                    ).order_by("-date")[:end]
+                    activities.extend(items)
+            for param, method in action_methods.items():
+                if param in types:
+                    items = UserAction.objects.filter(
+                        Q(user__id__in=following_ids)
+                        | Q(whom_follow__id__in=following_ids),
+                        method=method,
+                    ).order_by("-date")[:end]
+                    activities.extend(items)
+            for param, method in token_methods.items():
+                if param in types:
+                    items = TokenHistory.objects.filter(
+                        Q(new_owner__id__in=following_ids),
+                        method=method,
+                    ).order_by("-date")[:end]
+                    activities.extend(items)
+            for param, method in bids_methods.items():
+                if param in types:
+                    items = BidsHistory.objects.filter(
+                        user__id__in=following_ids,
+                        method=method,
+                    ).order_by("-date")[:end]
+                    activities.extend(items)
+            if "list" in types:
+                listing = ListingHistory.objects.filter(
+                    user__id__in=following_ids,
+                ).order_by("-date")[:end]
+        else:
+            actions = UserAction.objects.filter(
+                Q(user__id__in=following_ids) | Q(whom_follow__id__in=following_ids)
+            ).order_by("-date")[:end]
+            activities.extend(actions)
+            history = (
+                TokenHistory.objects.filter(
+                    Q(new_owner__id__in=following_ids)
+                    | Q(old_owner__id__in=following_ids)
+                )
+                .exclude(Q(method="Burn") | Q(method="Transfer"))
+                .order_by("-date")[:end]
+            )
+            activities.extend(history)
+            listing = ListingHistory.objects.filter(
+                user__id__in=following_ids
+            ).order_by("-date")[:end]
+            activities.extend(listing)
+            bit = BidsHistory.objects.filter(user__id__in=following_ids).order_by("-date")[:end]
+            activities.extend(bit)
+
+        quick_sort(activities)
+        response_data = get_activity_response(activities)[start:end]
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class GetBestDealView(APIView):

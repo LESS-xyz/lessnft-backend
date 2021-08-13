@@ -14,17 +14,27 @@ from dds.settings import (
     CAPTCHA_SECRET, 
     CAPTCHA_URL
 )
+from dds.utilities import get_page_slice
 from dds.store.models import Token, Collection, Ownership
 from dds.store.serializers import TokenSerializer, CollectionSearchSerializer
 
 
-def token_is_selling(token) -> bool:
-    if token.standart=="ERC721":
-        return token.is_selling or token.is_auc_selling
-    return Ownership.objects.filter(token=token).filter(
-        Q(is_selling=True) |
-        Q(is_auc_selling=True)
-    ).exists()
+def token_selling_filter(is_selling) -> bool:
+   def token_filter(token):
+        if token.standart=="ERC721":
+            if is_selling:
+                return token.is_selling or token.is_auc_selling
+            return not token.is_selling and not token.is_auc_selling 
+        if is_selling:
+            return Ownership.objects.filter(token=token).filter(
+                Q(is_selling=True) |
+                Q(is_auc_selling=True)
+            ).exists()
+        return Ownership.objects.filter(token=token).filter(
+            is_selling=True, 
+            is_auc_selling=True,
+        ).exists()
+   return token_filter 
 
 
 def token_sort_price(token, reverse=False):
@@ -53,13 +63,17 @@ def token_search(words, page, **kwargs):
     
     if is_verified is not None:
         is_verified = is_verified[0]
+        is_verified = is_verified.lower()=="true"
         tokens = tokens.filter(
             Q(owner__is_verificated=is_verified) | 
             Q(owners__is_verificated=is_verified)
         ) 
 
-    if on_sale:
-        tokens = filter(token_is_selling, tokens)
+    if on_sale is not None:
+        on_sale = on_sale[0]
+        selling_filter = token_selling_filter(on_sale.lower()=="true")
+        tokens = filter(selling_filter, tokens)
+        tokens = list(tokens)
 
     if max_price:
         ownerships = Ownership.objects.filter(token__in=tokens)
@@ -78,7 +92,7 @@ def token_search(words, page, **kwargs):
     if order_by is not None:
         order_by = order_by[0]
     reverse = False
-    if order_by.startswith("-"):
+    if order_by and order_by.startswith("-"):
         order_by = order_by[1:]
         reverse = True
     
@@ -92,8 +106,7 @@ def token_search(words, page, **kwargs):
         tokens = sorted(tokens, key=token_sort_likes, reverse=reverse)
 
     page = int(page)
-    start = (page - 1) * 50
-    end = page * 50 if len(tokens) >= page * 50 else None
+    start, end = get_page_slice(page, len(tokens))
     return TokenSerializer(tokens[start:end], many=True).data
 
 
@@ -105,8 +118,7 @@ def collection_search(words, page):
     for word in words:
         collections = collections.filter(name__icontains=word)
 
-    start = (page - 1) * 50
-    end = page * 50 if len(collections) >= page * 50 else None
+    start, end = get_page_slice(page, len(collections))
     return CollectionSearchSerializer(collections[start:end]).data
     
 
