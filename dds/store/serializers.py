@@ -187,6 +187,7 @@ class TokenSerializer(serializers.ModelSerializer):
             "currency",
             "USD_price",
             "owners",
+            "standart",
             "creator",
             "collection",
             "description",

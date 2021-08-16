@@ -224,7 +224,6 @@ class Token(models.Model):
     name = models.CharField(max_length=200, unique=True)
     tx_hash = models.CharField(max_length=200, null=True, blank=True)
     ipfs = models.CharField(max_length=200, null=True, default=None)
-    standart = models.CharField(max_length=10, choices=[('ERC721', 'ERC721'), ('ERC1155', 'ERC1155')])
     total_supply = models.PositiveIntegerField(validators=[validate_nonzero])
     price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
                                 null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
@@ -251,6 +250,10 @@ class Token(models.Model):
         if ipfs:
             return get_media_from_ipfs(ipfs)
         return None
+
+    @property
+    def standart(self):
+        return self.collection.standart
 
     @property
     def is_selling(self):

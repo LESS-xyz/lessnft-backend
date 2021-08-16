@@ -29,7 +29,7 @@ class TokenAdmin(admin.ModelAdmin):
     image_preview.short_description = 'Preview'
     list_display = ('name', 'collection', 'standart', 'is_favorite')
     list_editable = ('is_favorite', )
-    list_filter = ('standart', 'is_favorite')
+    list_filter = ('is_favorite', )
     search_fields = ['name', 'collections']
 
 
