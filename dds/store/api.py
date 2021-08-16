@@ -58,6 +58,7 @@ def token_sort_updated_at(token, reverse=False):
 
 def token_search(words, page, **kwargs):
     words = words.split(' ')
+    tags = kwargs.get("tags")
     is_verified = kwargs.get("is_verified")
     max_price = kwargs.get("max_price")
     order_by = kwargs.get("order_by")
@@ -68,6 +69,12 @@ def token_search(words, page, **kwargs):
 
     for word in words:
         tokens = tokens.filter(name__icontains=word)
+
+    if tags is not None:
+        tags = tags[0].split(",")
+        tokens = tokens.filter(
+            tags__name__in=tags
+        ).distinct()
     
     if is_verified is not None:
         is_verified = is_verified[0]
@@ -78,6 +85,7 @@ def token_search(words, page, **kwargs):
         ) 
 
     if currencies is not None:
+        currencies = currencies[0].split(",")
         currency_filter = token_currency_filter(currencies)
         tokens = filter(currency_filter, tokens)
         tokens = list(tokens)
