@@ -272,7 +272,10 @@ class GetUserCollections(APIView):
         except:
             return Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        collections = Collection.objects.filter(name__in=('DDS-721', 'DDS-1155')).filter(status__iexact='Committed')
+        collections = Collection.objects.filter(name__in=(
+            COLLECTION_721, 
+            COLLECTION_1155,
+        )).filter(status__iexact='Committed')
         collections |= Collection.objects.filter(creator=user).filter(status__iexact='Committed')
         response_data = UserCollectionSerializer(collections, many=True).data
         return Response({'collections': response_data}, status=status.HTTP_200_OK)
