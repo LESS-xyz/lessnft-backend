@@ -4,11 +4,30 @@ from django.forms import CheckboxSelectMultiple
 from dds.store.models import Token, Collection, Tags, Ownership
 from django.utils.safestring import mark_safe
 
+
+class TokenStandartFilter(admin.SimpleListFilter):
+    title = 'token standart'
+    parameter_name = 'token_standart'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('ERC721', 'ERC721'),
+            ('ERC1155', 'ERC1155'),
+        )
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value == 'ERC721':
+            return queryset.filter(collection__standart="ERC721")
+        elif value == 'ERC1155':
+            return queryset.filter(collection__standart="ERC1155")
+        return queryset
+
+
 class TokenInline(admin.TabularInline):
     model = Token
     readonly_fields = ('id',)
     extra = 0
-
 
 
 class TokenAdmin(admin.ModelAdmin):
@@ -29,7 +48,7 @@ class TokenAdmin(admin.ModelAdmin):
     image_preview.short_description = 'Preview'
     list_display = ('name', 'collection', 'standart', 'is_favorite')
     list_editable = ('is_favorite', )
-    list_filter = ('is_favorite', )
+    list_filter = ('is_favorite', TokenStandartFilter)
     search_fields = ['name', 'collections']
 
 
