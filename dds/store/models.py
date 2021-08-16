@@ -33,7 +33,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework import status
 from dds.consts import DECIMALS
-from .services.ipfs import get_ipfs
+from .services.ipfs import get_ipfs, get_ipfs_by_hash
 from contracts import (
     ERC721_FABRIC,
     ERC1155_FABRIC,
@@ -147,6 +147,20 @@ class Collection(models.Model):
                 address=web3.toChecksumAddress(ERC721_FABRIC_ADDRESS),
                 abi=ERC721_FABRIC,
             )
+            '''
+            # JUST FOR TESTS
+            tx = myContract.functions.makeERC721(
+                name,
+                symbol,
+                baseURI,
+                SIGNER_ADDRESS,
+                signature
+            ).buildTransaction(tx_params)
+            signed_tx = web3.eth.account.sign_transaction(tx,'92cf3cee409da87ce5eb2137f2befce69d4ebaab14f898a8211677d77f91e6b0')
+            tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
+            return tx_hash.hex()
+            '''
+
             return myContract.functions.makeERC721(
                 name, 
                 symbol, 
@@ -233,7 +247,10 @@ class Token(models.Model):
 
     @property
     def media(self):
-        return get_media_from_ipfs(self.ipfs)
+        ipfs = get_ipfs_by_hash(self.ipfs).get("media")
+        if ipfs:
+            return get_media_from_ipfs(ipfs)
+        return None
 
     @property
     def is_selling(self):
@@ -279,7 +296,7 @@ class Token(models.Model):
         )
         currency_symbol = request.data.get("currency")
         if currency_symbol:
-            currency = UsdRate.objects.filter(symbol=currency_symbol).first()
+            currency = UsdRate.objects.filter(symbol__iexact=currency_symbol).first()
 
         if self.standart == 'ERC721':
             self.currency = currency

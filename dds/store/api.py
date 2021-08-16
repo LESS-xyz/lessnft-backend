@@ -21,32 +21,29 @@ from dds.store.serializers import TokenSerializer, CollectionSearchSerializer
 
 def token_selling_filter(is_selling) -> bool:
    def token_filter(token):
-        if token.standart=="ERC721":
-            if is_selling:
-                return token.is_selling or token.is_auc_selling
-            return not token.is_selling and not token.is_auc_selling 
-        if is_selling:
-            return Ownership.objects.filter(token=token).filter(
-                Q(is_selling=True) |
-                Q(is_auc_selling=True)
-            ).exists()
-        return Ownership.objects.filter(token=token).filter(
-            is_selling=True, 
-            is_auc_selling=True,
-        ).exists()
-   return token_filter 
+       if is_selling:
+           return token.is_selling or token.is_auc_selling
+       return not token.is_selling and not token.is_auc_selling
+   return token_filter
 
 
 def token_sort_price(token, reverse=False):
+    if not (token.is_selling or token.is_auc_selling):
+        return 0
     if token.standart=="ERC721":
         return token.price if token.price else token.minimal_bid
+    owners_price = [owner.get_price for owner in token.ownership_set.all()]    
     if reverse:
-        return max(token.ownership_set.values_list("get_price", flat=True))
-    return min(token.ownership_set.values_list("get_price", flat=True))
+        return max(owners_price)
+    return min(owners_price)
 
 
 def token_sort_likes(token, reverse=False):
     return token.useraction_set.filter(method="like").count()
+
+
+def token_sort_updated_at(token, reverse=False):
+    return token.updated_at
 
 
 def token_search(words, page, **kwargs):
@@ -69,12 +66,6 @@ def token_search(words, page, **kwargs):
             Q(owners__is_verificated=is_verified)
         ) 
 
-    if on_sale is not None:
-        on_sale = on_sale[0]
-        selling_filter = token_selling_filter(on_sale.lower()=="true")
-        tokens = filter(selling_filter, tokens)
-        tokens = list(tokens)
-
     if max_price:
         ownerships = Ownership.objects.filter(token__in=tokens)
         ownerships = ownerships.filter(
@@ -88,6 +79,12 @@ def token_search(words, page, **kwargs):
         )
         token_ids.extend(token_list.values_list("id").distinct())
         tokens = Token.objects.filter(token_id__in=token_ids)
+
+    if on_sale is not None:
+        on_sale = on_sale[0]
+        selling_filter = token_selling_filter(on_sale.lower()=="true")
+        tokens = filter(selling_filter, tokens)
+        tokens = list(tokens)
     
     if order_by is not None:
         order_by = order_by[0]
@@ -97,9 +94,7 @@ def token_search(words, page, **kwargs):
         reverse = True
     
     if order_by == "date":
-        tokens = tokens.order_by("updated_at")
-        if reverse:
-            tokens = tokens.reverse()
+        tokens = sorted(tokens, key=token_sort_updated_at, reverse=reverse)
     elif order_by == "price":
         tokens = sorted(tokens, key=token_sort_price, reverse=reverse)
     elif order_by == "likes":

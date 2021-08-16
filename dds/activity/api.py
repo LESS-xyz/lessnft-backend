@@ -28,7 +28,7 @@ def get_activity_response(activities):
 
         item = {
             "token_id": activ.token.id if activ.token else None,
-            "token_image": activ.token.media,
+            "token_image": activ.token.media if activ.token else None,
             "token_name": activ.token.name if activ.token else None,
             "method": activ.method,
             "from_id": user_from.id if user_from else None,

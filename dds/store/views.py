@@ -148,6 +148,7 @@ class CreateView(APIView):
                 'currency': openapi.Schema(type=openapi.TYPE_STRING),
                 'description': openapi.Schema(type=openapi.TYPE_STRING),
                 'price': openapi.Schema(type=openapi.TYPE_NUMBER),
+                'minimal_bid': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'creator_royalty': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'collection': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'details': openapi.Schema(type=openapi.TYPE_OBJECT),
@@ -683,13 +684,11 @@ class MakeBid(APIView):
         quantity = int(request_data.get('quantity'))
 
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
-        weth_contract = web3.eth.contract(
-            address=web3.toChecksumAddress(WETH_ADDRESS), abi=WETH_CONTRACT)
 
         user = request.user
 
         #returns True if OK, or error message
-        result = validate_bid(user, token_id, amount, weth_contract, quantity)
+        result = validate_bid(user, token_id, amount, WETH_CONTRACT, quantity)
 
         if result == 'OK':
             #create new bid or update old one
@@ -760,10 +759,6 @@ class VerificateBetView(APIView):
     def get(self, request, token_id):
         print('virificate!')
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
-        weth_contract = web3.eth.contract(
-            address=web3.toChecksumAddress(WETH_CONTRACT_ADDRESS),
-            abi=WETH_CONTRACT
-        )
 
         bets = Bid.objects.filter(token__id=token_id).order_by('-amount')
         max_bet = bets.first()
@@ -776,7 +771,7 @@ class VerificateBetView(APIView):
         amount = max_bet.amount
         quantity = max_bet.quantity
 
-        check_valid = validate_bid(user, token_id, amount, weth_contract, quantity)
+        check_valid = validate_bid(user, token_id, amount, WETH_CONTRACT, quantity)
 
         if check_valid == 'OK':
             print('all ok!')
@@ -789,7 +784,7 @@ class VerificateBetView(APIView):
                 user = bet.user
                 amount = bet.amount
                 quantity = bet.quantity
-                check_valid = validate_bid(user, token_id, amount, weth_contract, quantity)
+                check_valid = validate_bid(user, token_id, amount, WETH_CONTRACT, quantity)
                 if check_valid == 'OK':
                     print('again ok!')
                     return Response(

@@ -144,7 +144,7 @@ def mint_transfer(latest_block, smart_contract):
         tx_hash = event['transactionHash'].hex()
 
         token_id = event['args'].get('tokenId')
-        if not token_id:
+        if token_id is None:
             token_id = event['args'].get('id')
         logging.info('token id:', token_id)
         
@@ -157,11 +157,9 @@ def mint_transfer(latest_block, smart_contract):
             new_owner = [None]
         ipfs = get_ipfs(token_id, collection.address, contract_standart)
         try:
-            ipfs = get_ipfs_by_hash(ipfs[6:])
-            ipfs=ipfs['media']
+            ipfs = ipfs[6:]
         except:
             continue
-        
         token = Token.objects.filter(
             ipfs=ipfs, 
             collection=collection,

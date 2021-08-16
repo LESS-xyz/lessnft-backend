@@ -8,6 +8,7 @@ class TokenHistorySerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
     price = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = TokenHistory
@@ -25,6 +26,9 @@ class TokenHistorySerializer(serializers.ModelSerializer):
 
     def get_name(self, obj):
         return obj.new_owner.get_name()
+
+    def get_avatar(self, obj):
+        return obj.new_owner.avatar
 
     def get_price(self, obj):
         if obj.price:
