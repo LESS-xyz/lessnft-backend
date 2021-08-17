@@ -1,5 +1,6 @@
 import json
 import requests
+from decimal import Decimal
 from web3 import Web3
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import get_connection
@@ -65,7 +66,7 @@ def token_search(words, page, **kwargs):
     on_sale = kwargs.get("on_sale")
     currencies = kwargs.get("currency")
 
-    tokens = Token.objects.all()
+    tokens = Token.objects.all().select_related("currency", "owner")
 
     for word in words:
         tokens = tokens.filter(name__icontains=word)
@@ -84,6 +85,22 @@ def token_search(words, page, **kwargs):
             Q(owners__is_verificated=is_verified)
         ) 
 
+    if max_price:
+        max_price = Decimal(max_price[0])
+        ownerships = Ownership.objects.filter(token__in=tokens)
+        ownerships = ownerships.filter(
+            Q(price__lte=max_price) |
+            Q(minimal_bid__lte=max_price)
+        )
+        token_ids = list()
+        token_ids.extend(ownerships.values_list("token_id", flat=True).distinct())
+        token_list = tokens.filter(
+            Q(price__lte=max_price) |
+            Q(minimal_bid__lte=max_price)
+        )
+        token_ids.extend(token_list.values_list("id", flat=True).distinct())
+        tokens = Token.objects.filter(id__in=token_ids)
+
     if currencies is not None:
         currencies = currencies[0].split(",")
         currency_filter = token_currency_filter(currencies)
@@ -95,20 +112,6 @@ def token_search(words, page, **kwargs):
         selling_filter = token_selling_filter(on_sale.lower()=="true")
         tokens = filter(selling_filter, tokens)
         tokens = list(tokens)
-
-    if max_price:
-        ownerships = Ownership.objects.filter(token__in=tokens)
-        ownerships = ownerships.filter(
-            Q(price__lte=max_price) |
-            Q(minimal_bid__lte=max_price)
-        )
-        token_ids = ownerships.values_list("token").distinct()
-        token_list = tokens.filter(
-            Q(price__lte=max_price) |
-            Q(minimal_bid__lte=max_price)
-        )
-        token_ids.extend(token_list.values_list("id").distinct())
-        tokens = Token.objects.filter(token_id__in=token_ids)
     
     if order_by is not None:
         order_by = order_by[0]

@@ -212,7 +212,7 @@ class TokenSerializer(serializers.ModelSerializer):
         if obj.standart == "ERC721":
             available = 1 if obj.selling else 0
         else:
-            owners = Ownership.objects.filter(token=obj, selling=True)
+            owners = obj.ownership_set.filter(selling=True)
             available = 0
             for owner in owners:
                 available += owner.quantity
