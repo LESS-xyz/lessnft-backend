@@ -127,7 +127,7 @@ class SearchView(APIView):
         params = request.query_params
         sort = params.get('type', 'items')
 
-        search_result = globals()[SEARCH_TYPES[sort] + '_search'](words, page, **params)
+        search_result = globals()[SEARCH_TYPES[sort] + '_search'](words, page, user=request.user, **params)
 
         return Response(search_result, status=status.HTTP_200_OK)
 
@@ -281,7 +281,7 @@ class GetOwnedView(APIView):
         start, end = get_page_slice(page, len(tokens))
 
         token_list = tokens[start:end]
-        response_data = TokenSerializer(token_list, many=True).data
+        response_data = TokenSerializer(token_list, many=True, context={"user": request.user}).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -304,7 +304,7 @@ class GetCreatedView(APIView):
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
-        response_data = TokenSerializer(token_list, many=True).data
+        response_data = TokenSerializer(token_list, many=True, context={"user": request.user}).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -333,7 +333,7 @@ class GetLikedView(APIView):
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
-        response_data = TokenSerializer(token_list, many=True).data
+        response_data = TokenSerializer(token_list, many=True, context={"user": request.user}).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -934,7 +934,7 @@ def get_fee(request):
 @api_view(http_method_names=['GET'])
 def get_favorites(request):
     token_list = Token.objects.filter(is_favorite=True).order_by("-updated_at")
-    response_data = TokenSerializer(token_list, many=True).data
+    response_data = TokenSerializer(token_list, many=True, context={"user": request.user}).data
     return Response(response_data, status=status.HTTP_200_OK)
 
 

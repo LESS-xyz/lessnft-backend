@@ -65,6 +65,7 @@ def token_search(words, page, **kwargs):
     order_by = kwargs.get("order_by")
     on_sale = kwargs.get("on_sale")
     currencies = kwargs.get("currency")
+    user = kwargs.get("user")
 
     tokens = Token.objects.all().select_related("currency", "owner")
 
@@ -129,7 +130,7 @@ def token_search(words, page, **kwargs):
 
     page = int(page)
     start, end = get_page_slice(page, len(tokens))
-    return TokenSerializer(tokens[start:end], many=True).data
+    return TokenSerializer(tokens[start:end], context={"user": user}, many=True).data
 
 
 def collection_search(words, page):

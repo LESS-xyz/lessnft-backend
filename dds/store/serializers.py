@@ -13,6 +13,7 @@ from dds.store.models import (
 from dds.accounts.serializers import CreatorSerializer, UserSerializer
 from dds.activity.serializers import TokenHistorySerializer 
 from dds.accounts.models import MasterUser
+from dds.activity.models import UserAction
 from dds.rates.models import UsdRate
 
 try:
@@ -167,6 +168,7 @@ class TokenSerializer(serializers.ModelSerializer):
     USD_price = serializers.SerializerMethodField()
     owners = serializers.SerializerMethodField()
     royalty = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
     creator = CreatorSerializer()
     collection = CollectionSlimSerializer()
     currency = CurrencySerializer()
@@ -193,6 +195,7 @@ class TokenSerializer(serializers.ModelSerializer):
             "description",
             "details",
             "royalty",
+            "is_liked",
             "selling",
             "updated_at",
         )
@@ -223,6 +226,12 @@ class TokenSerializer(serializers.ModelSerializer):
             return UserSerializer(obj.owner).data
         owners = Ownership.objects.filter(token=obj, selling=True)
         return OwnershipSerializer(owners, many=True).data
+
+    def get_is_liked(self, obj):
+        user = self.context.get("user") 
+        if user:
+            return UserAction.objects.filter(method=like, token=obj, user=user).exists()
+        return False
 
 
 class HotCollectionSerializer(CollectionSlimSerializer):
@@ -303,6 +312,7 @@ class TokenFullSerializer(TokenSerializer):
     like_count = serializers.SerializerMethodField()
     service_fee = serializers.SerializerMethodField()
     owner_auction = serializers.SerializerMethodField()
+    is_liked = serializers.SerializerMethodField()
 
     class Meta(TokenSerializer.Meta):
         fields = TokenSerializer.Meta.fields + (
@@ -313,6 +323,7 @@ class TokenFullSerializer(TokenSerializer):
             "history",
             "sellers",
             "like_count",
+            "is_liked",
             "service_fee",
             "internal_id",
             "owner_auction",
@@ -358,3 +369,9 @@ class TokenFullSerializer(TokenSerializer):
 
     def get_owner_auction(self, obj):
         return obj.get_owner_auction()
+
+    def get_is_liked(self, obj):
+        user = self.context.get("user") 
+        if user:
+            return UserAction.objects.filter(method=like, token=obj, user=user).exists()
+        return False
