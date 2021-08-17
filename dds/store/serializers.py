@@ -230,7 +230,7 @@ class TokenSerializer(serializers.ModelSerializer):
     def get_is_liked(self, obj):
         user = self.context.get("user") 
         if user:
-            return UserAction.objects.filter(method=like, token=obj, user=user).exists()
+            return UserAction.objects.filter(method="like", token=obj, user=user).exists()
         return False
 
 
@@ -373,5 +373,5 @@ class TokenFullSerializer(TokenSerializer):
     def get_is_liked(self, obj):
         user = self.context.get("user") 
         if user:
-            return UserAction.objects.filter(method=like, token=obj, user=user).exists()
+            return UserAction.objects.filter(method="like", token=obj, user=user).exists()
         return False

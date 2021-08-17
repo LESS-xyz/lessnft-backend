@@ -354,7 +354,7 @@ class GetView(APIView):
             return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
         if token.status == Status.BURNED:
             return Response({'error': 'burned'}, status=status.HTTP_404_NOT_FOUND)
-        response_data = TokenFullSerializer(token).data
+        response_data = TokenFullSerializer(token, context={"user": request.user}).data
         return Response(response_data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -444,7 +444,7 @@ class GetView(APIView):
             token.selling = False
             token.save()
 
-        response_data = TokenFullSerializer(token).data
+        response_data = TokenFullSerializer(token, context={"user": request.user}).data
         print('token min bid:', token.minimal_bid)
         try:
             price
@@ -505,7 +505,7 @@ class GetHotView(APIView):
         start, end = get_page_slice(page, len(tokens))
 
         token_list = tokens[start:end]
-        response_data = TokenFullSerializer(token_list, many=True).data
+        response_data = TokenFullSerializer(token_list, context={"user": request.user}, many=True).data
         return Response({'tokens': response_data, 'length': length}, status=status.HTTP_200_OK)
 
 
@@ -942,7 +942,7 @@ def get_favorites(request):
 def get_hot_bids(request):
     bids = Bid.objects.filter(state=Status.COMMITTED).order_by('-id')[:6]
     token_list= [bid.token for bid in bids]
-    response_data = TokenFullSerializer(token_list, many=True).data
+    response_data = TokenFullSerializer(token_list, context={"user": request.user}, many=True).data
     return Response(response_data, status=status.HTTP_200_OK)
 
 
