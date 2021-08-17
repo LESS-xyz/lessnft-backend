@@ -129,7 +129,7 @@ class GetOtherView(APIView):
         try:
             # convert param to int() if it contains only digitts, because string params are not allowed
             # in searching by id field. Numeric custom_urls should be prohibited on frontend
-            id_ = int(param) if param.isdigit() else None
+            id_ = int(param) if isinstance(param, int) or param.isdigit() else None
             user = AdvUser.objects.get(
                 Q(id=id_) | Q(custom_url=param)
             )
@@ -160,7 +160,7 @@ class FollowView(APIView):
         id_ = request_data.get('id')
 
         try:
-            int_id = int(id_) if id_.isdigit() else None
+            int_id = int(id_) if isinstance(id_, int) or id_.isdigit() else None
             user = AdvUser.objects.get(
                 Q(id=int_id) | Q(custom_url=id_)
             )
@@ -199,7 +199,7 @@ class UnfollowView(APIView):
         id_ = request_data.get('id')
         
         try:
-            int_id = int(id_) if id_.isdigit() else None
+            int_id = int(id_) if isinstance(id_, int) or id_.isdigit() else None
             user = AdvUser.objects.get(
                 Q(id=int_id) | Q(custom_url=id_)
             )
@@ -292,7 +292,7 @@ class GetFollowingView(APIView):
 
     def get(self, request, address, page):
         try:
-            id_ = int(address) if address.isdigit() else None
+            id_ = int(address) if isinstance(address, int) or address.isdigit() else None
             user = AdvUser.objects.get(
                 Q(id=id_) | Q(custom_url=address)
             )
@@ -316,7 +316,7 @@ class GetFollowersView(APIView):
 
     def get(self, request, address, page):
         try:
-            id_ = int(address) if address.isdigit() else None
+            id_ = int(address) if isinstance(address, int) or address.isdigit() else None
             user = AdvUser.objects.get(
                 Q(id=id_) | Q(custom_url=address)
             )

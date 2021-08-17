@@ -293,7 +293,7 @@ class Token(models.Model):
         selling = request.data.get('selling')
         self.creator = creator
         self.collection = Collection.objects.get(id=collection)
-        collection_id = int(collection) if collection.isdigit() else None
+        collection_id = int(collection) if isinstance(collection, int) or collection.isdigit() else None
         self.collection = Collection.objects.get(
             Q(id=collection_id) | Q(short_url=collection)
         )

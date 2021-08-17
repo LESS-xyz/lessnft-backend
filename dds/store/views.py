@@ -163,7 +163,10 @@ class CreateView(APIView):
         token_collection_id = request_data.get('collection')
         
         try:
-            int_token_collection_id = int(token_collection_id) if token_collection_id.isdigit() else None
+            if isinstance(token_collection, int) or token_collection_id.isdigit():
+                int_token_collection_id = int(token_collection_id)  
+            else:
+                int_token_collection_id = None
             token_collection = Collection.objects.get(
                 Q(id=int_token_collection_id) | Q(short_url=token_collection_id)
             )
@@ -538,7 +541,7 @@ class GetCollectionView(APIView):
 
     def get(self, request, param, page):
         try:
-            id_ = int(param) if param.isdigit() else None
+            id_ = int(param) if isinstance(param, int) or param.isdigit() else None
             collection = Collection.objects.get(
                 Q(id=id_) | Q(short_url=param)
             )
@@ -637,7 +640,7 @@ class BuyTokenView(APIView):
         buyer = request.user
         try:
             if seller_id:
-                int_id = int(seller_id) if seller_id.isdigit() else None
+                int_id = int(seller_id) if isinstance(seller_id, int) or seller_id.isdigit() else None
                 seller = AdvUser.objects.get(
                     Q(id=int_id) | Q(custom_url=seller_id)
                 )
@@ -910,7 +913,7 @@ class SetCoverView(APIView):
         user = request.user
         collection_id = request.data.get('id')
         try:
-            int_collection_id = int(collection_id) if collection_id.isdigit() else None
+            int_collection_id = int(collection_id) if isinstance(collection_id, int) or collection_id.isdigit() else None
             collection = Collection.objects.get(
                 Q(id=int_collection_id) | Q(short_url=collection_id)
             )
