@@ -109,12 +109,6 @@ def token_search(words, page, **kwargs):
         )
         token_ids.extend(token_list.values_list("id").distinct())
         tokens = Token.objects.filter(token_id__in=token_ids)
-
-    if on_sale is not None:
-        on_sale = on_sale[0]
-        selling_filter = token_selling_filter(on_sale.lower()=="true")
-        tokens = filter(selling_filter, tokens)
-        tokens = list(tokens)
     
     if order_by is not None:
         order_by = order_by[0]
