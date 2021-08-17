@@ -225,10 +225,8 @@ class Token(models.Model):
     tx_hash = models.CharField(max_length=200, null=True, blank=True)
     ipfs = models.CharField(max_length=200, null=True, default=None)
     total_supply = models.PositiveIntegerField(validators=[validate_nonzero])
-    price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
-                                null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
-    minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
-                                      null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
+    currency_price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True)
+    currency_minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True)
     currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None, blank=True)
     owner = models.ForeignKey('accounts.AdvUser', on_delete=models.PROTECT, related_name='%(class)s_owner', null=True, blank=True)
     owners = models.ManyToManyField('accounts.AdvUser', through='Ownership', null=True)
@@ -250,6 +248,26 @@ class Token(models.Model):
         if ipfs:
             return get_media_from_ipfs(ipfs)
         return None
+
+    @property
+    def price(self):
+        if self.currency_price:
+            return int(self.currency_price * self.currency.get_decimals)
+
+    @price.setter
+    def price(self, value):
+        self.currency_price = value
+        self.save()
+
+    @property
+    def minimal_bid(self):
+        if self.currency_minimal_bid:
+            return int(self.currency_minimal_bid * self.currency.get_decimals)
+
+    @minimal_bid.setter
+    def minimal_bid(self, value):
+        self.currency_minimal_bid = value
+        self.save()
 
     @property
     def standart(self):
@@ -310,7 +328,7 @@ class Token(models.Model):
             if request.data.get('minimal_bid'):
                 self.minimal_bid = int(float(request.data.get('minimal_bid')) * self.currency.get_decimals)
             if price:
-                self.price = int(float(price) * self.currency.get_decimals)
+                self.price = float(price)
         else:
             self.full_clean()
             self.save()
@@ -323,7 +341,7 @@ class Token(models.Model):
                 ownership.selling = True
                 self.selling=True
             if price:
-                ownership.price = int(float(price) * self.currency.get_decimals)
+                ownership.price = float(price)
             if self.price:
                 if self.price > ownership.price:
                     self.price = ownership.price
@@ -507,10 +525,28 @@ class Ownership(models.Model):
     currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None)
     quantity = models.PositiveIntegerField(null=True)
     selling = models.BooleanField(default=False)
-    price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
-                                null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
-    minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
-                                null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
+    currency_price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True)
+    currency_minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True)
+
+    @property
+    def price(self):
+        if self.currency_price:
+            return int(self.currency_price * self.currency.get_decimals)
+
+    @price.setter
+    def price(self, value):
+        self.currency_price = value
+        self.save()
+
+    @property
+    def minimal_bid(self):
+        if self.currency_minimal_bid:
+            return int(self.currency_minimal_bid * self.currency.get_decimals)
+
+    @minimal_bid.setter
+    def minimal_bid(self, value):
+        self.currency_minimal_bid = value
+        self.save()
 
     @property
     def get_price(self):
