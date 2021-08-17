@@ -61,6 +61,7 @@ class OwnershipSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "quantity",
+            "currency_price",
             "price",
             "currency",
         )
@@ -163,7 +164,6 @@ class TokenSlimSerializer(serializers.ModelSerializer):
 
 class TokenSerializer(serializers.ModelSerializer):
     available = serializers.SerializerMethodField()
-    price = serializers.SerializerMethodField()
     USD_price = serializers.SerializerMethodField()
     owners = serializers.SerializerMethodField()
     royalty = serializers.SerializerMethodField()
@@ -199,10 +199,6 @@ class TokenSerializer(serializers.ModelSerializer):
         
     def get_royalty(self, obj):
         return obj.creator_royalty
-
-    def get_price(self, obj):
-        if obj.price:
-            return obj.price / obj.currency.get_decimals
 
     def get_USD_price(self, obj):
         if obj.price:
@@ -346,7 +342,7 @@ class TokenFullSerializer(TokenSerializer):
 
     def get_sellers(self, obj):
         sellers = obj.ownership_set.filter(price__isnull=False, selling=True).order_by(
-            "price"
+            "currency_price"
         )
         return OwnershipSerializer(sellers, many=True).data
 

@@ -389,7 +389,7 @@ class GetView(APIView):
                 return Response({'error': "this token doesn't belong to you"}, status=status.HTTP_400_BAD_REQUEST)
 
         if request_data.get('price'):
-            request_data['price'] = int(request_data['price'] * get_decimals(request_data.get('currency')))
+            request_data['price'] = request_data['price'] 
 
         if request_data.get('minimal_bid'):
             request_data['minimal_bid'] = int(float(request_data['minimal_bid']) * get_decimals(request_data.get('currency')))
@@ -397,10 +397,7 @@ class GetView(APIView):
 
         if token.standart == 'ERC1155':
             selling = request_data.pop('selling')
-            if request_data.get('price'):
-                price = request_data.pop('price')
-            else:
-                price = None
+            price = request_data.pop('price', None)
             if request_data.get('minimal_bid'):
                 minimal_bid = float(request_data.pop('minimal_bid'))
                 print('minimal bid 2:', minimal_bid)
