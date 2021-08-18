@@ -46,6 +46,7 @@ from dds.settings import (
 
 class Status(models.TextChoices):
     PENDING = 'Pending'
+
     FAILED = 'Failed'
     COMMITTED = 'Committed'
     BURNED = 'Burned'
@@ -280,7 +281,6 @@ class Token(models.Model):
 
     def save_in_db(self, request, ipfs):
         self.name = request.data.get('name')
-        self.standart = request.data.get('standart')
         self.status = Status.PENDING
         self.total_supply = request.data.get('total_supply')
         self.details = request.data.get('details')
@@ -383,6 +383,10 @@ class Token(models.Model):
                 price = self.price
             else:
                 price = Ownership.objects.get(token=self, owner=seller, selling=True).price
+        if self.standart == 'ERC721':
+            address = self.currency.address
+        else:
+            address = Ownership.objects.get(token=self, owner=seller, selling=True).currency.address
 
         types_list = [
             'bytes32', 
@@ -403,7 +407,7 @@ class Token(models.Model):
             Web3.toChecksumAddress(self.collection.address),
             self.internal_id,
             token_amount,
-            Web3.toChecksumAddress(self.currency.address),
+            Web3.toChecksumAddress(address),
             int(price),
             [
                 Web3.toChecksumAddress(self.creator.username), 
@@ -415,7 +419,7 @@ class Token(models.Model):
             ],
             Web3.toChecksumAddress(buyer.username)
         ]
-        print(values_list)
+        print(f"values_list: {values_list}")
         signature = sign_message(
             types_list,
             values_list
@@ -425,19 +429,19 @@ class Token(models.Model):
 
         data = {
             'idOrder': id_order,
-            'SellerBuyer': [seller_address, buyer.username],
+            'SellerBuyer': [Web3.toChecksumAddress(seller_address), Web3.toChecksumAddress(buyer.username)],
             'tokenToBuy': {
-                'tokenAddress':self.collection.address,
+                'tokenAddress': Web3.toChecksumAddress(self.collection.address),
                 'id': self.internal_id,
                 'amount': token_amount
             },
             'tokenToSell': {
-                'tokenAddress': ERC20_ADDRESS,
+                'tokenAddress': Web3.toChecksumAddress(address),
                 'id': 0,
                 'amount': str(int(price))
             },
             'fee': {
-                'feeAddresses': [self.creator.username, master_account.address],
+                'feeAddresses': [Web3.toChecksumAddress(self.creator.username), Web3.toChecksumAddress(master_account.address)],
                 'feeAmounts': [
                     (int(self.creator_royalty / 100 * float(price))), 
                     (int(master_account.commission / 100 * float(price)))
@@ -445,7 +449,7 @@ class Token(models.Model):
             },
             'signature': signature
         }
-
+        print(f'data: {data}')
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
 
         initial_tx = {

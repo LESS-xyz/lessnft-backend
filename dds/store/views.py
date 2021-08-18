@@ -163,7 +163,7 @@ class CreateView(APIView):
         token_collection_id = request_data.get('collection')
         
         try:
-            if isinstance(token_collection, int) or token_collection_id.isdigit():
+            if isinstance(token_collection_id, int) or token_collection_id.isdigit():
                 int_token_collection_id = int(token_collection_id)  
             else:
                 int_token_collection_id = None
@@ -605,7 +605,8 @@ class BuyTokenView(APIView):
             type=openapi.TYPE_OBJECT,
             properties={
                 'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'tokenAmount': openapi.Schema(type=openapi.TYPE_NUMBER)
+                'tokenAmount': openapi.Schema(type=openapi.TYPE_NUMBER),
+                'sellerId': openapi.Schema(type=openapi.TYPE_STRING),
             }),
         responses={200:buy_token_response, 400:"you cant buy token"}
     )
@@ -616,10 +617,7 @@ class BuyTokenView(APIView):
             token_id = int(request.data.get('id'))
         except TypeError:
             token_id = None
-        try:
-            seller_id = int(request.data.get('sellerId'))
-        except TypeError:
-            seller_id = None
+        seller_id = request.data.get('sellerId')
         tradable_token = Token.objects.get(id=token_id)
         if tradable_token.status == Status.BURNED:
             return Response({'error': 'burned'}, status=status.HTTP_404_NOT_FOUND)

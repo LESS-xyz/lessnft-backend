@@ -7,8 +7,10 @@ from dds.settings import PRIV_KEY
 
 def sign_message(type, message):
     message_hash = Web3.soliditySha3(type, message)
+    print(f'message_hash: {message_hash}')
     signed = Account.signHash(message_hash, PRIV_KEY)
-    print(signed['signature'].hex())
+    print(f"signed: {signed}")
+    print(f" signature: {signed['signature'].hex()}")
     return signed['signature'].hex()
 
 
