@@ -621,6 +621,9 @@ class BuyTokenView(APIView):
         if tradable_token.internal_id is None:
             return Response('token is not validated yet, please wait up to 5 minutes. If problem persists,'
                             'please contact us through support form', status=status.HTTP_400_BAD_REQUEST)
+        if not seller_id and tradable_token.standart == "ERC1155":
+            return Response({'error': "The 'sellerId' field is required for token 1155."}, status=status.HTTP_400_BAD_REQUEST)
+
         token_amount = int(request.data.get('tokenAmount'))
 
         if tradable_token.selling is False:
