@@ -18,6 +18,7 @@ from dds.settings import (
 from dds.utilities import get_page_slice
 from dds.store.models import Token, Collection, Ownership
 from dds.store.serializers import TokenSerializer, CollectionSearchSerializer
+from dds.rates.api import calculate_amount
 
 
 def token_selling_filter(is_selling) -> bool:
@@ -42,11 +43,13 @@ def token_sort_price(token, reverse=False):
     if not (token.is_selling or token.is_auc_selling):
         return 0
     if token.standart=="ERC721":
-        return token.currency_price if token.currency_price else token.minimal_bid
-    owners_price = [owner.get_currency_price for owner in token.ownership_set.all()]    
+        price = token.currency_price if token.currency_price else token.minimal_bid
+        return calculate_amount(price, token.currency.symbol)[0]
+    owners_price = [{"price": owner.get_currency_price, "currency": owner.currency.symbol} for owner in token.ownership_set.all()]
+    prices = [calculate_amount(op.get("price"), op.get("currency"))[0] for op in owners_price]
     if reverse:
-        return max(owners_price)
-    return min(owners_price)
+        return max(prices)
+    return min(prices)
 
 
 def token_sort_likes(token, reverse=False):

@@ -252,23 +252,21 @@ class Token(models.Model):
 
     @property
     def price(self):
-        if self.currency_price:
+        if self.currency_price and self.currency:
             return int(self.currency_price * self.currency.get_decimals)
 
     @price.setter
     def price(self, value):
         self.currency_price = value
-        self.save()
 
     @property
     def minimal_bid(self):
-        if self.currency_minimal_bid:
+        if self.currency_minimal_bid and self.currency:
             return int(self.currency_minimal_bid * self.currency.get_decimals)
 
     @minimal_bid.setter
     def minimal_bid(self, value):
         self.currency_minimal_bid = value
-        self.save()
 
     @property
     def standart(self):
@@ -329,7 +327,7 @@ class Token(models.Model):
             if request.data.get('minimal_bid'):
                 self.minimal_bid = int(float(request.data.get('minimal_bid')) * self.currency.get_decimals)
             if price:
-                self.price = float(price)
+                self.currency_price = Decimal(price)
         else:
             self.full_clean()
             self.save()
@@ -342,14 +340,14 @@ class Token(models.Model):
                 ownership.selling = True
                 self.selling=True
             if price:
-                ownership.price = float(price)
+                ownership.price = Decimal(price)
             if self.price:
                 if self.price > ownership.price:
-                    self.price = ownership.price
+                    self.currency_price = ownership.price
                     self.full_clean()
                     self.save()
             else:
-                self.price = ownership.price
+                self.currency_price = ownership.price
                 self.full_clean()
                 self.save()
             minimal_bid = request.data.get('minimal_bid')
@@ -505,7 +503,7 @@ def token_save_dispatcher(sender, instance, created, **kwargs):
     if instance.standart == 'ERC1155':
         if not Ownership.objects.filter(token=instance).filter(selling=True):
             instance.selling = False
-            instance.price = None
+            instance.currency_price = None
         else:
             instance.selling = True
             try:
@@ -516,9 +514,9 @@ def token_save_dispatcher(sender, instance, created, **kwargs):
                 print(minimal_price)
             except:
                 minimal_price = None
-            instance.price = minimal_price
+            instance.currency_price = minimal_price
         post_save.disconnect(token_save_dispatcher, sender=sender)
-        instance.save(update_fields=['selling', 'price'])
+        instance.save(update_fields=['selling', 'currency_price'])
         post_save.connect(token_save_dispatcher, sender=sender)
 
 post_save.connect(token_save_dispatcher, sender=Token)
@@ -535,23 +533,21 @@ class Ownership(models.Model):
 
     @property
     def price(self):
-        if self.currency_price:
+        if self.currency_price and self.currency:
             return int(self.currency_price * self.currency.get_decimals)
 
     @price.setter
     def price(self, value):
         self.currency_price = value
-        self.save()
 
     @property
     def minimal_bid(self):
-        if self.currency_minimal_bid:
+        if self.currency_minimal_bid and self.currency:
             return int(self.currency_minimal_bid * self.currency.get_decimals)
 
     @minimal_bid.setter
     def minimal_bid(self, value):
         self.currency_minimal_bid = value
-        self.save()
 
     @property
     def get_currency_price(self):
