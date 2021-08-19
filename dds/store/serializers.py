@@ -62,6 +62,7 @@ class OwnershipSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "quantity",
+            "currency_price",
             "price",
             "currency",
         )
@@ -164,11 +165,11 @@ class TokenSlimSerializer(serializers.ModelSerializer):
 
 class TokenSerializer(serializers.ModelSerializer):
     available = serializers.SerializerMethodField()
-    price = serializers.SerializerMethodField()
     USD_price = serializers.SerializerMethodField()
     owners = serializers.SerializerMethodField()
     royalty = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
+    price = serializers.SerializerMethodField()
     creator = CreatorSerializer()
     collection = CollectionSlimSerializer()
     currency = CurrencySerializer()
@@ -203,13 +204,12 @@ class TokenSerializer(serializers.ModelSerializer):
     def get_royalty(self, obj):
         return obj.creator_royalty
 
-    def get_price(self, obj):
-        if obj.price:
-            return obj.price / obj.currency.get_decimals
-
     def get_USD_price(self, obj):
         if obj.price:
             return calculate_amount(obj.price, obj.currency.symbol)[0]
+
+    def get_price(self, obj):
+        return obj.currency_price
 
     def get_available(self, obj):
         if obj.standart == "ERC721":
@@ -335,8 +335,7 @@ class TokenFullSerializer(TokenSerializer):
         return obj.ownership_set.filter(selling=True).exists() 
 
     def get_minimal_bid(self, obj):
-        if obj.minimal_bid:
-            return obj.minimal_bid / obj.currency.get_decimals
+        return obj.currency_minimal_bid
 
     def get_highest_bid(self, obj):
         bids = obj.bid_set.filter(state=Status.COMMITTED).order_by(
@@ -356,8 +355,8 @@ class TokenFullSerializer(TokenSerializer):
         return [tag.name for tag in obj.tags.all()]
 
     def get_sellers(self, obj):
-        sellers = obj.ownership_set.filter(price__isnull=False, selling=True).order_by(
-            "price"
+        sellers = obj.ownership_set.filter(currency_price__isnull=False, selling=True).order_by(
+            "currency_price"
         )
         return OwnershipSerializer(sellers, many=True).data
 

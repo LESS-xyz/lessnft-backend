@@ -18,6 +18,7 @@ from dds.settings import (
 from dds.utilities import get_page_slice
 from dds.store.models import Token, Collection, Ownership
 from dds.store.serializers import TokenSerializer, CollectionSearchSerializer
+from dds.rates.api import calculate_amount
 
 
 def token_selling_filter(is_selling) -> bool:
@@ -42,11 +43,13 @@ def token_sort_price(token, reverse=False):
     if not (token.is_selling or token.is_auc_selling):
         return 0
     if token.standart=="ERC721":
-        return token.price if token.price else token.minimal_bid
-    owners_price = [owner.get_price for owner in token.ownership_set.all()]    
+        price = token.currency_price if token.currency_price else token.minimal_bid
+        return calculate_amount(price, token.currency.symbol)[0]
+    owners_price = [{"price": owner.get_currency_price, "currency": owner.currency.symbol} for owner in token.ownership_set.all()]
+    prices = [calculate_amount(op.get("price"), op.get("currency"))[0] for op in owners_price]
     if reverse:
-        return max(owners_price)
-    return min(owners_price)
+        return max(prices)
+    return min(prices)
 
 
 def token_sort_likes(token, reverse=False):
@@ -90,14 +93,14 @@ def token_search(words, page, **kwargs):
         max_price = Decimal(max_price[0])
         ownerships = Ownership.objects.filter(token__in=tokens)
         ownerships = ownerships.filter(
-            Q(price__lte=max_price) |
-            Q(minimal_bid__lte=max_price)
+            Q(currency_price__lte=max_price) |
+            Q(currency_minimal_bid__lte=max_price)
         )
         token_ids = list()
         token_ids.extend(ownerships.values_list("token_id", flat=True).distinct())
         token_list = tokens.filter(
-            Q(price__lte=max_price) |
-            Q(minimal_bid__lte=max_price)
+            Q(currency_price__lte=max_price) |
+            Q(currency_minimal_bid__lte=max_price)
         )
         token_ids.extend(token_list.values_list("id", flat=True).distinct())
         tokens = Token.objects.filter(id__in=token_ids)

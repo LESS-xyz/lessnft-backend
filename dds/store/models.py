@@ -226,10 +226,8 @@ class Token(models.Model):
     tx_hash = models.CharField(max_length=200, null=True, blank=True)
     ipfs = models.CharField(max_length=200, null=True, default=None)
     total_supply = models.PositiveIntegerField(validators=[validate_nonzero])
-    price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
-                                null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
-    minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
-                                      null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
+    currency_price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
+    currency_minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
     currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None, blank=True)
     owner = models.ForeignKey('accounts.AdvUser', on_delete=models.PROTECT, related_name='%(class)s_owner', null=True, blank=True)
     owners = models.ManyToManyField('accounts.AdvUser', through='Ownership', null=True)
@@ -253,6 +251,24 @@ class Token(models.Model):
         return None
 
     @property
+    def price(self):
+        if self.currency_price and self.currency:
+            return int(self.currency_price * self.currency.get_decimals)
+
+    @price.setter
+    def price(self, value):
+        self.currency_price = value
+
+    @property
+    def minimal_bid(self):
+        if self.currency_minimal_bid and self.currency:
+            return int(self.currency_minimal_bid * self.currency.get_decimals)
+
+    @minimal_bid.setter
+    def minimal_bid(self, value):
+        self.currency_minimal_bid = value
+
+    @property
     def standart(self):
         return self.collection.standart
 
@@ -261,7 +277,7 @@ class Token(models.Model):
         if self.standart == "ERC1155":
             return self.ownership_set.filter(
                 selling=True, 
-                price__isnull=False,
+                currency_price__isnull=False,
                 currency__isnull=False,
             ).exists()
         return bool(self.selling and self.price and self.currency)
@@ -271,10 +287,11 @@ class Token(models.Model):
         if self.standart == "ERC1155":
             return self.ownership_set.filter(
                 selling=True, 
-                price__isnull=True,
+                currency_price__isnull=True,
+                currency_minimal_bid__isnull=False,
                 currency__isnull=False,
             ).exists()
-        return bool(self.selling and not self.price and self.currency)
+        return bool(self.selling and not self.price and self.minimal_bid and self.currency)
 
     def __str__(self):
         return self.name
@@ -310,7 +327,7 @@ class Token(models.Model):
             if request.data.get('minimal_bid'):
                 self.minimal_bid = int(float(request.data.get('minimal_bid')) * self.currency.get_decimals)
             if price:
-                self.price = int(float(price) * self.currency.get_decimals)
+                self.currency_price = Decimal(price)
         else:
             self.full_clean()
             self.save()
@@ -323,14 +340,14 @@ class Token(models.Model):
                 ownership.selling = True
                 self.selling=True
             if price:
-                ownership.price = int(float(price) * self.currency.get_decimals)
+                ownership.price = Decimal(price)
             if self.price:
                 if self.price > ownership.price:
-                    self.price = ownership.price
+                    self.currency_price = ownership.price
                     self.full_clean()
                     self.save()
             else:
-                self.price = ownership.price
+                self.currency_price = ownership.price
                 self.full_clean()
                 self.save()
             minimal_bid = request.data.get('minimal_bid')
@@ -467,7 +484,7 @@ class Token(models.Model):
         return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
 
     def get_owner_auction(self):
-        owners_auction = self.ownership_set.filter(price=None, selling=True)
+        owners_auction = self.ownership_set.filter(currency_price=None, selling=True)
 
         owners_auction_info = []
         for owner in owners_auction:
@@ -486,7 +503,7 @@ def token_save_dispatcher(sender, instance, created, **kwargs):
     if instance.standart == 'ERC1155':
         if not Ownership.objects.filter(token=instance).filter(selling=True):
             instance.selling = False
-            instance.price = None
+            instance.currency_price = None
         else:
             instance.selling = True
             try:
@@ -497,9 +514,9 @@ def token_save_dispatcher(sender, instance, created, **kwargs):
                 print(minimal_price)
             except:
                 minimal_price = None
-            instance.price = minimal_price
+            instance.currency_price = minimal_price
         post_save.disconnect(token_save_dispatcher, sender=sender)
-        instance.save(update_fields=['selling', 'price'])
+        instance.save(update_fields=['selling', 'currency_price'])
         post_save.connect(token_save_dispatcher, sender=sender)
 
 post_save.connect(token_save_dispatcher, sender=Token)
@@ -511,10 +528,32 @@ class Ownership(models.Model):
     currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None)
     quantity = models.PositiveIntegerField(null=True)
     selling = models.BooleanField(default=False)
-    price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
-                                null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
-    minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True,
-                                null=True, validators=[MinValueValidator(Decimal('1000000000000000'))])
+    currency_price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
+    currency_minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
+
+    @property
+    def price(self):
+        if self.currency_price and self.currency:
+            return int(self.currency_price * self.currency.get_decimals)
+
+    @price.setter
+    def price(self, value):
+        self.currency_price = value
+
+    @property
+    def minimal_bid(self):
+        if self.currency_minimal_bid and self.currency:
+            return int(self.currency_minimal_bid * self.currency.get_decimals)
+
+    @minimal_bid.setter
+    def minimal_bid(self, value):
+        self.currency_minimal_bid = value
+
+    @property
+    def get_currency_price(self):
+        if self.currency_price:
+            return self.currency_price
+        return self.currency_minimal_bid
 
     @property
     def get_price(self):
