@@ -15,6 +15,7 @@ from dds.activity.serializers import TokenHistorySerializer
 from dds.accounts.models import MasterUser
 from dds.activity.models import UserAction
 from dds.rates.models import UsdRate
+from django.db.models import Min
 
 try:
     service_fee = MasterUser.objects.get().commission
@@ -209,7 +210,10 @@ class TokenSerializer(serializers.ModelSerializer):
             return calculate_amount(obj.price, obj.currency.symbol)[0]
 
     def get_price(self, obj):
-        return obj.currency_price
+        if obj.standart == "ERC721":
+            return obj.currency_price
+        min_price = obj.ownership_set.filter(selling=True).aggregate(Min("currency_price"))
+        return min_price.get("currency_price__min")
 
     def get_available(self, obj):
         if obj.standart == "ERC721":
