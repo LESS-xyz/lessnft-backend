@@ -279,7 +279,7 @@ class Token(models.Model):
         if self.standart == "ERC1155":
             return self.ownership_set.filter(
                 selling=True, 
-                price__isnull=False,
+                currency_price__isnull=False,
                 currency__isnull=False,
             ).exists()
         return bool(self.selling and self.price and self.currency)
@@ -289,10 +289,11 @@ class Token(models.Model):
         if self.standart == "ERC1155":
             return self.ownership_set.filter(
                 selling=True, 
-                price__isnull=True,
+                currency_price__isnull=True,
+                currency_minimal_bid__isnull=False,
                 currency__isnull=False,
             ).exists()
-        return bool(self.selling and not self.price and self.currency)
+        return bool(self.selling and not self.price and self.minimal_bid and self.currency)
 
     def __str__(self):
         return self.name
@@ -485,7 +486,7 @@ class Token(models.Model):
         return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
 
     def get_owner_auction(self):
-        owners_auction = self.ownership_set.filter(price=None, selling=True)
+        owners_auction = self.ownership_set.filter(currency_price=None, selling=True)
 
         owners_auction_info = []
         for owner in owners_auction:
