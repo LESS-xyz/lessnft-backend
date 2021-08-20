@@ -334,12 +334,15 @@ def buy_scanner(latest_block, smart_contract, standart):
         logging.info('tokens:', token)
         logging.info('token standart:', token[0].standart)
         if token[0].standart == 'ERC721':
-            logging.info('in ERC 721')
+            price = token[0].currency_price
+            currency = token[0].currency
             token.update(owner=new_owner, selling=False, price=None)
             Bid.objects.filter(token=token[0]).delete()
             logging.info('all bids deleted!')
         elif token[0].standart == 'ERC1155':
-            logging.info('in erc 1155')
+            old_ownership = token[0].ownership_set.filter(owner=old_owner).first()
+            price = old_ownership.currency_price
+            currency = old_ownership.currency
             owner = Ownership.objects.filter(
                 owner=new_owner,
                 token=token[0]
@@ -383,19 +386,22 @@ def buy_scanner(latest_block, smart_contract, standart):
                 logging.info('bet upgraded')
 
         logging.info(f'{token} update!')
-        price = token[0].price
 
         token_history = TokenHistory.objects.filter(tx_hash=tx_hash)
+        history_params = {
+            "method": "Buy",
+            "price": price,
+            "currency": currency,
+        }
         if token_history.exists():
-            token_history.update(method='Buy', price=price)
+            token_history.update(**history_params)
         else:
             TokenHistory.objects.get_or_create(
                 token=token[0],
                 tx_hash=tx_hash,
-                method='Buy',
                 new_owner=new_owner,
                 old_owner=old_owner,
-                price=price
+                **history_params,
             )
 
     save_last_block(
