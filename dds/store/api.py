@@ -156,7 +156,7 @@ def collection_search(words, page):
     return CollectionSearchSerializer(collections[start:end]).data
     
 
-def validate_bid(user, token_id, amount, weth_contract, quantity):
+def validate_bid(user, token_id, amount, weth_contract, quantity, currency):
     try:
         token = Token.objects.get(id=token_id)
     except ObjectDoesNotExist:
@@ -165,6 +165,8 @@ def validate_bid(user, token_id, amount, weth_contract, quantity):
         return 'token is not set on action'
     if token.minimal_bid and token.minimal_bid > amount:
         return 'Your bid is too low'
+    if not currency or token.currency.symbol != currency:
+        return 'Your bid currency is not equal token currency'
     if token.total_supply < quantity:
         return 'Token quantity is lower'
     user_balance = weth_contract.functions.balanceOf(Web3.toChecksumAddress(user.username)).call()
