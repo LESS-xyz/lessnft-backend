@@ -17,7 +17,7 @@ from dds.settings import (
 )
 from dds.utilities import get_page_slice
 from dds.store.models import Token, Collection, Ownership
-from dds.store.serializers import TokenSerializer, CollectionSearchSerializer
+from dds.store.serializers import TokenSerializer, CollectionSearchSerializer, TokenSearchSerializer
 from dds.rates.api import calculate_amount
 
 
@@ -141,7 +141,7 @@ def token_search(words, page, **kwargs):
 
     page = int(page)
     start, end = get_page_slice(page, len(tokens))
-    return TokenSerializer(tokens[start:end], context={"user": user}, many=True).data
+    return TokenSearchSerializer(tokens[start:end], context={"user": user, "currency": currency}, many=True).data
 
 
 def collection_search(words, page):

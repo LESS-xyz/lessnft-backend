@@ -236,6 +236,34 @@ class TokenSerializer(serializers.ModelSerializer):
         if user and not user.is_anonymous:
             return UserAction.objects.filter(method="like", token=obj, user=user).exists()
         return False
+        
+
+class TokenSearchSerializer(TokenSerializer):
+    price = serializers.SerializerMethodField()
+    currency = serializers.SerializerMethodField()
+
+    def get_price(self, obj):
+        if obj.standart == "ERC721":
+            return obj.price
+        symbol = self.context.get("currency")
+        if not symbol:
+            symbol = "less"
+        currency = obj.ownership_set.filter(
+            currency__symbol=symbol, 
+            is_selling=True, 
+            currency_price__isnull=False,
+        ).aggregate(Min("currency_price"))
+        return min_price.get("currency_price__min")
+
+    def get_currency(self, obj):
+        if obj.standart == "ERC721":
+            return CurrencySerializer(obj.currency).data
+        symbol = self.context.get("currency")
+        if not symbol:
+            symbol = "less"
+        currency = UsdRate.objects.get(symbol=symbol)
+        return CurrencySerializer(currency).data
+
 
 
 class HotCollectionSerializer(CollectionSlimSerializer):
