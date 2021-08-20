@@ -464,15 +464,18 @@ class GetView(APIView):
                     owner=user
                 ).first()
                 quantity = ownership.quantity
-                price = ownership.price
+                price = ownership.currency_price
+                currency = ownership.currency
             else:
                 quantity = 0
-                price = token.price
+                price = token.currency_price
+                currency = token.currency
             ListingHistory.objects.create(
                 token=token,
                 user=user,
                 quantity=quantity,
-                price=price
+                price=price,
+                currency=currency,
             )
 
         return Response(response_data, status=status.HTTP_200_OK)
