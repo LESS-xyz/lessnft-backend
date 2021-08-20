@@ -53,6 +53,7 @@ class TokenPatchSerializer(serializers.ModelSerializer):
 class OwnershipSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
+    pric = serializers.SerializerMethodField()
     avatar = serializers.CharField(read_only=True, source='owner.avatar')
     currency = CurrencySerializer()
 
@@ -63,13 +64,15 @@ class OwnershipSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "quantity",
-            "currency_price",
             "price",
             "currency",
         )
 
     def get_id(self, obj):
         return obj.owner.id
+
+    def get_price(self, obj):
+        return obj.currency_price
 
     def get_name(self, obj):
         return obj.owner.get_name()
@@ -173,7 +176,7 @@ class TokenSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
     creator = CreatorSerializer()
     collection = CollectionSlimSerializer()
-    currency = CurrencySerializer()
+    currency = serializers.SerializerMethodField()
 
     class Meta:
         model = Token
@@ -212,8 +215,39 @@ class TokenSerializer(serializers.ModelSerializer):
     def get_price(self, obj):
         if obj.standart == "ERC721":
             return obj.currency_price
-        min_price = obj.ownership_set.filter(selling=True).aggregate(Min("currency_price"))
-        return min_price.get("currency_price__min")
+            owners = obj.ownership_set.filter(
+            selling=True,
+            currency__isnull=False,
+            currency_price__isnull=False,
+        )
+        prices = [
+            {
+                "price": owner.currency_price,
+                "usd_price": calculate_amount(owner.price, owner.currency.symbol)[0],
+            }
+            for owner in owners
+        ]
+        sort_prices = list(sorted(prices, key=lambda i: i["usd_price"]))
+        return sort_prices[0].get("price")
+
+    def get_currency(self, obj):
+        if obj.standart == "ERC721":
+            return CurrencySerializer(obj.currency).data
+        owners = obj.ownership_set.filter(
+            selling=True,
+            currency__isnull=False,
+            currency_price__isnull=False,
+        )
+        prices = [
+            {
+                "currency": owner.currency,
+                "usd_price": calculate_amount(owner.price, owner.currency.symbol)[0],
+            }
+            for owner in owners
+        ]
+        sort_prices = list(sorted(prices, key=lambda i: i["usd_price"]))
+        currency = sort_prices[0].get("currency")
+        return CurrencySerializer(currency).data
 
     def get_available(self, obj):
         if obj.standart == "ERC721":
@@ -244,16 +278,16 @@ class TokenSearchSerializer(TokenSerializer):
 
     def get_price(self, obj):
         if obj.standart == "ERC721":
-            return obj.price
+            return obj.currency_price
         symbol = self.context.get("currency")
         if not symbol:
             symbol = "less"
         currency = obj.ownership_set.filter(
-            currency__symbol=symbol, 
-            is_selling=True, 
+            currency__symbol=symbol,
+            selling=True,
             currency_price__isnull=False,
         ).aggregate(Min("currency_price"))
-        return min_price.get("currency_price__min")
+        return currency.get("currency_price__min")
 
     def get_currency(self, obj):
         if obj.standart == "ERC721":
