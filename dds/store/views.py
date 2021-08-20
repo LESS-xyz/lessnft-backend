@@ -435,7 +435,7 @@ class GetView(APIView):
                     user=user,
                     quantity=quantity,
                     price=price,
-                    # currency=currency,
+                    currency=currency,
                 )
 
         response_data = TokenFullSerializer(token, context={"user": request.user}).data
