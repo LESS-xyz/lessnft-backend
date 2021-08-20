@@ -20,6 +20,7 @@ from dds.utilities import sign_message, get_page_slice
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
 from django.db.models import Exists, OuterRef, Q
+from decimal import Decimal
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
@@ -392,7 +393,7 @@ class GetView(APIView):
                 return Response({'error': "this token doesn't belong to you"}, status=status.HTTP_400_BAD_REQUEST)
 
         if request_data.get('price'):
-            request_data['price'] = request_data['price'] 
+            request_data['currency_price'] = request_data['price'] 
 
         if request_data.get('minimal_bid'):
             request_data['minimal_bid'] = int(float(request_data['minimal_bid']) * get_decimals(request_data.get('currency')))
@@ -401,6 +402,8 @@ class GetView(APIView):
         if token.standart == 'ERC1155':
             selling = request_data.pop('selling')
             price = request_data.pop('price', None)
+            if price:
+                price = Decimal(price)
             if request_data.get('minimal_bid'):
                 minimal_bid = float(request_data.pop('minimal_bid'))
                 print('minimal bid 2:', minimal_bid)
