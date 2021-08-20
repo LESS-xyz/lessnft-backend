@@ -29,23 +29,24 @@ def token_selling_filter(is_selling) -> bool:
    return token_filter
 
 
-def token_currency_filter(currencies) -> bool:
+def token_currency_filter(currency) -> bool:
    def token_filter(token):
         if token.standart=="ERC721":
-            return token.currency.symbol in currencies
+            return token.currency.symbol == currency
         return token.ownership_set.filter(
-            currency_symbol__in=currencies
+            currency__symbol=currency
         ).exists()
    return token_filter 
 
 
-def token_sort_price(token, reverse=False):
+def token_sort_price(token, currency, reverse=False):
     if not (token.is_selling or token.is_auc_selling):
         return 0
     if token.standart=="ERC721":
         price = token.currency_price if token.currency_price else token.minimal_bid
         return calculate_amount(price, token.currency.symbol)[0]
-    owners_price = [{"price": owner.get_currency_price, "currency": owner.currency.symbol} for owner in token.ownership_set.all()]
+    owners = token.ownership_set.filter(currency__symbol=currency)
+    owners_price = [{"price": owner.get_currency_price, "currency": owner.currency.symbol} for owner in owners]
     prices = [calculate_amount(op.get("price"), op.get("currency"))[0] for op in owners_price]
     if reverse:
         return max(prices)
@@ -67,11 +68,14 @@ def token_search(words, page, **kwargs):
     max_price = kwargs.get("max_price")
     order_by = kwargs.get("order_by")
     on_sale = kwargs.get("on_sale")
-    currencies = kwargs.get("currency")
+    currency = kwargs.get("currency")
     user = kwargs.get("user")
+    if currency is not None:
+        currency = currency[0]
 
     tokens = Token.objects.all().select_related("currency", "owner")
 
+    # Below are the tokens in the form of a QUERYSET
     for word in words:
         tokens = tokens.filter(name__icontains=word)
 
@@ -93,21 +97,25 @@ def token_search(words, page, **kwargs):
         max_price = Decimal(max_price[0])
         ownerships = Ownership.objects.filter(token__in=tokens)
         ownerships = ownerships.filter(
+            currency__symbol=currency
+        ).filter(
             Q(currency_price__lte=max_price) |
             Q(currency_minimal_bid__lte=max_price)
         )
         token_ids = list()
         token_ids.extend(ownerships.values_list("token_id", flat=True).distinct())
         token_list = tokens.filter(
+            currency__symbol=currency
+        ).filter(
             Q(currency_price__lte=max_price) |
             Q(currency_minimal_bid__lte=max_price)
         )
         token_ids.extend(token_list.values_list("id", flat=True).distinct())
         tokens = Token.objects.filter(id__in=token_ids)
 
-    if currencies is not None:
-        currencies = currencies[0].split(",")
-        currency_filter = token_currency_filter(currencies)
+    # Below are the tokens in the form of a LIST
+    if currency is not None:
+        currency_filter = token_currency_filter(currency)
         tokens = filter(currency_filter, tokens)
         tokens = list(tokens)
 
