@@ -53,7 +53,7 @@ class TokenPatchSerializer(serializers.ModelSerializer):
 class OwnershipSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
-    pric = serializers.SerializerMethodField()
+    price = serializers.SerializerMethodField()
     avatar = serializers.CharField(read_only=True, source='owner.avatar')
     currency = CurrencySerializer()
 
@@ -215,10 +215,10 @@ class TokenSerializer(serializers.ModelSerializer):
     def get_price(self, obj):
         if obj.standart == "ERC721":
             return obj.currency_price
-            owners = obj.ownership_set.filter(
-            selling=True,
-            currency__isnull=False,
-            currency_price__isnull=False,
+        owners = obj.ownership_set.filter(
+        selling=True,
+        currency__isnull=False,
+        currency_price__isnull=False,
         )
         prices = [
             {
