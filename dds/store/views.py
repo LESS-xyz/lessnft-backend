@@ -380,101 +380,61 @@ class GetView(APIView):
         try:
             token = Token.objects.get(id=id)
         except ObjectDoesNotExist:
-            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': not_found_response}, status=status.HTTP_404_NOT_FOUND)
+        
+        is_valid, response = token.patch_validate(user)
+        if not is_valid:
+            return response
 
-        if token.status == Status.BURNED:
-            return Response({'error': 'burned'}, status=status.HTTP_404_NOT_FOUND)
+        price = request_data.pop('price', None)
+        minimal_bid = request_data.pop('minimal_bid', None)
+        selling = request_data.pop('selling', False)
+        currency = request_data.pop('currency', None)
+        if price:
+            price = Decimal(price)
+            request_data['currency_price'] = price 
+        if minimal_bid:
+            minimal_bid = Decimal(minimal_bid)
+            request_data['currency_minimal_bid'] = minimal_bid
+        if currency:
+            request_data['currency'] = UsdRate.objects.filter(symbol=currency).first()
+        
+        if token.standart == "ERC721":
+            old_status = token.selling
+            old_price = token.currency_price
+            old_currency = token.currency
+            quantity = 1
 
-        if token.standart == 'ERC721':
-            if token.owner.username != user.username:
-                return Response({'error': "this token doesn't belong to you"}, status=status.HTTP_400_BAD_REQUEST)
+            serializer = TokenPatchSerializer(token, data=request_data, partial=True)
+
+            print(f"PatchSerializer valid - {serializer.is_valid()}")
+            if serializer.is_valid():
+                serializer.save()
         else:
-            if not Ownership.objects.filter(token=token, owner=user):
-                return Response({'error': "this token doesn't belong to you"}, status=status.HTTP_400_BAD_REQUEST)
-
-        if request_data.get('price'):
-            request_data['currency_price'] = request_data['price'] 
-
-        if request_data.get('minimal_bid'):
-            request_data['minimal_bid'] = int(float(request_data['minimal_bid']) * get_decimals(request_data.get('currency')))
-            print('minimal bid 1:', request_data['minimal_bid'])
-
-        if token.standart == 'ERC1155':
-            selling = request_data.pop('selling')
-            price = request_data.pop('price', None)
-            if price:
-                price = Decimal(price)
-            if request_data.get('minimal_bid'):
-                minimal_bid = float(request_data.pop('minimal_bid'))
-                print('minimal bid 2:', minimal_bid)
-            else:
-                minimal_bid = None
-            print('result minimal bid:', minimal_bid)
-
-        serializer = TokenPatchSerializer(token, data=request_data, partial=True)
-
-        if serializer.is_valid():
-            serializer.save()
-            print('saved')
-        else:
-            print('serializer not valid')
-
-        #1155 specific ownership and token changes
-        if token.standart == 'ERC1155':
             ownership = Ownership.objects.get(owner=user, token=token)
-            if selling is not None:
-                ownership.selling = selling
-            ownership.price = price
-            if token.price and ownership.price:
-                if token.price > ownership.price:
-                    token.price = ownership.price
-                    token.full_clean()
-                    token.save()
-            else:
-                token.price = ownership.price
-                token.full_clean()
-                token.save()
-            if minimal_bid:
-                print('minimal bet is exist')
-                ownership.minimal_bid = minimal_bid
-                if token.minimal_bid:
-                    if token.minimal_bid > ownership.minimal_bid:
-                        token.minimal_bid = ownership.minimal_bid
-                        token.full_clean()
-                        token.save()
+            old_status = ownership.selling
+            old_price = ownership.currency_price
+            old_currency = ownership.currency
+            quantity = ownership.quantity
+            ownership.selling = selling
+            ownership.currency_price = price
+            ownership.currency = currency
+            ownership.minimal_bid = minimal_bid
             ownership.full_clean()
             ownership.save()
-            token.selling = False
-            token.save()
+
+        # add changes to listing
+        if status and old_status:
+            if price != old_price or currency != old_currency:
+                ListingHistory.objects.create(
+                    token=token,
+                    user=user,
+                    quantity=quantity,
+                    price=price,
+                    currency=currency,
+                )
 
         response_data = TokenFullSerializer(token, context={"user": request.user}).data
-        print('token min bid:', token.minimal_bid)
-        try:
-            price
-        except UnboundLocalError:
-            price = None
-        try:
-            selling
-        except UnboundLocalError:
-            selling = None
-        if ((token.standart=='ERC721' and token.selling) or selling) and (price or request_data['price']):
-            if token.standart == 'ERC1155':
-                ownership = Ownership.objects.filter(
-                    token=token,
-                    owner=user
-                ).first()
-                quantity = ownership.quantity
-                price = ownership.price
-            else:
-                quantity = 0
-                price = token.price
-            ListingHistory.objects.create(
-                token=token,
-                user=user,
-                quantity=quantity,
-                price=price
-            )
-
         return Response(response_data, status=status.HTTP_200_OK)
 
 

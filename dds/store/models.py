@@ -31,7 +31,6 @@ from contracts import (
 )
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework import status
 from dds.consts import DECIMALS
 from .services.ipfs import get_ipfs, get_ipfs_by_hash
 from contracts import (
@@ -46,7 +45,6 @@ from dds.settings import (
 
 class Status(models.TextChoices):
     PENDING = 'Pending'
-
     FAILED = 'Failed'
     COMMITTED = 'Committed'
     BURNED = 'Burned'
@@ -295,6 +293,18 @@ class Token(models.Model):
 
     def __str__(self):
         return self.name
+
+    def patch_validate(self, user) -> Tuple[bool, Union[Response, None]]:
+        if self.status == Status.BURNED:
+            return False, Response({'error': 'burned'}, status=status.HTTP_404_NOT_FOUND)
+        if self.standart == 'ERC721':
+            if self.owner != user:
+                return False, Response({'error': "this token doesn't belong to you"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            if not self.ownership_set.filter(owner=user).exists():
+                return False, Response({'error': "this token doesn't belong to you"}, status=status.HTTP_400_BAD_REQUEST)
+        return True, None
+
 
     def save_in_db(self, request, ipfs):
         self.name = request.data.get('name')

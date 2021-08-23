@@ -40,7 +40,7 @@ class TokenPatchSerializer(serializers.ModelSerializer):
     '''
     class Meta:
         model = Token
-        fields = ('currency_price', 'selling', 'minimal_bid')
+        fields = ('currency_price', 'selling', 'currency_minimal_bid', 'currency')
 
     def update(self, instance, validated_data):
         print('started patch')
