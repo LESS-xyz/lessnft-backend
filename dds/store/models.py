@@ -309,71 +309,49 @@ class Token(models.Model):
     def save_in_db(self, request, ipfs):
         self.name = request.data.get('name')
         self.status = Status.PENDING
-        self.total_supply = request.data.get('total_supply')
         self.details = request.data.get('details')
         self.ipfs = ipfs
         self.description = request.data.get('description')
         self.creator_royalty = request.data.get('creator_royalty')
-        price = request.data.get('price')
-        creator = request.user
+        self.creator = request.user
         collection = request.data.get('collection')
-        selling = request.data.get('selling')
-        self.creator = creator
-        self.collection = Collection.objects.get(id=collection)
         collection_id = int(collection) if isinstance(collection, int) or collection.isdigit() else None
         self.collection = Collection.objects.get(
             Q(id=collection_id) | Q(short_url=collection)
         )
-        currency_symbol = request.data.get("currency")
-        if currency_symbol:
+
+        price = request.data.get('price')
+        if price:
+            price = Decimal(price)
+        minimal_bid = request.data.get('minimal_bid')
+        if minimal_bid:
+            minimal_bid = Decimal(minimal_bid)
+        selling = request.data.get('selling', 'false')
+        selling = selling.lower() == 'true'
+        currency = request.data.get("currency")
+
+        if currency:
             currency = UsdRate.objects.filter(symbol__iexact=currency_symbol).first()
 
         if self.standart == 'ERC721':
             self.currency = currency
             self.total_supply = 1
             self.owner = self.creator
-            if selling == 'true':
-                self.selling = True
-            if request.data.get('minimal_bid'):
-                self.minimal_bid = int(float(request.data.get('minimal_bid')) * self.currency.get_decimals)
-            if price:
-                self.currency_price = Decimal(price)
+            self.selling = selling
+            self.currency_price = price
+            self.currency_minimal_bid = minimal_bid
         else:
             self.full_clean()
-            self.save()
-            self.owners.add(creator)
+            self.owners.add(self.creator)
             self.save()
             ownership = Ownership.objects.get(owner=creator, token=self)
-            ownership.quantity = self.total_supply
+            ownership.quantity = request.data.get('total_supply')
             ownership.currency = currency
-            if selling == 'true':
-                ownership.selling = True
-                self.selling=True
-            if price:
-                ownership.price = Decimal(price)
-            if self.price:
-                if self.price > ownership.price:
-                    self.currency_price = ownership.price
-                    self.full_clean()
-                    self.save()
-            else:
-                self.currency_price = ownership.price
-                self.full_clean()
-                self.save()
-            minimal_bid = request.data.get('minimal_bid')
-            if minimal_bid:
-                minimal_bid = int(float(minimal_bid) * self.currency.get_decimals)
-                ownership.minimal_bid = minimal_bid
-                if self.minimal_bid:
-                    if self.minimal_bid > minimal_bid:
-                        self.minimal_bid = minimal_bid
-                else:
-                    self.minimal_bid = minimal_bid
-                self.full_clean()
-                self.save()
+            ownership.selling = selling
+            ownership.currency_price = price
+            ownership.currency_minimal_bid = minimal_bid
             ownership.full_clean()
             ownership.save()
-
         self.full_clean()
         self.save()
 
