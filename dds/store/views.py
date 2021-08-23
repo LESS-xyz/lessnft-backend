@@ -37,6 +37,7 @@ from contracts import (
     WETH_CONTRACT
 )
 from dds.rates.api import get_decimals
+from dds.rates.models import UsdRate
 
 
 transfer_tx = openapi.Response(
@@ -386,18 +387,23 @@ class GetView(APIView):
         if not is_valid:
             return response
 
-        price = request_data.pop('price', None)
-        minimal_bid = request_data.pop('minimal_bid', None)
-        selling = request_data.pop('selling', False)
-        currency = request_data.pop('currency', None)
+        price = request_data.get('price', None)
+        minimal_bid = request_data.get('minimal_bid', None)
+        selling = request_data.get('selling')
+        selling = selling.lower() == 'true'
+        currency = request_data.get('currency', None)
         if price:
+            request_data.pop('price', None)
             price = Decimal(price)
             request_data['currency_price'] = price 
         if minimal_bid:
+            request_data.pop('minimal_bid')
             minimal_bid = Decimal(minimal_bid)
             request_data['currency_minimal_bid'] = minimal_bid
         if currency:
-            request_data['currency'] = UsdRate.objects.filter(symbol=currency).first()
+            request_data.pop('currency')
+            currency = UsdRate.objects.filter(symbol=currency).first()
+            request_data['currency'] = currency
         
         if token.standart == "ERC721":
             old_status = token.selling
@@ -431,7 +437,7 @@ class GetView(APIView):
                     user=user,
                     quantity=quantity,
                     price=price,
-                    currency=currency,
+                    # currency=currency,
                 )
 
         response_data = TokenFullSerializer(token, context={"user": request.user}).data

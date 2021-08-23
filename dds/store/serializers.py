@@ -228,7 +228,8 @@ class TokenSerializer(serializers.ModelSerializer):
             for owner in owners
         ]
         sort_prices = list(sorted(prices, key=lambda i: i["usd_price"]))
-        return sort_prices[0].get("price")
+        if sort_prices:
+            return sort_prices[0].get("price")
 
     def get_currency(self, obj):
         if obj.standart == "ERC721":
@@ -246,8 +247,9 @@ class TokenSerializer(serializers.ModelSerializer):
             for owner in owners
         ]
         sort_prices = list(sorted(prices, key=lambda i: i["usd_price"]))
-        currency = sort_prices[0].get("currency")
-        return CurrencySerializer(currency).data
+        if sort_prices:
+            currency = sort_prices[0].get("currency")
+            return CurrencySerializer(currency).data
 
     def get_available(self, obj):
         if obj.standart == "ERC721":
