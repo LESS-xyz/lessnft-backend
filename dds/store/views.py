@@ -390,11 +390,10 @@ class GetView(APIView):
         price = request_data.get('price', None)
         minimal_bid = request_data.get('minimal_bid', None)
         selling = request_data.get('selling')
-        selling = selling.lower() == 'true'
         currency = request_data.get('currency', None)
         if price:
             request_data.pop('price', None)
-            price = Decimal(price)
+            price = Decimal(str(price))
             request_data['currency_price'] = price 
         if minimal_bid:
             request_data.pop('minimal_bid')
@@ -403,7 +402,7 @@ class GetView(APIView):
         if currency:
             request_data.pop('currency')
             currency = UsdRate.objects.filter(symbol=currency).first()
-            request_data['currency'] = currency
+            request_data['currency'] = currency.id
         
         if token.standart == "ERC721":
             old_price = token.currency_price

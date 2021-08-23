@@ -319,6 +319,7 @@ class Token(models.Model):
         self.collection = Collection.objects.get(
             Q(id=collection_id) | Q(short_url=collection)
         )
+        self.total_supply = request.data.get('total_supply')
 
         price = request.data.get('price')
         if price:
@@ -331,7 +332,7 @@ class Token(models.Model):
         currency = request.data.get("currency")
 
         if currency:
-            currency = UsdRate.objects.filter(symbol__iexact=currency_symbol).first()
+            currency = UsdRate.objects.filter(symbol__iexact=currency).first()
 
         if self.standart == 'ERC721':
             self.currency = currency
@@ -342,9 +343,10 @@ class Token(models.Model):
             self.currency_minimal_bid = minimal_bid
         else:
             self.full_clean()
-            self.owners.add(self.creator)
             self.save()
-            ownership = Ownership.objects.get(owner=creator, token=self)
+            self.owners.add(request.user)
+            self.save()
+            ownership = Ownership.objects.get(owner=self.creator, token=self)
             ownership.quantity = request.data.get('total_supply')
             ownership.currency = currency
             ownership.selling = selling
