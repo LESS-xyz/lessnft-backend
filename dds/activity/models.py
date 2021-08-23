@@ -62,7 +62,7 @@ class TokenHistory(models.Model):
         null=True,
         related_name='old_owner'
     )
-    price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True, null=True)
+    price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=18, default=None, blank=True, null=True)
     currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, blank=True, default=None)
 
 
@@ -71,7 +71,7 @@ class ListingHistory(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     quantity = models.IntegerField()
     user = models.ForeignKey('accounts.AdvUser', on_delete=models.CASCADE)
-    price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True, null=True)
+    price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=18, default=None, blank=True, null=True)
     currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, blank=True, default=None)
     method = models.CharField(choices=[('Listing', 'Listing')], default='Listing', max_length=7)
 
@@ -80,6 +80,6 @@ class BidsHistory(models.Model):
     token = models.ForeignKey('store.Token', on_delete=models.CASCADE)
     date = models.DateTimeField()
     user = models.ForeignKey('accounts.AdvUser', on_delete=models.CASCADE)
-    price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=0, default=None, blank=True, null=True)
+    price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=18, default=None, blank=True, null=True)
     currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, blank=True, default=None)
     method = models.CharField(choices=[('Bet', 'Bet')], default='Bet', max_length=3)
