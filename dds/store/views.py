@@ -406,7 +406,6 @@ class GetView(APIView):
             request_data['currency'] = currency
         
         if token.standart == "ERC721":
-            old_status = token.selling
             old_price = token.currency_price
             old_currency = token.currency
             quantity = 1
@@ -418,7 +417,6 @@ class GetView(APIView):
                 serializer.save()
         else:
             ownership = Ownership.objects.get(owner=user, token=token)
-            old_status = ownership.selling
             old_price = ownership.currency_price
             old_currency = ownership.currency
             quantity = ownership.quantity
@@ -430,7 +428,7 @@ class GetView(APIView):
             ownership.save()
 
         # add changes to listing
-        if status and old_status:
+        if status:
             if price != old_price or currency != old_currency:
                 ListingHistory.objects.create(
                     token=token,
