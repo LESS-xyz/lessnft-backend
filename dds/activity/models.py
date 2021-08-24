@@ -29,7 +29,7 @@ class UserAction(models.Model):
         null=True,
         default=None
     )
-    is_viewed = moedls.BooleanField(default=False)
+    is_viewed = models.BooleanField(default=False)
 
     class Meta:
         constraints = [
@@ -65,7 +65,7 @@ class TokenHistory(models.Model):
     )
     price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=18, default=None, blank=True, null=True)
     currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, blank=True, default=None)
-    is_viewed = moedls.BooleanField(default=False)
+    is_viewed = models.BooleanField(default=False)
 
 
 class ListingHistory(models.Model):
@@ -76,7 +76,7 @@ class ListingHistory(models.Model):
     price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=18, default=None, blank=True, null=True)
     currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, blank=True, default=None)
     method = models.CharField(choices=[('Listing', 'Listing')], default='Listing', max_length=7)
-    is_viewed = moedls.BooleanField(default=False)
+    is_viewed = models.BooleanField(default=False)
 
 
 class BidsHistory(models.Model):
@@ -86,4 +86,4 @@ class BidsHistory(models.Model):
     price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=18, default=None, blank=True, null=True)
     currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, blank=True, default=None)
     method = models.CharField(choices=[('Bet', 'Bet')], default='Bet', max_length=3)
-    is_viewed = moedls.BooleanField(default=False)
+    is_viewed = models.BooleanField(default=False)

@@ -100,28 +100,31 @@ class NotificationActivityView(APIView):
     )
     def get(self, request):
         address = request.user.username
+        activities = list()
 
         token_history = TokenHistory.objects.filter(
             Q(new_owner__username=address) | Q(old_owner__username=address),
             is_viewed=False,
         ).order_by("-date")[:end]
+        activities.extend(token_history)
 
         user_actions = UserAction.objects.filter(
             Q(user__username=address) | Q(whom_follow__username=address),
             is_viewed=False,
         ).order_by("-date")[:end]
+        activities.extend(user_actions)
 
         bids = BidsHistory.objects.filter(
             user__username=address,
             is_viewed=False,
         ).order_by("-date")[:end]
+        activities.extend(bids)
 
         listing = ListingHistory.objects.filter(
-            user__address=address,
+            user__username=address,
             is_viewed=False,
         ).order_by("-date")[:end]
-
-        activities = token_history + user_actions + bids + listing
+        activities.extend(listing)
 
         quick_sort(activities)
         response_data = get_activity_response(activities)[:5]
@@ -141,7 +144,7 @@ class NotificationActivityView(APIView):
         activity_id = request.data.get('activity_id')
         method = request.data.get('method')
         address = request.user.username
-        if method and method[0] == "all":
+        if method == "all":
             token_history = TokenHistory.objects.filter(
                 Q(new_owner__username=address) | Q(old_owner__username=address),
                 is_viewed=False,
@@ -158,18 +161,18 @@ class NotificationActivityView(APIView):
             ).update(is_viewed=True)
 
             listing = ListingHistory.objects.filter(
-                user__address=address,
+                user__username=address,
                 is_viewed=False,
             ).update(is_viewed=True)
             return Response('Marked all as viewed', status=status.HTTP_200_OK)
 
         methods = {
-            "Transfer": UserAction,
-            "Buy": UserAction,
-            "Mint": UserAction,
-            "Burn": UserAction,
-            "like": TokenHistory,
-            "follow": TokenHistory,
+            "Transfer": TokenHistory,
+            "Buy": TokenHistory,
+            "Mint": TokenHistory,
+            "Burn": TokenHistory,
+            "like": UserAction,
+            "follow": UserAction,
             "Bet": BidsHistory,
             "Listing": ListingHistory,
         }
