@@ -10,28 +10,18 @@ from dds.store.models import (
     Ownership,
     Bid,
 )
-from dds.accounts.serializers import CreatorSerializer, UserSerializer
+from dds.accounts.serializers import CreatorSerializer, UserSerializer, UserOwnerSerializer
 from dds.activity.serializers import TokenHistorySerializer 
 from dds.accounts.models import MasterUser
 from dds.activity.models import UserAction
 from dds.rates.models import UsdRate
+from dds.rates.serializers import CurrencySerializer
 from django.db.models import Min
 
 try:
     service_fee = MasterUser.objects.get().commission
 except:
     print('master user not found, please add him for correct backend start')
-
-
-class CurrencySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UsdRate
-        fields = (
-            "rate",
-            "symbol",
-            "name",
-            "image",
-        )
 
 
 class TokenPatchSerializer(serializers.ModelSerializer):
@@ -263,7 +253,10 @@ class TokenSerializer(serializers.ModelSerializer):
 
     def get_owners(self, obj):
         if obj.standart == "ERC721":
-            return UserSerializer(obj.owner).data
+            return UserOwnerSerializer(obj.owner, context={
+                "price": obj.currency_price,
+                "currency": CurrencySerializer(obj.currency).data,
+            }).data
         owners = Ownership.objects.filter(token=obj, selling=True)
         return OwnershipSerializer(owners, many=True).data
 

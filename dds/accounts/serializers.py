@@ -6,6 +6,7 @@ from dds.accounts.utils import valid_metamask_message
 from dds.settings import ALLOWED_HOSTS
 from dds.store.models import Token
 from dds.accounts.models import AdvUser
+from dds.rates.serializers import CurrencySerializer
 
 
 class TokenSlimSerializer(serializers.ModelSerializer):
@@ -108,6 +109,28 @@ class BaseAdvUserSerializer(serializers.ModelSerializer):
 
     def get_name(self, obj):
         return obj.get_name()
+
+ 
+class UserOwnerSerializer(BaseAdvUserSerializer):
+    quantity = serializers.SerializerMethodField()
+    price = serializers.SerializerMethodField()
+    currency = serializers.SerializerMethodField()
+
+    class Meta(BaseAdvUserSerializer.Meta):
+        fields = BaseAdvUserSerializer.Meta.fields + (
+            "quantity",
+            "price",
+            "currency",
+        )
+
+    def get_quantity(self, obj):
+        return 1
+
+    def get_price(self, obj):
+        return self.context.get("price")
+
+    def get_currency(self, obj):
+        return self.context.get("currency")
 
 
 class FollowingSerializer(BaseAdvUserSerializer):

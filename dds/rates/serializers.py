@@ -10,3 +10,14 @@ class UsdRateSerializer(serializers.ModelSerializer):
             "symbol",
             "image",
         )
+
+
+class CurrencySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UsdRate
+        fields = (
+            "rate",
+            "symbol",
+            "name",
+            "image",
+        )

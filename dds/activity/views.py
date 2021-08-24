@@ -157,7 +157,7 @@ class UserActivityView(APIView):
                     activities.extend(items)
             if "list" in types:
                 listing = ListingHistory.objects.filter(
-                    user__address=address,
+                    user__username=address,
                 ).order_by("-date")[:end]
         else:
             actions = UserAction.objects.filter(
