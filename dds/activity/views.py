@@ -91,7 +91,7 @@ class ActivityView(APIView):
 
 class NotificationActivityView(APIView):
     """
-    View for get users activities and filter by types
+    View for get user notifications
     """
     permission_classes = [IsAuthenticated]
 
@@ -101,15 +101,30 @@ class NotificationActivityView(APIView):
     def get(self, request):
         address = request.user.username
         activities = list()
+        end = 5
 
-        token_history = TokenHistory.objects.filter(
-            Q(new_owner__username=address) | Q(old_owner__username=address),
+        new_owner_methods = [
+            'Transfer',
+            'Mint',
+            'Burn',
+        ]
+
+        items = TokenHistory.objects.filter(
+            new_owner__username=address,
+            method__in=new_owner_methods,
             is_viewed=False,
         ).order_by("-date")[:end]
-        activities.extend(token_history)
+        activities.extend(items)
+
+        buy = TokenHistory.objects.filter(
+            old_owner__username=address,
+            method='Buy',
+            is_viewed=False,
+        ).order_by("-date")[:end]
+        activities.extend(buy)
 
         user_actions = UserAction.objects.filter(
-            Q(user__username=address) | Q(whom_follow__username=address),
+            whom_follow__username=address,
             is_viewed=False,
         ).order_by("-date")[:end]
         activities.extend(user_actions)
@@ -127,7 +142,7 @@ class NotificationActivityView(APIView):
         activities.extend(listing)
 
         quick_sort(activities)
-        response_data = get_activity_response(activities)[:5]
+        response_data = get_activity_response(activities)[:end]
         return Response(response_data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -144,14 +159,26 @@ class NotificationActivityView(APIView):
         activity_id = request.data.get('activity_id')
         method = request.data.get('method')
         address = request.user.username
+        new_owner_methods = [
+            'Transfer',
+            'Mint',
+            'Burn',
+        ]
         if method == "all":
             token_history = TokenHistory.objects.filter(
-                Q(new_owner__username=address) | Q(old_owner__username=address),
+                new_owner__username=address,
+                method__in=new_owner_methods,
+                is_viewed=False,
+            ).update(is_viewed=True)
+
+            token_history = TokenHistory.objects.filter(
+                old_owner__username=address,
+                method="Buy",
                 is_viewed=False,
             ).update(is_viewed=True)
 
             user_actions = UserAction.objects.filter(
-                Q(user__username=address) | Q(whom_follow__username=address),
+                whom_follow__username=address,
                 is_viewed=False,
             ).update(is_viewed=True)
 
