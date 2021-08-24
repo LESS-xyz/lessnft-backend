@@ -36,7 +36,7 @@ from contracts import (
     EXCHANGE,
     WETH_CONTRACT
 )
-from dds.rates.api import get_decimals
+from dds.rates.api import get_decimals, calculate_amount
 from dds.rates.models import UsdRate
 
 
@@ -434,7 +434,7 @@ class GetView(APIView):
                     user=user,
                     quantity=quantity,
                     price=price,
-                    # currency=currency,
+                    currency=currency,
                 )
 
         response_data = TokenFullSerializer(token, context={"user": request.user}).data
@@ -650,55 +650,69 @@ class MakeBid(APIView):
     def post(self, request):
         request_data = request.data
         token_id = request_data.get('token_id')
-        amount = int(request_data.get('amount'))
+        amount = Decimal(request_data.get('amount'))
         quantity = int(request_data.get('quantity'))
+        currency = request_data.get('currency')
 
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
 
         user = request.user
 
-        #returns True if OK, or error message
-        result = validate_bid(user, token_id, amount, WETH_CONTRACT, quantity)
+        #returns OK if valid, or error message
+        result = validate_bid(user, token_id, amount, WETH_CONTRACT, quantity, currency)
 
-        if result == 'OK':
-            #create new bid or update old one
-            bid = Bid.objects.get_or_create(user=user, token=Token.objects.get(id=token_id))[0]
-            if bid.amount and bid.amount > amount:
-                return Response({'error': 'you cannot lower your bid'}, status=status.HTTP_400_BAD_REQUEST)
-            bid.amount = amount
-            bid.quantity = quantity
-            bid.full_clean()
-            bid.save()
-
-            #construct approve tx if not approved yet:
-            allowance = weth_contract.functions.allowance(web3.toChecksumAddress(user.username),
-                                                          web3.toChecksumAddress(EXCHANGE_ADDRESS)).call()
-            user_balance = weth_contract.functions.balanceOf(Web3.toChecksumAddress(user.username)).call()
-            if allowance < amount * quantity:
-                tx_params = {
-                    'chainId': web3.eth.chainId,
-                    'gas': APPROVE_GAS_LIMIT,
-                    'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(user.username), 'pending'),
-                    'gasPrice': web3.eth.gasPrice,
-                }
-                initial_tx = weth_contract.functions.approve(web3.toChecksumAddress(EXCHANGE_ADDRESS), user_balance).buildTransaction(tx_params)
-                return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
-
-            else:
-                bid.state = Status.COMMITTED
-                bid.full_clean()
-                bid.save()
-                
-                BidsHistory.objects.create(
-                    token=bid.token,
-                    user=bid.user,
-                    price=bid.amount,
-                    date=bid.created_at
-                    )
-
-                return Response({'bid created, allowance not needed'}, status=status.HTTP_200_OK)
-        else:
+        if result != 'OK':
             return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
+
+        #create new bid or update old one
+        bid, created = Bid.objects.get_or_create(user=user, token=Token.objects.get(id=token_id))
+
+        if created and bid.amount > amount:
+            return Response({'error': 'you cannot lower your bid'}, status=status.HTTP_400_BAD_REQUEST)
+
+        bid.amount = amount
+        bid.currency = currency
+        bid.quantity = quantity
+        bid.full_clean()
+        bid.save()
+
+        #construct approve tx if not approved yet:
+        allowance = weth_contract.functions.allowance(
+            web3.toChecksumAddress(user.username),
+            web3.toChecksumAddress(EXCHANGE_ADDRESS),
+        ).call()
+        user_balance = weth_contract.functions.balanceOf(
+            Web3.toChecksumAddress(user.username)
+        ).call()
+        
+        amount = calculate_amount(amount, currency)
+
+        if allowance < amount * quantity:
+            tx_params = {
+                'chainId': web3.eth.chainId,
+                'gas': APPROVE_GAS_LIMIT,
+                'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(user.username), 'pending'),
+                'gasPrice': web3.eth.gasPrice,
+            }
+            initial_tx = weth_contract.functions.approve(
+                web3.toChecksumAddress(EXCHANGE_ADDRESS), 
+                user_balance,
+            ).buildTransaction(tx_params)
+            return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
+
+        bid.state = Status.COMMITTED
+        bid.full_clean()
+        bid.save()
+        
+        BidsHistory.objects.create(
+            token=bid.token,
+            user=bid.user,
+            price=bid.amount,
+            currency=bid.currency,
+            date=bid.created_at,
+        )
+
+        return Response({'bid created, allowance not needed'}, status=status.HTTP_200_OK)
 
 
 @api_view(http_method_names=['GET'])

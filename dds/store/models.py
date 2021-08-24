@@ -574,5 +574,6 @@ class Bid(models.Model):
         null=True,
         validators=[MinValueValidator(Decimal('1000000000000000'))]
     )
+    currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, blank=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     state = models.CharField(max_length=50, choices=Status.choices, default=Status.PENDING)
