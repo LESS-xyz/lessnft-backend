@@ -40,8 +40,10 @@ def get_activity_response(activities):
             "to_address": user_to.username if user_to else None,
             "to_name": user_to.get_name() if user_to else None,
             "date": activ.date,
+            "id": activ.id,
             "price": price,
             "quantity": quantity,
+            "is_viewed": activ.is_viewed,
         }
         if item not in sorted_activity:
             sorted_activity.append(item)
