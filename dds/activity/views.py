@@ -6,6 +6,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 
 from dds.utilities import get_page_slice
 from dds.consts import DECIMALS
@@ -88,6 +89,95 @@ class ActivityView(APIView):
         response_data = get_activity_response(activities)[start:end]
         return Response(response_data, status=status.HTTP_200_OK)
 
+class NotificationActivityView(APIView):
+    """
+    View for get users activities and filter by types
+    """
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="get user notifications, return last 5",
+    )
+    def get(self, request):
+        address = request.user.username
+
+        token_history = TokenHistory.objects.filter(
+            Q(new_owner__username=address) | Q(old_owner__username=address),
+            is_viewed=False,
+        ).order_by("-date")[:end]
+
+        user_actions = UserAction.objects.filter(
+            Q(user__username=address) | Q(whom_follow__username=address),
+            is_viewed=False,
+        ).order_by("-date")[:end]
+
+        bids = BidsHistory.objects.filter(
+            user__username=address,
+            is_viewed=False,
+        ).order_by("-date")[:end]
+
+        listing = ListingHistory.objects.filter(
+            user__address=address,
+            is_viewed=False,
+        ).order_by("-date")[:end]
+
+        activities = token_history + user_actions + bids + listing
+
+        quick_sort(activities)
+        response_data = get_activity_response(activities)[:5]
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_description="Mark activity as viewed",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'activity_id': openapi.Schema(type=openapi.TYPE_NUMBER),
+                'method': openapi.Schema(type=openapi.TYPE_STRING),
+            }),
+        responses={200: "Marked as viewed"},
+    )
+    def post(self, request):
+        activity_id = request.data.get('activity_id')
+        method = request.data.get('method')
+        address = request.user.username
+        if method and method[0] == "all":
+            token_history = TokenHistory.objects.filter(
+                Q(new_owner__username=address) | Q(old_owner__username=address),
+                is_viewed=False,
+            ).update(is_viewed=True)
+
+            user_actions = UserAction.objects.filter(
+                Q(user__username=address) | Q(whom_follow__username=address),
+                is_viewed=False,
+            ).update(is_viewed=True)
+
+            bids = BidsHistory.objects.filter(
+                user__username=address,
+                is_viewed=False,
+            ).update(is_viewed=True)
+
+            listing = ListingHistory.objects.filter(
+                user__address=address,
+                is_viewed=False,
+            ).update(is_viewed=True)
+            return Response('Marked all as viewed', status=status.HTTP_200_OK)
+
+        methods = {
+            "Transfer": UserAction,
+            "Buy": UserAction,
+            "Mint": UserAction,
+            "Burn": UserAction,
+            "like": TokenHistory,
+            "follow": TokenHistory,
+            "Bet": BidsHistory,
+            "Listing": ListingHistory,
+        }
+        action = methods[method].objects.get(id=int(activity_id))
+        action.is_viewed = True
+        action.save()
+        return Response('Marked as viewed', status=status.HTTP_200_OK)
+
 
 class UserActivityView(APIView):
     """
@@ -159,6 +249,7 @@ class UserActivityView(APIView):
                 listing = ListingHistory.objects.filter(
                     user__username=address,
                 ).order_by("-date")[:end]
+                activities.extend(listing)
         else:
             actions = UserAction.objects.filter(
                 Q(user__username=address) | Q(whom_follow__username=address)
