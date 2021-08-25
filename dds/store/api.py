@@ -163,7 +163,7 @@ def validate_bid(user, token_id, amount, weth_contract, quantity, currency):
         return 'Token not found'
     if not token.is_auc_selling:
         return 'token is not set on action'
-    if token.minimal_bid and token.minimal_bid > amount:
+    if token.currency_minimal_bid and token.currency_minimal_bid > amount:
         return 'Your bid is too low'
     if not currency or token.currency.symbol != currency:
         return 'Your bid currency is not equal token currency'

@@ -568,11 +568,10 @@ class Bid(models.Model):
     user = models.ForeignKey('accounts.AdvUser', on_delete=models.PROTECT)
     amount = models.DecimalField(
         max_digits=MAX_AMOUNT_LEN, 
-        decimal_places=0, 
+        decimal_places=18, 
         default=None, 
         blank=True, 
         null=True,
-        validators=[MinValueValidator(Decimal('1000000000000000'))]
     )
     currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, blank=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)

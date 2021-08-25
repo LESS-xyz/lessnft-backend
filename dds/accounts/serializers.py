@@ -177,7 +177,7 @@ class CreatorSerializer(BaseAdvUserSerializer):
     address = serializers.SerializerMethodField()
 
     class Meta(BaseAdvUserSerializer.Meta):
-        fields = BaseAdvUserSerializer.Meta.fields + ("address", )
+        fields = BaseAdvUserSerializer.Meta.fields + ("address", "is_verificated")
 
     def get_address(self, obj):
         return obj.username

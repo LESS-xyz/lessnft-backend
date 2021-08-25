@@ -667,7 +667,7 @@ class MakeBid(APIView):
         #create new bid or update old one
         bid, created = Bid.objects.get_or_create(user=user, token=Token.objects.get(id=token_id))
 
-        if created and bid.amount > amount:
+        if not created and bid.amount >= amount:
             return Response({'error': 'you cannot lower your bid'}, status=status.HTTP_400_BAD_REQUEST)
 
         bid.amount = amount
@@ -677,24 +677,24 @@ class MakeBid(APIView):
         bid.save()
 
         #construct approve tx if not approved yet:
-        allowance = weth_contract.functions.allowance(
+        allowance = WETH_CONTRACT.functions.allowance(
             web3.toChecksumAddress(user.username),
             web3.toChecksumAddress(EXCHANGE_ADDRESS),
         ).call()
-        user_balance = weth_contract.functions.balanceOf(
+        user_balance = WETH_CONTRACT.functions.balanceOf(
             Web3.toChecksumAddress(user.username)
         ).call()
         
-        amount = calculate_amount(amount, currency)
+        amount, _ = calculate_amount(amount, currency)
 
-        if allowance < amount * quantity:
+        if allowance < amout * quantity:
             tx_params = {
                 'chainId': web3.eth.chainId,
                 'gas': APPROVE_GAS_LIMIT,
                 'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(user.username), 'pending'),
                 'gasPrice': web3.eth.gasPrice,
             }
-            initial_tx = weth_contract.functions.approve(
+            initial_tx = WETH_CONTRACT.functions.approve(
                 web3.toChecksumAddress(EXCHANGE_ADDRESS), 
                 user_balance,
             ).buildTransaction(tx_params)
