@@ -228,17 +228,17 @@ class UserActivityView(APIView):
         start, end = get_page_slice(page)
 
         token_transfer_methods = {
-            "purchase": "Buy",
             "sale": "Buy",
-            "transfer": "Transfer",
         }
         action_methods = {
             "like": "like",
             "follow": "follow",
         }
         token_methods = {
+            "purchase": "Buy",
             "mint": "Mint",
             "burn": "Burn",
+            "transfer": "Transfer",
         }
         bids_methods = {
             "bids": "Bet",
@@ -250,7 +250,14 @@ class UserActivityView(APIView):
             for param, method in token_transfer_methods.items():
                 if param in types:
                     items = TokenHistory.objects.filter(
-                        Q(new_owner__username=address) | Q(old_owner__username=address),
+                        old_owner__username=address,
+                        method=method,
+                    ).order_by("-date")[:end]
+                    activities.extend(items)
+            for param, method in token_methods.items():
+                if param in types:
+                    items = TokenHistory.objects.filter(
+                        new_owner__username=address,
                         method=method,
                     ).order_by("-date")[:end]
                     activities.extend(items)
@@ -258,13 +265,6 @@ class UserActivityView(APIView):
                 if param in types:
                     items = UserAction.objects.filter(
                         Q(user__username=address) | Q(whom_follow__username=address),
-                        method=method,
-                    ).order_by("-date")[:end]
-                    activities.extend(items)
-            for param, method in token_methods.items():
-                if param in types:
-                    items = TokenHistory.objects.filter(
-                        Q(new_owner__username=address),
                         method=method,
                     ).order_by("-date")[:end]
                     activities.extend(items)
@@ -281,22 +281,37 @@ class UserActivityView(APIView):
                 ).order_by("-date")[:end]
                 activities.extend(listing)
         else:
-            actions = UserAction.objects.filter(
-                Q(user__username=address) | Q(whom_follow__username=address)
+            new_owner_methods = [
+                'Transfer',
+                'Mint',
+                'Burn',
+            ]
+
+            items = TokenHistory.objects.filter(
+                new_owner__username=address,
+                method__in=new_owner_methods,
+                is_viewed=False,
             ).order_by("-date")[:end]
-            activities.extend(actions)
-            history = (
-                TokenHistory.objects.filter(
-                    Q(new_owner__username=address) | Q(old_owner__username=address)
-                )
-                .exclude(Q(method="Burn") | Q(method="Transfer"))
-                .order_by("-date")[:end]
-            )
-            activities.extend(history)
+            activities.extend(items)
+
+            buy = TokenHistory.objects.filter(
+                old_owner__username=address,
+                method='Buy',
+                is_viewed=False,
+            ).order_by("-date")[:end]
+            activities.extend(buy)
+
+            user_actions = UserAction.objects.filter(
+                whom_follow__username=address,
+                is_viewed=False,
+            ).order_by("-date")[:end]
+            activities.extend(user_actions)
+
             listing = ListingHistory.objects.filter(user__username=address).order_by(
                 "-date"
             )[:end]
             activities.extend(listing)
+
             bit = BidsHistory.objects.filter(user__username=address).order_by("-date")[:end]
             activities.extend(bit)
 
