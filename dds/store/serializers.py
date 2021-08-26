@@ -85,7 +85,6 @@ class BidSerializer(serializers.ModelSerializer):
     bidder_avatar = serializers.CharField(read_only=True, source='user.avatar')
     bidder = serializers.SerializerMethodField()
     bidder_id = serializers.SerializerMethodField()
-    amount = serializers.SerializerMethodField()
     currency = serializers.SerializerMethodField()
 
     class Meta:
@@ -105,9 +104,6 @@ class BidSerializer(serializers.ModelSerializer):
 
     def get_bidder_id(self, obj):
         return obj.user.id
-
-    def get_amount(self, obj):
-        return obj.amount
 
     def get_currency(self, obj):
         return CurrencySerializer(obj.token.currency).data

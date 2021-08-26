@@ -34,7 +34,9 @@ from dds.accounts.api import user_search
 from dds.settings import NETWORK_SETTINGS, WETH_ADDRESS
 from contracts import (
     EXCHANGE,
-    WETH_CONTRACT
+    WETH_CONTRACT,
+    ERC721_MAIN,
+    ERC1155_MAIN,
 )
 from dds.rates.api import get_decimals, calculate_amount
 from dds.rates.models import UsdRate
@@ -441,6 +443,33 @@ class GetView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
+class TokenBurnView(APIView):
+    '''
+    View for burn token.
+    '''
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="token burn",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'id': openapi.Schema(type=openapi.TYPE_NUMBER),
+                'address': openapi.Schema(type=openapi.TYPE_STRING)
+            }),
+        responses={200: transfer_tx},
+    )
+    def post(self, request, token_id):
+        user = request.user
+        token = Token.objects.get(id=token_id)
+        amount = request.data.get("amount")
+        if transferring_token.status != Status.COMMITTED:
+            return Response({'error': 'Invalid token status'}, status=status.HTTP_400_BAD_REQUEST)
+        if not (token.owner == user or token.ownership_set.filter(user=user).exists()):
+            return Response({'error': "That token don't belong to you"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'initial_tx': token.burn(user, amount)}, status=status.HTTP_200_OK)
+
+
 class GetHotView(APIView):
     '''
     View for getting hot items
@@ -650,7 +679,7 @@ class MakeBid(APIView):
     def post(self, request):
         request_data = request.data
         token_id = request_data.get('token_id')
-        amount = Decimal(request_data.get('amount'))
+        amount = Decimal(str(request_data.get('amount')))
         quantity = int(request_data.get('quantity'))
         currency = request_data.get('currency')
 

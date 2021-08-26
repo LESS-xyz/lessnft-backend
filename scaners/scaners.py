@@ -336,7 +336,7 @@ def buy_scanner(latest_block, smart_contract, standart):
         if token[0].standart == 'ERC721':
             price = token[0].currency_price
             currency = token[0].currency
-            token.update(owner=new_owner, selling=False, price=None)
+            token.update(owner=new_owner, selling=False, currency_price=None)
             Bid.objects.filter(token=token[0]).delete()
             logging.info('all bids deleted!')
         elif token[0].standart == 'ERC1155':
