@@ -18,6 +18,11 @@ def get_activity_response(activities):
         except AttributeError:
             price = ""
 
+        if hasattr(activ, "currency"):
+            currency = activ.currency.symbol if activ.currency else None,
+        else:
+            currency = None
+
         if price:
             price = price / activ.token.currency.get_decimals
 
@@ -42,7 +47,7 @@ def get_activity_response(activities):
             "date": activ.date,
             "id": activ.id,
             "price": price,
-            "currency": activ.currency.symbol if activ.currency else None,
+            "currency": currency,
             "quantity": quantity,
             "is_viewed": activ.is_viewed,
         }

@@ -463,7 +463,7 @@ class TokenBurnView(APIView):
         user = request.user
         token = Token.objects.get(id=token_id)
         amount = request.data.get("amount")
-        if transferring_token.status != Status.COMMITTED:
+        if token.status != Status.COMMITTED:
             return Response({'error': 'Invalid token status'}, status=status.HTTP_400_BAD_REQUEST)
         if not (token.owner == user or token.ownership_set.filter(user=user).exists()):
             return Response({'error': "That token don't belong to you"}, status=status.HTTP_400_BAD_REQUEST)
