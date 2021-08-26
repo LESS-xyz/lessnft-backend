@@ -376,6 +376,30 @@ class Token(models.Model):
                                         web3.toChecksumAddress(new_owner), self.internal_id).buildTransaction(tx_params)
         return initial_tx
 
+    def burn(self, user=None, amount=None):
+        web3 = Web3(HTTPProvider(NETWORK_SETTINGS["ETH"]["endpoint"]))
+        tx_params = {
+            'chainId': web3.eth.chainId,
+            'gas': TOKEN_MINT_GAS_LIMIT,
+            'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(self.owner.username), 'pending'),
+            'gasPrice': web3.eth.gasPrice,
+        }
+        if self.standart == "ERC721":
+            myContract = web3.eth.contract(
+                address=web3.toChecksumAddress(self.collection.address),
+                abi=ERC721_MAIN,
+            )
+            return myContract.functions.burn(self.internal_id).buildTransaction(tx_params)
+        myContract = web3.eth.contract(
+            address=web3.toChecksumAddress(self.collection.address),
+            abi=ERC1155_MAIN,
+        )
+        return myContract.functions.burn(
+            web3.toChecksumAddress(user.username),
+            self.internal_id, 
+            amount,
+        ).buildTransaction(tx_params)
+
     def buy_token(self, token_amount, buyer, master_account, seller=None, price=None):
         print(f'seller: {seller}')  
 

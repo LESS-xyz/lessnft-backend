@@ -42,6 +42,7 @@ def get_activity_response(activities):
             "date": activ.date,
             "id": activ.id,
             "price": price,
+            "currency": activ.currency.symbol if activ.currency else None,
             "quantity": quantity,
             "is_viewed": activ.is_viewed,
         }
