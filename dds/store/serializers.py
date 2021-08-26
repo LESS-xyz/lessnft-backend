@@ -107,7 +107,7 @@ class BidSerializer(serializers.ModelSerializer):
         return obj.user.id
 
     def get_amount(self, obj):
-        return obj.amount / obj.token.currency.get_decimals
+        return obj.amount
 
     def get_currency(self, obj):
         return CurrencySerializer(obj.token.currency).data

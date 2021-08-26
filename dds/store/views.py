@@ -670,6 +670,8 @@ class MakeBid(APIView):
         if not created and bid.amount >= amount:
             return Response({'error': 'you cannot lower your bid'}, status=status.HTTP_400_BAD_REQUEST)
 
+        currency = UsdRate.objects.get(symbol=currency)
+
         bid.amount = amount
         bid.currency = currency
         bid.quantity = quantity
@@ -685,9 +687,9 @@ class MakeBid(APIView):
             Web3.toChecksumAddress(user.username)
         ).call()
         
-        amount, _ = calculate_amount(amount, currency)
+        amount, _ = calculate_amount(amount, currency.symbol)
 
-        if allowance < amout * quantity:
+        if allowance < amount * quantity:
             tx_params = {
                 'chainId': web3.eth.chainId,
                 'gas': APPROVE_GAS_LIMIT,
