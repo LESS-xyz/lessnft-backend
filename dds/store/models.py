@@ -581,3 +581,18 @@ class Bid(models.Model):
     currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, blank=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     state = models.CharField(max_length=50, choices=Status.choices, default=Status.PENDING)
+
+
+class TransactionTracker(models.Model):
+    tx_hash = models.CharField(max_length=200, null=True, blank=True)
+    token = models.ForeignKey('Token', on_delete=models.CASCADE, null=True, blank=True, default=None)
+    ownership = models.ForeignKey('Ownership', on_delete=models.CASCADE, null=True, blank=True, default=None)
+
+    def __str__(self):
+        return self.tx_hash
+    
+    @property
+    def item(self):
+        if self.token:
+            return self.token
+        return self.ownership

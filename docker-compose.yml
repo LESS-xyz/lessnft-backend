@@ -32,6 +32,15 @@ services:
     restart: unless-stopped
     networks:
       dds2-net:
+  tx_tracker:
+    build:
+      context: .
+      dockerfile: dockerfiles/tx_tracker.Dockerfile
+    depends_on:
+      - db
+    restart: unless-stopped
+    networks:
+      dds2-net:
   scanner_721:
     build:
       context: .
