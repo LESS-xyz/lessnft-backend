@@ -454,8 +454,7 @@ class TokenBurnView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'address': openapi.Schema(type=openapi.TYPE_STRING)
+                'amount': openapi.Schema(type=openapi.TYPE_STRING),
             }),
         responses={200: transfer_tx},
     )

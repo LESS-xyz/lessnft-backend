@@ -14,7 +14,7 @@ urlpatterns = [
     path('transfer/<str:token>/', TransferOwned.as_view()),
     path('collection/<str:param>/<int:page>/', GetCollectionView.as_view()),
     path('<int:id>/', GetView.as_view()),
-    path('<int:id>/burn/', TokenBurnView.as_view()),
+    path('<int:token_id>/burn/', TokenBurnView.as_view()),
     path('buy/', BuyTokenView.as_view()),
     path('tags/', get_tags),
     path('bids/make_bid/', MakeBid.as_view()),

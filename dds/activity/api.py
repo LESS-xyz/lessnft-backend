@@ -23,9 +23,6 @@ def get_activity_response(activities):
         else:
             currency = None
 
-        if price:
-            price = price / activ.token.currency.get_decimals
-
         try:
             quantity = getattr(activ, "quantity")
         except AttributeError:
