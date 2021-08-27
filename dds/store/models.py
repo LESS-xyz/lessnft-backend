@@ -91,7 +91,6 @@ class Collection(models.Model):
         self.creator = request.user
         self.save()
 
-
     def create_token(self, creator, ipfs, signature, amount):
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
         if self.standart == 'ERC721':
@@ -218,7 +217,6 @@ def validate_nonzero(value):
         )
 
 
-
 class Token(models.Model):
     name = models.CharField(max_length=200, unique=True)
     tx_hash = models.CharField(max_length=200, null=True, blank=True)
@@ -253,18 +251,10 @@ class Token(models.Model):
         if self.currency_price and self.currency:
             return int(self.currency_price * self.currency.get_decimals)
 
-    @price.setter
-    def price(self, value):
-        self.currency_price = value
-
     @property
     def minimal_bid(self):
         if self.currency_minimal_bid and self.currency:
             return int(self.currency_minimal_bid * self.currency.get_decimals)
-
-    @minimal_bid.setter
-    def minimal_bid(self, value):
-        self.currency_minimal_bid = value
 
     @property
     def standart(self):
@@ -304,7 +294,6 @@ class Token(models.Model):
             if not self.ownership_set.filter(owner=user).exists():
                 return False, Response({'error': "this token doesn't belong to you"}, status=status.HTTP_400_BAD_REQUEST)
         return True, None
-
 
     def save_in_db(self, request, ipfs):
         self.name = request.data.get('name')
@@ -550,18 +539,10 @@ class Ownership(models.Model):
         if self.currency_price and self.currency:
             return int(self.currency_price * self.currency.get_decimals)
 
-    @price.setter
-    def price(self, value):
-        self.currency_price = value
-
     @property
     def minimal_bid(self):
         if self.currency_minimal_bid and self.currency:
             return int(self.currency_minimal_bid * self.currency.get_decimals)
-
-    @minimal_bid.setter
-    def minimal_bid(self, value):
-        self.currency_minimal_bid = value
 
     @property
     def get_currency_price(self):

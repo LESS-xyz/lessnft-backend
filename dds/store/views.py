@@ -424,7 +424,7 @@ class GetView(APIView):
             ownership.selling = selling
             ownership.currency_price = price
             ownership.currency = currency
-            ownership.minimal_bid = minimal_bid
+            ownership.currency_minimal_bid = minimal_bid
             ownership.full_clean()
             ownership.save()
 
