@@ -5,7 +5,7 @@ from dds.settings import *
 from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid, token_search, collection_search)
 from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs
 
-from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token
+from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token, TransactionTracker
 from dds.store.serializers import (
     TokenPatchSerializer, 
     TokenSerializer,
@@ -999,3 +999,44 @@ class SupportView(APIView):
             return Response('OK', status=status.HTTP_200_OK)
         else:
             return Response('you are robot. go away, robot!', status=status.HTTP_400_BAD_REQUEST)
+
+
+class TransactionTrackerView(APIView):
+    """
+    View for transaction tracking
+    """
+    @swagger_auto_schema(
+        operation_description="transaction_tracker",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'tx_hash': openapi.Schema(type=openapi.TYPE_STRING),
+                'token': openapi.Schema(type=openapi.TYPE_NUMBER),
+                'ownership': openapi.Schema(type=openapi.TYPE_NUMBER),
+            }),
+        responses={
+            200: {"success": "trancsaction is tracked"}, 
+            400: {"error": "token or ownership not found"},
+        },
+    )
+    def post(self, request):
+        token_id = request.data.get("token")
+        tx_hash = request.data.get("tx_hash")
+        token = None
+        ownership = None
+        if token_id:
+            token = Token.objects.filter(id=token_id).first()
+        ownership_id = request.data.get("ownership")
+        if ownership_id:
+            ownership = Ownership.objects.filter(id=ownership_id).first()
+        if token:
+            token.selling = False
+            token.save()
+            TransactionTracker.objects.create(token=token, tx_hash=tx_hash)
+            return Response({"success": "trancsaction is tracked"}, status=status.HTTP_200_OK)
+        if ownership:
+            ownership.selling = False
+            ownership.save()
+            TransactionTracker.objects.create(ownership=ownership, tx_hash=tx_hash)
+            return Response({"success": "trancsaction is tracked"}, status=status.HTTP_200_OK)
+        return Response({"error": "token or ownership not found"}, status=status.HTTP_400_BAD_REQUEST)
