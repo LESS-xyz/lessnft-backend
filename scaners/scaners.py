@@ -153,17 +153,23 @@ def mint_transfer(latest_block, smart_contract):
         new_owner_address = event['args']['to'].lower()
 
         new_owner = AdvUser.objects.filter(username=new_owner_address)
-        if not new_owner.exists():
+        if not new_owner:
             new_owner = [None]
-        ipfs = get_ipfs(token_id, collection.address, contract_standart)
-        try:
-            ipfs = ipfs[6:]
-        except:
-            continue
-        token = Token.objects.filter(
-            ipfs=ipfs, 
-            collection=collection,
-        )
+        if event['args']['to'] == empty_address:
+            token = Token.objects.filter(internal_id__isnull=False).filter(
+                internal_id=token_id,
+                collection__address=collection.address,
+            )
+        else:
+            ipfs = get_ipfs(token_id, collection.address, contract_standart)
+            try:
+                ipfs = ipfs[6:]
+            except:
+                continue
+            token = Token.objects.filter(
+                ipfs=ipfs, 
+                collection=collection,
+            )
         if not token.exists():
             logging.warning('token 404!')
             continue

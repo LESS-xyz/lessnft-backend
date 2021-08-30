@@ -16,7 +16,7 @@ from dds.settings import (
     CAPTCHA_URL
 )
 from dds.utilities import get_page_slice
-from dds.store.models import Token, Collection, Ownership
+from dds.store.models import Token, Collection, Ownership, Status
 from dds.store.serializers import TokenSerializer, CollectionSearchSerializer, TokenSearchSerializer
 from dds.rates.api import calculate_amount
 
@@ -73,7 +73,7 @@ def token_search(words, page, **kwargs):
     if currency is not None:
         currency = currency[0]
 
-    tokens = Token.objects.all().select_related("currency", "owner")
+    tokens = Token.objects.filter(status=Status.COMMITTED).select_related("currency", "owner")
 
     # Below are the tokens in the form of a QUERYSET
     for word in words:

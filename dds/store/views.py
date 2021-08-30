@@ -1014,10 +1014,6 @@ class TransactionTrackerView(APIView):
                 'token': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'ownership': openapi.Schema(type=openapi.TYPE_NUMBER),
             }),
-        responses={
-            200: {"success": "trancsaction is tracked"}, 
-            400: {"error": "token or ownership not found"},
-        },
     )
     def post(self, request):
         token_id = request.data.get("token")
