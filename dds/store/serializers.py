@@ -162,7 +162,7 @@ class TokenSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
     creator = CreatorSerializer()
     collection = CollectionSlimSerializer()
-    currency = serializers.SerializerMethodField()
+    currency = CurrencySerializer()
 
     class Meta:
         model = Token
@@ -217,26 +217,6 @@ class TokenSerializer(serializers.ModelSerializer):
         if sort_prices:
             return sort_prices[0].get("price")
 
-    def get_currency(self, obj):
-        if obj.standart == "ERC721":
-            return CurrencySerializer(obj.currency).data
-        owners = obj.ownership_set.filter(
-            selling=True,
-            currency__isnull=False,
-            currency_price__isnull=False,
-        )
-        prices = [
-            {
-                "currency": owner.currency,
-                "usd_price": calculate_amount(owner.price, owner.currency.symbol)[0],
-            }
-            for owner in owners
-        ]
-        sort_prices = list(sorted(prices, key=lambda i: i["usd_price"]))
-        if sort_prices:
-            currency = sort_prices[0].get("currency")
-            return CurrencySerializer(currency).data
-
     def get_available(self, obj):
         if obj.standart == "ERC721":
             available = 1 if obj.selling else 0
@@ -265,7 +245,6 @@ class TokenSerializer(serializers.ModelSerializer):
 
 class TokenSearchSerializer(TokenSerializer):
     price = serializers.SerializerMethodField()
-    currency = serializers.SerializerMethodField()
 
     def get_price(self, obj):
         if obj.standart == "ERC721":
@@ -279,15 +258,6 @@ class TokenSearchSerializer(TokenSerializer):
             currency_price__isnull=False,
         ).aggregate(Min("currency_price"))
         return currency.get("currency_price__min")
-
-    def get_currency(self, obj):
-        if obj.standart == "ERC721":
-            return CurrencySerializer(obj.currency).data
-        symbol = self.context.get("currency")
-        if not symbol:
-            symbol = "less"
-        currency = UsdRate.objects.get(symbol=symbol)
-        return CurrencySerializer(currency).data
 
 
 

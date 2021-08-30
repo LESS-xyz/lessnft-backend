@@ -322,9 +322,9 @@ class Token(models.Model):
 
         if currency:
             currency = UsdRate.objects.filter(symbol__iexact=currency).first()
+        self.currency = currency
 
         if self.standart == 'ERC721':
-            self.currency = currency
             self.total_supply = 1
             self.owner = self.creator
             self.selling = selling
@@ -337,7 +337,6 @@ class Token(models.Model):
             self.save()
             ownership = Ownership.objects.get(owner=self.creator, token=self)
             ownership.quantity = request.data.get('total_supply')
-            ownership.currency = currency
             ownership.selling = selling
             ownership.currency_price = price
             ownership.currency_minimal_bid = minimal_bid
