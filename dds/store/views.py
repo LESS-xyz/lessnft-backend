@@ -556,32 +556,25 @@ class TransferOwned(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'address': openapi.Schema(type=openapi.TYPE_STRING)
+                'address': openapi.Schema(type=openapi.TYPE_STRING),
+                'amount': openapi.Schema(type=openapi.TYPE_NUMBER)
             }),
         responses={200: transfer_tx, 400: "you can not transfer tokens that don't belong to you"},
     )
     def post(self, request, token):
-        #get token, collection and user
-        id = request.data.get('id')
-        new_owner = Web3.toChecksumAddress(request.data.get('address'))
-        transferring_token = Token.objects.get(id=id)
-        if transferring_token.status == Status.BURNED:
-            return Response({'error': 'burned'}, status=status.HTTP_404_NOT_FOUND)
-        if transferring_token.internal_id is None:
-            return Response('token is not validated yet, please wait up to 5 minutes. If problem persists,'
-                            'please contact us through support form', status=status.HTTP_400_BAD_REQUEST)
+        address = request.data.get("address")
+        amount = request.data.get("amount")
         user = request.user
+        transferring_token = Token.objects.get(id=token)
+        new_user = AdvUser.objects.get(username=address)
 
-        #construct tx
-        current_owner = Web3.toChecksumAddress(user.username)
+        is_valid, response = transferring_token.patch_validate(user=user)
+        if not is_valid:
+            return response
 
-        if current_owner.lower() != transferring_token.owner.username.lower():
-            return Response({'error': "you can not transfer tokens that don't belong to you"})
-
-        initial_tx = transferring_token.transfer(new_owner)
-
-        return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
+        current_owner = Web3.toChecksumAddress(request.user.username)
+        initial_tx = transferring_token.transfer(user, address, amount)
+        return Response({"initial_tx": initial_tx}, status=status.HTTP_200_OK)
 
 
 class BuyTokenView(APIView):

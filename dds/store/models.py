@@ -346,24 +346,35 @@ class Token(models.Model):
         self.full_clean()
         self.save()
 
-    def transfer(self, new_owner):
+    def transfer(self, old_owner, new_owner, amount=None):
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
-        if self.standart == 'ERC721':
-            abi = ERC721_MAIN
-        else:
-            abi = ERC1155_MAIN
-        myContract = web3.eth.contract(
-            address=web3.toChecksumAddress(self.collection.address),
-            abi=abi)
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': TOKEN_TRANSFER_GAS_LIMIT,
-            'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(self.owner.username), 'pending'),
+            'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(old_owner.username), 'pending'),
             'gasPrice': web3.eth.gasPrice,
         }
-        initial_tx = myContract.functions.transferFrom(web3.toChecksumAddress(self.owner.username),
-                                        web3.toChecksumAddress(new_owner), self.internal_id).buildTransaction(tx_params)
-        return initial_tx
+        if self.standart == 'ERC721':
+            myContract = web3.eth.contract(
+                address=web3.toChecksumAddress(self.collection.address),
+                abi=ERC721_MAIN,
+            )
+            return myContract.functions.transferFrom(
+                web3.toChecksumAddress(self.owner.username),
+                web3.toChecksumAddress(new_owner), 
+                self.internal_id,
+            ).buildTransaction(tx_params)
+        myContract = web3.eth.contract(
+            address=web3.toChecksumAddress(self.collection.address),
+            abi=ERC1155_MAIN,
+        )
+        return myContract.functions.safeTransferFrom(
+            web3.toChecksumAddress(old_owner.username),
+            web3.toChecksumAddress(new_owner), 
+            self.internal_id,
+            int(amount),
+            old_owner.username,
+        ).buildTransaction(tx_params)
 
     def burn(self, user=None, amount=None):
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS["ETH"]["endpoint"]))
