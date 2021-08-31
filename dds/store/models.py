@@ -339,6 +339,7 @@ class Token(models.Model):
             ownership.quantity = request.data.get('total_supply')
             ownership.selling = selling
             ownership.currency_price = price
+            ownership.currency = currency
             ownership.currency_minimal_bid = minimal_bid
             ownership.full_clean()
             ownership.save()
@@ -369,7 +370,7 @@ class Token(models.Model):
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': TOKEN_MINT_GAS_LIMIT,
-            'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(self.owner.username), 'pending'),
+            'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(user.username), 'pending'),
             'gasPrice': web3.eth.gasPrice,
         }
         if self.standart == "ERC721":
@@ -385,7 +386,7 @@ class Token(models.Model):
         return myContract.functions.burn(
             web3.toChecksumAddress(user.username),
             self.internal_id, 
-            amount,
+            int(amount),
         ).buildTransaction(tx_params)
 
     def buy_token(self, token_amount, buyer, master_account, seller=None, price=None):

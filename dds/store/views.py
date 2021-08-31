@@ -462,10 +462,9 @@ class TokenBurnView(APIView):
         user = request.user
         token = Token.objects.get(id=token_id)
         amount = request.data.get("amount")
-        if token.status != Status.COMMITTED:
-            return Response({'error': 'Invalid token status'}, status=status.HTTP_400_BAD_REQUEST)
-        if not (token.owner == user or token.ownership_set.filter(user=user).exists()):
-            return Response({'error': "That token don't belong to you"}, status=status.HTTP_400_BAD_REQUEST)
+        is_valid, res = token.patch_validate(user=user)
+        if not is_valid:
+            return res
         return Response({'initial_tx': token.burn(user, amount)}, status=status.HTTP_200_OK)
 
 
