@@ -566,7 +566,7 @@ class TransferOwned(APIView):
         amount = request.data.get("amount")
         user = request.user
         transferring_token = Token.objects.get(id=token)
-        new_user = AdvUser.objects.get(username=address)
+        new_user = AdvUser.objects.get(username__iexact=address)
 
         is_valid, response = transferring_token.patch_validate(user=user)
         if not is_valid:
