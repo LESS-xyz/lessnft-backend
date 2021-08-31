@@ -385,7 +385,7 @@ class GetView(APIView):
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_404_NOT_FOUND)
         
-        is_valid, response = token.patch_validate(user)
+        is_valid, response = token.is_valid(user)
         if not is_valid:
             return response
 
@@ -462,7 +462,7 @@ class TokenBurnView(APIView):
         user = request.user
         token = Token.objects.get(id=token_id)
         amount = request.data.get("amount")
-        is_valid, res = token.patch_validate(user=user)
+        is_valid, res = token.is_valid(user=user)
         if not is_valid:
             return res
         return Response({'initial_tx': token.burn(user, amount)}, status=status.HTTP_200_OK)
@@ -568,7 +568,7 @@ class TransferOwned(APIView):
         transferring_token = Token.objects.get(id=token)
         new_user = AdvUser.objects.get(username=address)
 
-        is_valid, response = transferring_token.patch_validate(user=user)
+        is_valid, response = transferring_token.is_valid(user=user)
         if not is_valid:
             return response
 
