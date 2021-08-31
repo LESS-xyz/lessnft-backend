@@ -284,15 +284,27 @@ class Token(models.Model):
     def __str__(self):
         return self.name
 
-    def patch_validate(self, user) -> Tuple[bool, Union[Response, None]]:
+    def is_valid(self, user=None) -> Tuple[bool, Union[Response, None]]:
         if self.status == Status.BURNED:
-            return False, Response({'error': 'burned'}, status=status.HTTP_404_NOT_FOUND)
-        if self.standart == 'ERC721':
-            if self.owner != user:
-                return False, Response({'error': "this token doesn't belong to you"}, status=status.HTTP_400_BAD_REQUEST)
-        else:
+            return False, Response({"error": "burned"}, status=status.HTTP_404_NOT_FOUND)
+        if self.internal_id is None:
+            return False, Response(
+                "token is not validated yet, please wait up to 5 minutes. If problem persists,"
+                "please contact us through support form",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if user:
+            if self.standart == "ERC721":
+                if self.owner != user:
+                    return False, Response(
+                        {"error": "this token doesn't belong to you"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
             if not self.ownership_set.filter(owner=user).exists():
-                return False, Response({'error': "this token doesn't belong to you"}, status=status.HTTP_400_BAD_REQUEST)
+                return False, Response(
+                    {"error": "this token doesn't belong to you"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         return True, None
 
     def save_in_db(self, request, ipfs):
@@ -547,13 +559,13 @@ class Ownership(models.Model):
 
     @property
     def price(self):
-        if self.currency_price and self.currency:
-            return int(self.currency_price * self.currency.get_decimals)
+        if self.currency_price:
+            return int(self.currency_price * self.token.currency.get_decimals)
 
     @property
     def minimal_bid(self):
-        if self.currency_minimal_bid and self.currency:
-            return int(self.currency_minimal_bid * self.currency.get_decimals)
+        if self.currency_minimal_bid:
+            return int(self.currency_minimal_bid * self.token.currency.get_decimals)
 
     @property
     def get_currency_price(self):

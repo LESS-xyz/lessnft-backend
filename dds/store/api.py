@@ -17,7 +17,7 @@ from dds.settings import (
 )
 from dds.utilities import get_page_slice
 from dds.store.models import Token, Collection, Ownership, Status
-from dds.store.serializers import TokenSerializer, CollectionSearchSerializer, TokenSearchSerializer
+from dds.store.serializers import TokenSerializer, CollectionSearchSerializer
 from dds.rates.api import calculate_amount
 
 
@@ -29,25 +29,15 @@ def token_selling_filter(is_selling) -> bool:
    return token_filter
 
 
-def token_currency_filter(currency) -> bool:
-   def token_filter(token):
-        if token.standart=="ERC721":
-            return token.currency.symbol == currency
-        return token.ownership_set.filter(
-            currency__symbol=currency
-        ).exists()
-   return token_filter 
-
-
-def token_sort_price(token, currency, reverse=False):
+def token_sort_price(token, reverse=False):
+    currency = token.currency.symbol
     if not (token.is_selling or token.is_auc_selling):
         return 0
     if token.standart=="ERC721":
         price = token.currency_price if token.currency_price else token.minimal_bid
-        return calculate_amount(price, token.currency.symbol)[0]
-    owners = token.ownership_set.filter(currency__symbol=currency)
-    owners_price = [{"price": owner.get_currency_price, "currency": owner.currency.symbol} for owner in owners]
-    prices = [calculate_amount(op.get("price"), op.get("currency"))[0] for op in owners_price]
+        return calculate_amount(price, currency)[0]
+    owners = token.ownership_set.all()
+    prices = [calculate_amount(owner.get_currency_price, currency)[0] for owner in owners]
     if reverse:
         return max(prices)
     return min(prices)
@@ -113,12 +103,10 @@ def token_search(words, page, **kwargs):
         token_ids.extend(token_list.values_list("id", flat=True).distinct())
         tokens = Token.objects.filter(id__in=token_ids)
 
-    # Below are the tokens in the form of a LIST
     if currency is not None:
-        currency_filter = token_currency_filter(currency)
-        tokens = filter(currency_filter, tokens)
-        tokens = list(tokens)
+        tokens = tokens.filter(currency__symbol=currency)
 
+    # Below are the tokens in the form of a LIST
     if on_sale is not None:
         on_sale = on_sale[0]
         selling_filter = token_selling_filter(on_sale.lower()=="true")
@@ -141,7 +129,7 @@ def token_search(words, page, **kwargs):
 
     page = int(page)
     start, end = get_page_slice(page, len(tokens))
-    return TokenSearchSerializer(tokens[start:end], context={"user": user, "currency": currency}, many=True).data
+    return TokenSerializer(tokens[start:end], context={"user": user}, many=True).data
 
 
 def collection_search(words, page):
