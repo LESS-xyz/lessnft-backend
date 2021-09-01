@@ -636,11 +636,8 @@ class BuyTokenView(APIView):
         except ObjectDoesNotExist:
             return Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        master_account = MasterUser.objects.get()
-    
-        buy = tradable_token.buy_token(token_amount, buyer, master_account, seller)
-
-        return buy
+        buy = tradable_token.buy_token(token_amount, buyer, seller)
+        return Response({'initial_tx': buy}, status=status.HTTP_200_OK)
 
 
 @api_view(http_method_names=['GET'])
@@ -826,8 +823,6 @@ class AuctionEndView(APIView):
         if not bet:
             return {'error': 'no active bids'}
 
-        master_account = MasterUser.objects.get()
-
         token = bet.token
         buyer = bet.user
         price = bet.amount
@@ -847,8 +842,8 @@ class AuctionEndView(APIView):
         else:
             token_amount = min(bet.quantity, ownership.quantity)
 
-        sell = token.buy_token(token_amount, buyer, master_account,seller=seller, price=price)
-        return sell
+        sell = token.buy_token(token_amount, buyer,seller=seller, price=price)
+        return Response({'initial_tx': sell}, status=status.HTTP_200_OK)
 
 
 class ReportView(APIView):
