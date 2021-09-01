@@ -10,7 +10,7 @@ from django.db.models.signals import post_save
 from django.core.validators import MaxValueValidator, MinValueValidator
 from dds.consts import MAX_AMOUNT_LEN
 from dds.utilities import sign_message, get_media_from_ipfs
-from dds.accounts.models import AdvUser
+from dds.accounts.models import AdvUser, MasterUser
 from dds.rates.models import UsdRate
 from dds.consts import DECIMALS
 from dds.settings import (
@@ -420,8 +420,9 @@ class Token(models.Model):
             int(amount),
         ).buildTransaction(tx_params)
 
-    def buy_token(self, token_amount, buyer, master_account, seller=None, price=None):
+    def buy_token(self, token_amount, buyer, seller=None, price=None):
         print(f'seller: {seller}')  
+        master_account = MasterUser.objects.get()
 
         id_order = '0x%s' % secrets.token_hex(32)
 
@@ -503,7 +504,7 @@ class Token(models.Model):
         print(f'data: {data}')
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
 
-        initial_tx = {
+        return {
             'nonce': web3.eth.getTransactionCount(
                 web3.toChecksumAddress(buyer.username), 'pending'
             ),
@@ -514,8 +515,6 @@ class Token(models.Model):
             'value': 0,
             'data': data
         }
-
-        return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
 
     def get_owner_auction(self):
         owners_auction = self.ownership_set.filter(currency_price=None, selling=True)
