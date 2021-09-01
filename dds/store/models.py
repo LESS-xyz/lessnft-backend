@@ -300,11 +300,12 @@ class Token(models.Model):
                         {"error": "this token doesn't belong to you"},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
-            if not self.ownership_set.filter(owner=user).exists():
-                return False, Response(
-                    {"error": "this token doesn't belong to you"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            else:
+                if not self.ownership_set.filter(owner=user).exists():
+                    return False, Response(
+                        {"error": "this token doesn't belong to you"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
         return True, None
 
     def save_in_db(self, request, ipfs):

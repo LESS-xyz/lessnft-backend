@@ -251,8 +251,8 @@ def mint_transfer(latest_block, smart_contract):
                 else:
                     if owner.first().quantity:
                         owner.update(quantity=F('quantity')-event['args']['value'])
-                    else:
-                        owner.delete()
+                        if owner.first().quantity <= 0:
+                            owner.delete()
 
                 owner = Ownership.objects.filter(owner=new_owner[0], token=token.first())
                 if owner.exists():
@@ -267,9 +267,9 @@ def mint_transfer(latest_block, smart_contract):
                         token=token.first(),
                         quantity=event['args']['value']
                     )
-                    token.first().owners.add(owner)
-                
-                owner.save()
+                    owner.save()
+                    token.first().owners.add(new_owner[0])
+                    token.first().save()
 
     save_last_block(
         latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH, 

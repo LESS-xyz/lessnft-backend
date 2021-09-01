@@ -59,7 +59,7 @@ class OwnershipSerializer(serializers.ModelSerializer):
         )
 
     def get_id(self, obj):
-        return obj.owner.id
+        return obj.owner.url
 
     def get_currency(self, obj):
         return CurrencySerializer(obj.token.currency).data
@@ -226,7 +226,7 @@ class TokenSerializer(serializers.ModelSerializer):
                 "price": obj.currency_price,
                 "currency": CurrencySerializer(obj.currency).data,
             }).data
-        owners = Ownership.objects.filter(token=obj, selling=True)
+        owners = obj.ownership_set.all()
         return OwnershipSerializer(owners, many=True).data
 
     def get_is_liked(self, obj):
