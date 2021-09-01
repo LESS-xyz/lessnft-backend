@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.db import models
 from django.forms import CheckboxSelectMultiple
-from dds.store.models import Token, Collection, Tags, Ownership
+from dds.store.models import Token, Collection, Tags, Ownership, Bid
 from django.utils.safestring import mark_safe
 
 
@@ -28,6 +28,11 @@ class TokenInline(admin.TabularInline):
     model = Token
     readonly_fields = ('id',)
     extra = 0
+
+
+class BidAdmin(admin.ModelAdmin):
+    model = Bid
+    list_display = ('token', 'user')
 
 
 class TokenAdmin(admin.ModelAdmin):
@@ -69,4 +74,5 @@ class OwnershipAdmin(admin.ModelAdmin):
 admin.site.register(Tags)
 admin.site.register(Ownership, OwnershipAdmin)
 admin.site.register(Token, TokenAdmin)
+admin.site.register(Bid, BidAdmin)
 admin.site.register(Collection, CollectionAdmin)
