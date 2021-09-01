@@ -283,7 +283,7 @@ class GetOwnedView(APIView):
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
-        tokens = Token.objects.filter(Q(owner=user) | Q(owners=user)).exclude(status=Status.BURNED).order_by('-id')
+        tokens = Token.committed.filter(Q(owner=user) | Q(owners=user)).order_by('-id')
 
         start, end = get_page_slice(page, len(tokens))
 
@@ -307,7 +307,7 @@ class GetCreatedView(APIView):
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
-        tokens = Token.objects.filter(creator=user).exclude(status=Status.BURNED).order_by('-id')
+        tokens = Token.committed.filter(status=Status.COMMITTED).filter(creator=user).order_by('-id')
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
@@ -356,7 +356,7 @@ class GetView(APIView):
 
     def get(self, request, id):
         try:
-            token = Token.objects.get(id=id)
+            token = Token.committed.get(id=id)
         except ObjectDoesNotExist:
             return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
         if token.status == Status.BURNED:
@@ -381,7 +381,7 @@ class GetView(APIView):
         user = request.user
 
         try:
-            token = Token.objects.get(id=id)
+            token = Token.committed.get(id=id)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_404_NOT_FOUND)
         
@@ -460,7 +460,7 @@ class TokenBurnView(APIView):
     )
     def post(self, request, token_id):
         user = request.user
-        token = Token.objects.get(id=token_id)
+        token = Token.committed.get(id=token_id)
         amount = request.data.get("amount")
         is_valid, res = token.is_valid(user=user)
         if not is_valid:
@@ -488,9 +488,9 @@ class GetHotView(APIView):
         order = SORT_STATUSES[sort]
 
         if tag:
-            tokens = Token.objects.filter(tags__name__contains=tag).exclude(status=Status.BURNED).order_by(order)
+            tokens = Token.committed.filter(tags__name__contains=tag).order_by(order)
         else:
-            tokens = Token.objects.exclude(status=Status.BURNED).order_by(order)
+            tokens = Token.committed.order_by(order)
         if sort in ('cheapest', 'highest'):
             tokens = tokens.exclude(price=None).exclude(selling=False).exclude(status=Status.BURNED)
         length = tokens.count()
@@ -515,7 +515,7 @@ class GetHotCollectionsView(APIView):
         collections = Collection.objects.exclude(name__in=(
             COLLECTION_721, 
             COLLECTION_1155,
-        )).filter(Exists(Token.objects.filter(collection__id=OuterRef('id')))).order_by('-id')[:5]
+        )).filter(Exists(Token.committed.filter(collection__id=OuterRef('id')))).order_by('-id')[:5]
         response_data = HotCollectionSerializer(collections, many=True).data
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -538,7 +538,7 @@ class GetCollectionView(APIView):
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        tokens = Token.objects.filter(collection=collection).exclude(status=Status.BURNED)
+        tokens = Token.committed.filter(collection=collection)
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
@@ -742,7 +742,7 @@ class MakeBid(APIView):
 def get_bids(request, token_id):
     #validating token and user
     try:
-        token = Token.objects.get(id=token_id)
+        token = Token.committed.get(id=token_id)
     except ObjectDoesNotExist:
         return Response({'error': 'token not found'}, status=status.HTTP_400_BAD_REQUEST)
     if token.is_auc_selling:
@@ -936,7 +936,7 @@ def get_fee(request):
 
 @api_view(http_method_names=['GET'])
 def get_favorites(request):
-    token_list = Token.objects.filter(is_favorite=True).order_by("-updated_at")
+    token_list = Token.committed.filter(is_favorite=True).order_by("-updated_at")
     response_data = TokenSerializer(token_list, many=True, context={"user": request.user}).data
     return Response(response_data, status=status.HTTP_200_OK)
 
