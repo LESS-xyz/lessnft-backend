@@ -84,6 +84,14 @@ services:
       - ./.docker/redis-data:/data
     networks:
       dds2-net:
+  celery:
+    build: .
+    image: celery:3.1
+    command: "celery -A dds worker -l info"
+    depends_on:
+      - redis
+    networks:
+      dds2-net:
   celery_beat:
     build: .
     image: celery:3.1
