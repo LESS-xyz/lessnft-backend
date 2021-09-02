@@ -63,7 +63,7 @@ def token_search(words, page, **kwargs):
     if currency is not None:
         currency = currency[0]
 
-    tokens = Token.objects.filter(status=Status.COMMITTED).select_related("currency", "owner")
+    tokens = Token.committed.select_related("currency", "owner")
 
     # Below are the tokens in the form of a QUERYSET
     for word in words:
@@ -146,7 +146,7 @@ def collection_search(words, page):
 
 def validate_bid(user, token_id, amount, weth_contract, quantity):
     try:
-        token = Token.objects.get(id=token_id)
+        token = Token.committed.get(id=token_id)
     except ObjectDoesNotExist:
         return 'Token not found'
     if not token.is_auc_selling:

@@ -216,6 +216,10 @@ def validate_nonzero(value):
             params={'value': value},
         )
 
+class TokenManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(status=Status.COMMITTED)
+
 
 class Token(models.Model):
     name = models.CharField(max_length=200, unique=True)
@@ -238,6 +242,9 @@ class Token(models.Model):
     updated_at = models.DateTimeField(auto_now_add=True)
     tags = models.ManyToManyField('Tags', blank=True, null=True)
     is_favorite = models.BooleanField(default=False)
+
+    objects = models.Manager()
+    committed = TokenManager()
 
     @property
     def media(self):

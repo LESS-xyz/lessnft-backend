@@ -14,5 +14,8 @@ psycopg2-binary==2.8.6
 rlp==0.6.0
 web3==5.17.0
 ipfshttpclient==0.7.0
+celery==5.1.2
+django-celery-beat==2.2.1
+redis==3.5.3
 httpcore
 httpx

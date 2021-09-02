@@ -77,5 +77,20 @@ services:
       - ./logs:/code/logs/
     networks:
       dds2-net:
+  redis:
+    image: redis:5.0
+    restart: unless-stopped
+    volumes:
+      - ./.docker/redis-data:/data
+    networks:
+      dds2-net:
+  celery_beat:
+    build: .
+    image: celery:3.1
+    command: "celery -A dds beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    depends_on:
+      - redis
+    networks:
+      dds2-net:
 networks:
   dds2-net:
