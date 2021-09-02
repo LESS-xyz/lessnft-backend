@@ -293,7 +293,7 @@ class Token(models.Model):
     @property
     def is_timed_auc_selling(self):
         if self.standart == "ERC721":
-            return bool(self.selling and not self.price and self.minimal_bid and self.end_auction)
+            return bool(self.selling and not self.price and self.end_auction)
 
     def __str__(self):
         return self.name
