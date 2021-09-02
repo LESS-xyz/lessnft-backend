@@ -398,7 +398,7 @@ class GetView(APIView):
             request_data['currency_price'] = price 
         if minimal_bid:
             request_data.pop('minimal_bid')
-            minimal_bid = Decimal(minimal_bid)
+            minimal_bid = Decimal(str(minimal_bid))
             request_data['currency_minimal_bid'] = minimal_bid
         
         if token.standart == "ERC721":
@@ -428,7 +428,6 @@ class GetView(APIView):
                     user=user,
                     quantity=quantity,
                     price=price,
-                    currency=token.currency,
                 )
 
         response_data = TokenFullSerializer(token, context={"user": request.user}).data

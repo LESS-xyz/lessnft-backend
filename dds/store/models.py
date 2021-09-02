@@ -266,7 +266,6 @@ class Token(models.Model):
             return self.ownership_set.filter(
                 selling=True, 
                 currency_price__isnull=False,
-                currency__isnull=False,
             ).exists()
         return bool(self.selling and self.price and self.currency)
 
@@ -277,7 +276,6 @@ class Token(models.Model):
                 selling=True, 
                 currency_price__isnull=True,
                 currency_minimal_bid__isnull=False,
-                currency__isnull=False,
             ).exists()
         return bool(self.selling and not self.price and self.minimal_bid and self.currency)
 
