@@ -392,7 +392,6 @@ class GetView(APIView):
         price = request_data.get('price', None)
         minimal_bid = request_data.get('minimal_bid', None)
         selling = request_data.get('selling')
-        currency = request_data.get('currency', None)
         if price:
             request_data.pop('price', None)
             price = Decimal(str(price))
@@ -401,14 +400,9 @@ class GetView(APIView):
             request_data.pop('minimal_bid')
             minimal_bid = Decimal(minimal_bid)
             request_data['currency_minimal_bid'] = minimal_bid
-        if currency:
-            request_data.pop('currency')
-            currency = UsdRate.objects.filter(symbol=currency).first()
-            request_data['currency'] = currency.id
         
         if token.standart == "ERC721":
             old_price = token.currency_price
-            old_currency = token.currency
             quantity = 1
 
             serializer = TokenPatchSerializer(token, data=request_data, partial=True)
@@ -419,11 +413,9 @@ class GetView(APIView):
         else:
             ownership = Ownership.objects.get(owner=user, token=token)
             old_price = ownership.currency_price
-            old_currency = ownership.currency
             quantity = ownership.quantity
             ownership.selling = selling
             ownership.currency_price = price
-            ownership.currency = currency
             ownership.currency_minimal_bid = minimal_bid
             ownership.full_clean()
             ownership.save()
@@ -436,7 +428,7 @@ class GetView(APIView):
                     user=user,
                     quantity=quantity,
                     price=price,
-                    currency=currency,
+                    currency=token.currency,
                 )
 
         response_data = TokenFullSerializer(token, context={"user": request.user}).data
@@ -672,14 +664,13 @@ class MakeBid(APIView):
         token_id = request_data.get('token_id')
         amount = Decimal(str(request_data.get('amount')))
         quantity = int(request_data.get('quantity'))
-        currency = request_data.get('currency')
 
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
 
         user = request.user
 
         #returns OK if valid, or error message
-        result = validate_bid(user, token_id, amount, WETH_CONTRACT, quantity, currency)
+        result = validate_bid(user, token_id, amount, WETH_CONTRACT, quantity)
 
         if result != 'OK':
             return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
@@ -690,10 +681,7 @@ class MakeBid(APIView):
         if not created and bid.amount >= amount:
             return Response({'error': 'you cannot lower your bid'}, status=status.HTTP_400_BAD_REQUEST)
 
-        currency = UsdRate.objects.get(symbol=currency)
-
         bid.amount = amount
-        bid.currency = currency
         bid.quantity = quantity
         bid.full_clean()
         bid.save()
@@ -707,7 +695,7 @@ class MakeBid(APIView):
             Web3.toChecksumAddress(user.username)
         ).call()
         
-        amount, _ = calculate_amount(amount, currency.symbol)
+        amount, _ = calculate_amount(amount, bid.token.currency.symbol)
 
         if allowance < amount * quantity:
             tx_params = {
@@ -730,7 +718,6 @@ class MakeBid(APIView):
             token=bid.token,
             user=bid.user,
             price=bid.amount,
-            currency=bid.currency,
             date=bid.created_at,
         )
 

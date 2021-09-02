@@ -397,7 +397,6 @@ def buy_scanner(latest_block, smart_contract, standart):
         history_params = {
             "method": "Buy",
             "price": price,
-            "currency": currency,
         }
         if token_history.exists():
             token_history.update(**history_params)

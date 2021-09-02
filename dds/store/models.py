@@ -552,7 +552,6 @@ post_save.connect(token_save_dispatcher, sender=Token)
 class Ownership(models.Model):
     token = models.ForeignKey('Token', on_delete=models.CASCADE)
     owner = models.ForeignKey('accounts.AdvUser', on_delete=models.CASCADE)
-    currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None)
     quantity = models.PositiveIntegerField(null=True)
     selling = models.BooleanField(default=False)
     currency_price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
