@@ -7,7 +7,7 @@ from dds.store.models import Token, Status
 def remove_pending_tokens():
     expiration_date = datetime.today() - timedelta(days=1)
     tokens = Token.objects.filter(
-        status=Status.COMMITTED,
+        status__in=(Status.PENDING, Status.FAILED),
         updated_at__lte=expiration_date,
     )
     print(f"Pending {len(tokens)} tokens")
