@@ -30,7 +30,13 @@ class TokenPatchSerializer(serializers.ModelSerializer):
     '''
     class Meta:
         model = Token
-        fields = ('currency_price', 'selling', 'currency_minimal_bid')
+        fields = (
+            'currency_price', 
+            'selling', 
+            'currency_minimal_bid',
+            'start_auction',
+            'end_auction',
+        )
 
     def update(self, instance, validated_data):
         print('started patch')
@@ -172,6 +178,7 @@ class TokenSerializer(serializers.ModelSerializer):
         read_only_fields = (
             "is_selling",
             "is_auc_selling",
+            "is_timed_auc_selling",
         )
         fields = read_only_fields + (
             "id",
@@ -192,6 +199,8 @@ class TokenSerializer(serializers.ModelSerializer):
             "is_liked",
             "selling",
             "updated_at",
+            "start_auction",
+            "end_auction",
         )
         
     def get_royalty(self, obj):

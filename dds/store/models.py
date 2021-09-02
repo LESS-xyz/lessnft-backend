@@ -242,6 +242,8 @@ class Token(models.Model):
     updated_at = models.DateTimeField(auto_now_add=True)
     tags = models.ManyToManyField('Tags', blank=True, null=True)
     is_favorite = models.BooleanField(default=False)
+    start_auction = models.DateTimeField(blank=True, null=True, default=None)
+    end_auction = models.DateTimeField(blank=True, null=True, default=None)
 
     objects = models.Manager()
     committed = TokenManager()
@@ -288,6 +290,11 @@ class Token(models.Model):
             ).exists()
         return bool(self.selling and not self.price and self.minimal_bid and self.currency)
 
+    @property
+    def is_timed_auc_selling(self):
+        if self.standart == "ERC721":
+            return bool(self.selling and not self.price and self.minimal_bid and self.end_auction)
+
     def __str__(self):
         return self.name
 
@@ -322,6 +329,8 @@ class Token(models.Model):
         self.ipfs = ipfs
         self.description = request.data.get('description')
         self.creator_royalty = request.data.get('creator_royalty')
+        self.start_auction = request.data.get('start_auction')
+        self.end_auction = request.data.get('end_auction')
         self.creator = request.user
         collection = request.data.get('collection')
         collection_id = int(collection) if isinstance(collection, int) or collection.isdigit() else None
@@ -509,6 +518,7 @@ class Token(models.Model):
                 web3.toChecksumAddress(buyer.username), 'pending'
             ),
             'gasPrice': web3.eth.gasPrice,
+            'chainId': web3.eth.chainId,
             'gas': TOKEN_BUY_GAS_LIMIT,
             'to': EXCHANGE_ADDRESS,
             'method': method,

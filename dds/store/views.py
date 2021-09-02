@@ -391,6 +391,8 @@ class GetView(APIView):
 
         price = request_data.get('price', None)
         minimal_bid = request_data.get('minimal_bid', None)
+        start_auction = request_data.get('start_auction')
+        end_auction = request_data.get('end_auction')
         selling = request_data.get('selling')
         if price:
             request_data.pop('price', None)
@@ -405,6 +407,8 @@ class GetView(APIView):
             old_price = token.currency_price
             quantity = 1
 
+            request_data['start_auction'] = start_auction
+            request_data['end_auction'] = end_auction
             serializer = TokenPatchSerializer(token, data=request_data, partial=True)
 
             print(f"PatchSerializer valid - {serializer.is_valid()}")
