@@ -422,7 +422,7 @@ class GetView(APIView):
 
         # add changes to listing
         if status:
-            if price != old_price or currency != old_currency:
+            if price != old_price:
                 ListingHistory.objects.create(
                     token=token,
                     user=user,
