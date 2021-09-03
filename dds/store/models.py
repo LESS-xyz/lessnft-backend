@@ -1,4 +1,5 @@
 import random
+from datetime import datetime
 import secrets
 from typing import Tuple, Union
 from decimal import *
@@ -288,12 +289,12 @@ class Token(models.Model):
                 currency_minimal_bid__isnull=False,
                 currency__isnull=False,
             ).exists()
-        return bool(self.selling and not self.price and self.minimal_bid and self.currency)
+        return bool(self.selling and not self.price  and self.currency)
 
     @property
     def is_timed_auc_selling(self):
-        if self.standart == "ERC721":
-            return bool(self.selling and not self.price and self.end_auction)
+        if self.standart == "ERC721" and self.end_auction:
+            return bool(self.selling and not self.price and self.end_auction < datetime.today())
 
     def __str__(self):
         return self.name
