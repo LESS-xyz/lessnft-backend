@@ -9,14 +9,18 @@ def create_ipfs(request):
     name = request.data.get("name")
     description = request.data.get("description")
     media = request.FILES.get("media")
+    animation = request.FILES.get("animation")
     attributes = request.data.get("details")
     file_res = client.add(media)
     ipfs_json = {
         "name": name,
         "description": description,
-        "media": file_res["Hash"],
+        "image": f'https://ipfs.io/ipfs/{file_res["Hash"]}',
         "attributes": attributes,
     }
+    if animation:
+        anim_res = client.add(animation)
+        ipfs_json['animation_url'] = f'https://ipfs.io/ipfs/{anim_res["Hash"]}'
     res = client.add_json(ipfs_json)
     return res
 

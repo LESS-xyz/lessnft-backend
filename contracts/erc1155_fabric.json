@@ -217,6 +217,11 @@
         "type": "address"
       },
       {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
         "internalType": "bytes",
         "name": "signature",
         "type": "bytes"

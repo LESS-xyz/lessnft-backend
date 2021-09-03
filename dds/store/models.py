@@ -132,7 +132,7 @@ class Collection(models.Model):
     @classmethod
     def create_contract(cls, name, symbol, standart, owner):
         web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
-        baseURI = '/ipfs/'
+        baseURI = ''
         signature = sign_message(['address'], [SIGNER_ADDRESS])
         tx_params = {
             'chainId': web3.eth.chainId,
@@ -185,6 +185,7 @@ class Collection(models.Model):
         return myContract.functions.makeERC1155(
             baseURI, 
             SIGNER_ADDRESS, 
+            name,
             signature
         ).buildTransaction(tx_params)
 
@@ -248,9 +249,9 @@ class Token(models.Model):
 
     @property
     def media(self):
-        ipfs = get_ipfs_by_hash(self.ipfs).get("media")
+        ipfs = get_ipfs_by_hash(self.ipfs).get("image")
         if ipfs:
-            return get_media_from_ipfs(ipfs)
+            return ipfs
         return None
 
     @property

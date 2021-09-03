@@ -162,10 +162,6 @@ def mint_transfer(latest_block, smart_contract):
             )
         else:
             ipfs = get_ipfs(token_id, collection.address, contract_standart)
-            try:
-                ipfs = ipfs[6:]
-            except:
-                continue
             token = Token.objects.filter(
                 ipfs=ipfs, 
                 collection=collection,
