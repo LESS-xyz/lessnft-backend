@@ -12,13 +12,14 @@ class UsdRate(models.Model):
     Absolutely typical rate app for winter 2021.
     '''
     rate = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=8)
-    coin_node = models.CharField(max_length=100, unique=True)
+    coin_node = models.CharField(max_length=100)
     symbol = models.CharField(max_length=20)
     name = models.CharField(max_length=100)
     image = models.CharField(max_length=500, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     address = models.CharField(max_length=128)
     decimal = models.PositiveSmallIntegerField(null=True)
+    network = models.ForeignKey('networks.Network', on_delete=models.CASCADE)
 
     def __str__(self):
         return self.symbol
