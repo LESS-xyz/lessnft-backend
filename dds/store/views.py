@@ -157,6 +157,8 @@ class CreateView(APIView):
                 'collection': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'details': openapi.Schema(type=openapi.TYPE_OBJECT),
                 'selling': openapi.Schema(type=openapi.TYPE_STRING),
+                'start_auction': openapi.Schema(type=openapi.FORMAT_DATETIME),
+                'end_auction': openapi.Schema(type=openapi.FORMAT_DATETIME),
             }),
         responses={200: create_response},
     )
@@ -371,7 +373,9 @@ class GetView(APIView):
             properties={
                 'selling': openapi.Schema(type=openapi.TYPE_BOOLEAN),
                 'price': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'currency': openapi.Schema(type=openapi.TYPE_STRING)
+                'currency': openapi.Schema(type=openapi.TYPE_STRING),
+                'start_auction': openapi.Schema(type=openapi.FORMAT_DATETIME),
+                'end_auction': openapi.Schema(type=openapi.FORMAT_DATETIME),
             },
         ),
         responses={200: TokenFullSerializer, 401: not_found_response, 400: "this token doesn't belong to you"},
