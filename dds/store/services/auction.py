@@ -4,7 +4,7 @@ from contracts import EXCHANGE
    
 
 def end_auction(token):
-    initial_tx = token.buy_token(0, buyer, master_account,seller=seller, price=price)
+    initial_tx = token.buy_token(0, buyer, seller=seller, price=price)
     data = initial_tx.get("data")
 
     tx_params = {
