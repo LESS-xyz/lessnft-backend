@@ -444,11 +444,7 @@ class Token(models.Model):
                 price = self.price
             else:
                 price = Ownership.objects.get(token=self, owner=seller, selling=True).price
-        if self.standart == 'ERC721':
-            address = self.currency.address
-        else:
-            address = Ownership.objects.get(token=self, owner=seller, selling=True).currency.address
-
+        address = self.currency.address
         types_list = [
             'bytes32', 
             'address', 
