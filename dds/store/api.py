@@ -83,28 +83,24 @@ def token_search(words, page, **kwargs):
             Q(owners__is_verificated=is_verified)
         ) 
 
+    if currency is not None:
+        tokens = tokens.filter(currency__symbol=currency)
+
     if max_price:
         max_price = Decimal(max_price[0])
         ownerships = Ownership.objects.filter(token__in=tokens)
         ownerships = ownerships.filter(
-            currency__symbol=currency
-        ).filter(
             Q(currency_price__lte=max_price) |
             Q(currency_minimal_bid__lte=max_price)
         )
         token_ids = list()
         token_ids.extend(ownerships.values_list("token_id", flat=True).distinct())
         token_list = tokens.filter(
-            currency__symbol=currency
-        ).filter(
             Q(currency_price__lte=max_price) |
             Q(currency_minimal_bid__lte=max_price)
         )
         token_ids.extend(token_list.values_list("id", flat=True).distinct())
         tokens = Token.objects.filter(id__in=token_ids)
-
-    if currency is not None:
-        tokens = tokens.filter(currency__symbol=currency)
 
     # Below are the tokens in the form of a LIST
     if on_sale is not None:
