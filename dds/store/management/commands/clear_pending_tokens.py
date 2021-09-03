@@ -10,7 +10,7 @@ class Command(BaseCommand):
         PeriodicTask.objects.create(
             name="Remove pending tokens",
             task="remove_pending_tokens",
-            interval=IntervalSchedule.objects.get_or_create(every=10, period="seconds")[
+            interval=IntervalSchedule.objects.get_or_create(every=1, period="days")[
                 0
             ],
             start_time=timezone.now(),
