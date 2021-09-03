@@ -391,6 +391,8 @@ class GetView(APIView):
 
         price = request_data.get('price', None)
         minimal_bid = request_data.get('minimal_bid', None)
+        start_auction = request_data.get('start_auction')
+        end_auction = request_data.get('end_auction')
         selling = request_data.get('selling')
         if price:
             request_data.pop('price', None)
@@ -405,6 +407,8 @@ class GetView(APIView):
             old_price = token.currency_price
             quantity = 1
 
+            request_data['start_auction'] = start_auction
+            request_data['end_auction'] = end_auction
             serializer = TokenPatchSerializer(token, data=request_data, partial=True)
 
             print(f"PatchSerializer valid - {serializer.is_valid()}")
@@ -627,11 +631,8 @@ class BuyTokenView(APIView):
         except ObjectDoesNotExist:
             return Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        master_account = MasterUser.objects.get()
-    
-        buy = tradable_token.buy_token(token_amount, buyer, master_account, seller)
-
-        return buy
+        buy = tradable_token.buy_token(token_amount, buyer, seller)
+        return Response({'initial_tx': buy}, status=status.HTTP_200_OK)
 
 
 @api_view(http_method_names=['GET'])
@@ -812,8 +813,6 @@ class AuctionEndView(APIView):
         if not bet:
             return {'error': 'no active bids'}
 
-        master_account = MasterUser.objects.get()
-
         token = bet.token
         buyer = bet.user
         price = bet.amount
@@ -833,8 +832,8 @@ class AuctionEndView(APIView):
         else:
             token_amount = min(bet.quantity, ownership.quantity)
 
-        sell = token.buy_token(token_amount, buyer, master_account,seller=seller, price=price)
-        return sell
+        sell = token.buy_token(token_amount, buyer,seller=seller, price=price)
+        return Response({'initial_tx': sell}, status=status.HTTP_200_OK)
 
 
 class ReportView(APIView):
