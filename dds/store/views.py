@@ -33,11 +33,7 @@ from web3 import HTTPProvider, Web3
 
 from dds.accounts.api import user_search
 from dds.settings import NETWORK_SETTINGS, WETH_ADDRESS
-from contracts import (
-    EXCHANGE,
-    ERC721_MAIN,
-    ERC1155_MAIN,
-)
+from contracts import EXCHANGE
 from dds.rates.api import get_decimals, calculate_amount
 from dds.rates.models import UsdRate
 
