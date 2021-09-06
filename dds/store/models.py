@@ -53,7 +53,7 @@ class CollectionManager(models.Manager):
     def user_collections(self, user):
         """ Return committed collections for user (with default collections) """
         return self.filter(status=Status.COMMITTED).filter(
-            Q(name__in=[COLLECTION_721, COLLECTION_1155]) | Q(creator=u)
+            Q(name__in=[COLLECTION_721, COLLECTION_1155]) | Q(creator=user)
         )
 
     def hot_collections(self, user):

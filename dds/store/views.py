@@ -619,10 +619,7 @@ class BuyTokenView(APIView):
         buyer = request.user
         try:
             if seller_id:
-                int_id = int(seller_id) if isinstance(seller_id, int) or seller_id.isdigit() else None
-                seller = AdvUser.objects.get(
-                    Q(id=int_id) | Q(custom_url=seller_id)
-                )
+                seller = AdvUser.objects.get_by_custom_url(seller_id)
                 ownership = Ownership.objects.filter(token__id=token_id, owner=seller).filter(selling=True)
                 if not ownership:
                     return Response({'error': 'user is not owner or token is not on sell'})
@@ -996,21 +993,18 @@ class TransactionTrackerView(APIView):
     def post(self, request):
         token_id = request.data.get("token")
         tx_hash = request.data.get("tx_hash")
-        token = None
-        ownership = None
-        if token_id:
-            token = Token.objects.filter(id=token_id).first()
-        ownership_id = request.data.get("ownership")
-        if ownership_id:
-            ownership = Ownership.objects.filter(id=ownership_id).first()
-        if token:
-            token.selling = False
-            token.save()
-            TransactionTracker.objects.create(token=token, tx_hash=tx_hash)
-            return Response({"success": "trancsaction is tracked"}, status=status.HTTP_200_OK)
-        if ownership:
+        token = Token.objects.filter(id=token_id).first()
+        if not token:
+            return Response({"error": "token not found"}, status=status.HTTP_400_BAD_REQUEST)
+        if token.standart == "ERC1155":
+            owner_url = request.data.get("ownership")
+            user = AdvUser.objects.get_by_custom_url(owner_url)
+            ownership = Ownership.objects.filter(token_id=token_id, owner=user).first()
             ownership.selling = False
             ownership.save()
             TransactionTracker.objects.create(ownership=ownership, tx_hash=tx_hash)
             return Response({"success": "trancsaction is tracked"}, status=status.HTTP_200_OK)
-        return Response({"error": "token or ownership not found"}, status=status.HTTP_400_BAD_REQUEST)
+        token.selling = False
+        token.save()
+        TransactionTracker.objects.create(token=token, tx_hash=tx_hash)
+        return Response({"success": "trancsaction is tracked"}, status=status.HTTP_200_OK)
