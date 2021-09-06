@@ -51,6 +51,15 @@ class Status(models.TextChoices):
     BURNED = 'Burned'
 
 
+class CollectionManager(models.Manager):
+    def get_by_short_url(self, short_url):
+        """ Return collection by id or short_url """
+        collection_id = None
+        if isinstance(short_url, int) or short_url.isdigit():
+            collection_id = int(short_url)  
+        return self.get(Q(id=collection_id) | Q(short_url=short_url))
+
+
 class Collection(models.Model):
     name = models.CharField(max_length=50, unique=True)
     avatar_ipfs = models.CharField(max_length=200, null=True, default=None)
@@ -64,6 +73,8 @@ class Collection(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices)
     deploy_hash = models.CharField(max_length=100, null=True)
     deploy_block = models.IntegerField(null=True, default=None)
+
+    objects = CollectionManager()
 
     @property
     def avatar(self):
@@ -333,10 +344,7 @@ class Token(models.Model):
         self.end_auction = request.data.get('end_auction')
         self.creator = request.user
         collection = request.data.get('collection')
-        collection_id = int(collection) if isinstance(collection, int) or collection.isdigit() else None
-        self.collection = Collection.objects.get(
-            Q(id=collection_id) | Q(short_url=collection)
-        )
+        self.collection = Collection.objects.get_by_short_url(collection)
         self.total_supply = request.data.get('total_supply')
 
         price = request.data.get('price')

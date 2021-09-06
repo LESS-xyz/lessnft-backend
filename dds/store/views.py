@@ -169,13 +169,7 @@ class CreateView(APIView):
         token_collection_id = request_data.get('collection')
         
         try:
-            if isinstance(token_collection_id, int) or token_collection_id.isdigit():
-                int_token_collection_id = int(token_collection_id)  
-            else:
-                int_token_collection_id = None
-            token_collection = Collection.objects.get(
-                Q(id=int_token_collection_id) | Q(short_url=token_collection_id)
-            )
+            token_collection = Collection.objects.get_by_short_url(token_collection_id)
         except:
             return Response({'error': 'Collection not found'}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -530,10 +524,7 @@ class GetCollectionView(APIView):
 
     def get(self, request, param, page):
         try:
-            id_ = int(param) if isinstance(param, int) or param.isdigit() else None
-            collection = Collection.objects.get(
-                Q(id=id_) | Q(short_url=param)
-            )
+            collection = Collection.objects.get_by_short_url(param)
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -902,10 +893,7 @@ class SetCoverView(APIView):
         user = request.user
         collection_id = request.data.get('id')
         try:
-            int_collection_id = int(collection_id) if isinstance(collection_id, int) or collection_id.isdigit() else None
-            collection = Collection.objects.get(
-                Q(id=int_collection_id) | Q(short_url=collection_id)
-            )
+            collection = Collection.objects.get_by_short_url(collection_id)
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
         if collection.creator != user:
