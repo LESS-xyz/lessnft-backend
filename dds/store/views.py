@@ -6,6 +6,7 @@ from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid
 from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs
 
 from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token, TransactionTracker
+from dds.networks.models import Network
 from dds.store.serializers import (
     TokenPatchSerializer, 
     TokenSerializer,
@@ -224,6 +225,7 @@ class CreateCollectionView(APIView):
         symbol = request.data.get('symbol')
         short_url = request.data.get('short_url')
         standart = request.data.get('standart')
+        network = request.data.get('network')
         owner = request.user
 
         is_unique, response = Collection.collection_is_unique(name, symbol, short_url)
@@ -232,8 +234,11 @@ class CreateCollectionView(APIView):
 
         if standart not in ["ERC721", "ERC1155"]:
             return Response('invalid collection type', status=status.HTTP_400_BAD_REQUEST)
-
-        initial_tx = Collection.create_contract(name, symbol, standart, owner)
+        
+        network = Network.objects.filter(name=network)
+        if not network:
+            return Response('invalid network name', status=status.HTTP_400_BAD_REQUEST)
+        initial_tx = Collection.create_contract(name, symbol, standart, owner, network.first())
         return Response(initial_tx, status=status.HTTP_200_OK)
 
 
