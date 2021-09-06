@@ -1,6 +1,7 @@
 import random
 
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
@@ -19,6 +20,20 @@ class MasterUser(models.Model):
         return super(MasterUser, self).save(*args, **kwargs)
 
 
+class AdvUserManager(models.Manager):
+    def get_by_custom_url(self, custom_url):
+        """
+        Return user by id or custom_url.
+
+        Convert param to int() if it contains only digitts, because string params are not allowed
+        in searching by id field. Numeric custom_urls should be prohibited on frontend
+        """
+        user_id = None
+        if isinstance(custom_url, int) or custom_url.isdigit():
+            user_id = int(custom_url)  
+        return self.get(Q(id=user_id) | Q(custom_url=custom_url))
+
+
 class AdvUser(AbstractUser):
     avatar_ipfs = models.CharField(max_length=200, null=True, default=None)
     cover_ipfs = models.CharField(max_length=200, null=True, default=None)
@@ -29,6 +44,8 @@ class AdvUser(AbstractUser):
     instagram = models.CharField(max_length=80, default=None, null=True, blank=True)
     site = models.CharField(max_length = 200, default=None, null=True, blank=True)
     is_verificated = models.BooleanField(default=False)
+
+    objects = AdvUserManager()
 
     def get_name(self):
         return self.display_name if self.display_name else self.username

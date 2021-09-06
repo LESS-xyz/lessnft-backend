@@ -127,12 +127,7 @@ class GetOtherView(APIView):
     )
     def get(self, request, param):
         try:
-            # convert param to int() if it contains only digitts, because string params are not allowed
-            # in searching by id field. Numeric custom_urls should be prohibited on frontend
-            id_ = int(param) if isinstance(param, int) or param.isdigit() else None
-            user = AdvUser.objects.get(
-                Q(id=id_) | Q(custom_url=param)
-            )
+            user = AdvUser.objects.get_by_custom_url(param)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED) 
         response_data = UserSerializer(user).data
@@ -160,10 +155,7 @@ class FollowView(APIView):
         id_ = request_data.get('id')
 
         try:
-            int_id = int(id_) if isinstance(id_, int) or id_.isdigit() else None
-            user = AdvUser.objects.get(
-                Q(id=int_id) | Q(custom_url=id_)
-            )
+            user = AdvUser.objects.get_by_custom_url(id_)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -199,10 +191,7 @@ class UnfollowView(APIView):
         id_ = request_data.get('id')
         
         try:
-            int_id = int(id_) if isinstance(id_, int) or id_.isdigit() else None
-            user = AdvUser.objects.get(
-                Q(id=int_id) | Q(custom_url=id_)
-            )
+            user = AdvUser.objects.get_by_custom_url(id_)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED) 
         
@@ -292,10 +281,7 @@ class GetFollowingView(APIView):
 
     def get(self, request, address, page):
         try:
-            id_ = int(address) if isinstance(address, int) or address.isdigit() else None
-            user = AdvUser.objects.get(
-                Q(id=id_) | Q(custom_url=address)
-            )
+            user = AdvUser.objects.get_by_custom_url(address)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -316,10 +302,7 @@ class GetFollowersView(APIView):
 
     def get(self, request, address, page):
         try:
-            id_ = int(address) if isinstance(address, int) or address.isdigit() else None
-            user = AdvUser.objects.get(
-                Q(id=id_) | Q(custom_url=address)
-            )
+            user = AdvUser.objects.get_by_custom_url(address)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
