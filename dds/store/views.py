@@ -34,7 +34,6 @@ from dds.accounts.api import user_search
 from dds.settings import NETWORK_SETTINGS, WETH_ADDRESS
 from contracts import (
     EXCHANGE,
-    WETH_CONTRACT,
     ERC721_MAIN,
     ERC1155_MAIN,
 )
@@ -668,13 +667,13 @@ class MakeBid(APIView):
         token_id = request_data.get('token_id')
         amount = Decimal(str(request_data.get('amount')))
         quantity = int(request_data.get('quantity'))
-
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
-
+        token = Token.objects.get(id=token_id)
         user = request.user
 
+        web3, weth_contract = token.currency.network.get_weth_contract(token.currency.address)
+
         #returns OK if valid, or error message
-        result = validate_bid(user, token_id, amount, WETH_CONTRACT, quantity)
+        result = validate_bid(user, token_id, amount, weth_contract, quantity)
 
         if result != 'OK':
             return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
@@ -691,11 +690,11 @@ class MakeBid(APIView):
         bid.save()
 
         #construct approve tx if not approved yet:
-        allowance = WETH_CONTRACT.functions.allowance(
+        allowance = weth_contract.functions.allowance(
             web3.toChecksumAddress(user.username),
-            web3.toChecksumAddress(EXCHANGE_ADDRESS),
+            web3.toChecksumAddress(EXCHANGE),
         ).call()
-        user_balance = WETH_CONTRACT.functions.balanceOf(
+        user_balance = weth_contract.functions.balanceOf(
             Web3.toChecksumAddress(user.username)
         ).call()
         
@@ -708,8 +707,8 @@ class MakeBid(APIView):
                 'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(user.username), 'pending'),
                 'gasPrice': web3.eth.gasPrice,
             }
-            initial_tx = WETH_CONTRACT.functions.approve(
-                web3.toChecksumAddress(EXCHANGE_ADDRESS), 
+            initial_tx = weth_contract.functions.approve(
+                web3.toChecksumAddress(EXCHANGE), 
                 user_balance,
             ).buildTransaction(tx_params)
             return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
@@ -755,9 +754,8 @@ class VerificateBetView(APIView):
     )
     def get(self, request, token_id):
         print('virificate!')
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
-
-        bets = Bid.objects.filter(token__id=token_id).order_by('-amount')
+        token = Token.objects.get(id=token_id)
+        bets = Bid.objects.filter(token=token).order_by('-amount')
         max_bet = bets.first()
         if not max_bet:
             return Response(
@@ -768,7 +766,9 @@ class VerificateBetView(APIView):
         amount = max_bet.amount
         quantity = max_bet.quantity
 
-        check_valid = validate_bid(user, token_id, amount, WETH_CONTRACT, quantity)
+        web3, weth_contract = token.currency.network.get_weth_contract(token.currency.address)
+
+        check_valid = validate_bid(user, token_id, amount, weth_contract, quantity)
 
         if check_valid == 'OK':
             print('all ok!')
@@ -781,7 +781,7 @@ class VerificateBetView(APIView):
                 user = bet.user
                 amount = bet.amount
                 quantity = bet.quantity
-                check_valid = validate_bid(user, token_id, amount, WETH_CONTRACT, quantity)
+                check_valid = validate_bid(user, token_id, amount, weth_contract, quantity)
                 if check_valid == 'OK':
                     print('again ok!')
                     return Response(
