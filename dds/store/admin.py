@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.db import models
 from django.forms import CheckboxSelectMultiple
-from dds.store.models import Token, Collection, Tags, Ownership, Bid
+from dds.store.models import Token, Collection, Tags, Ownership, Bid, TransactionTracker
 from django.utils.safestring import mark_safe
 
 
@@ -71,8 +71,14 @@ class OwnershipAdmin(admin.ModelAdmin):
     list_display = ('token', 'owner', 'quantity')
 
 
+class TxTrackerAdmin(admin.ModelAdmin):
+    model = TransactionTracker
+    list_display = ('token', 'tx_hash', 'ownership')
+
+
 admin.site.register(Tags)
 admin.site.register(Ownership, OwnershipAdmin)
 admin.site.register(Token, TokenAdmin)
 admin.site.register(Bid, BidAdmin)
 admin.site.register(Collection, CollectionAdmin)
+admin.site.register(TransactionTracker, TxTrackerAdmin)
