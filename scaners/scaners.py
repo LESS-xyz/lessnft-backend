@@ -221,7 +221,7 @@ def mint_transfer(latest_block, smart_contract):
                     internal_id=token_id,
                 )
                 if token[0].standart == 'ERC721':
-                    token.update(owner=new_owner[0])
+                    token.update(owner=new_owner[0], selling=False)
                 
                 token_history = TokenHistory.objects.filter(tx_hash=tx_hash)
                 if token_history.exists():
