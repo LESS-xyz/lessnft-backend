@@ -26,7 +26,7 @@ class Network(models.Model):
     """
     name = models.CharField(max_length=100)
     needs_middleware = models.BooleanField(default=False)
-    native_symbol = models.CharField(max_length=10, default="BNB")
+    native_symbol = models.CharField(max_length=10, blank=True, null=True, default=None)
     endpoint = models.CharField(max_length=256)
     fabric721_address = models.CharField(max_length=128)
     fabric1155_address = models.CharField(max_length=128)
@@ -63,5 +63,5 @@ class Network(models.Model):
     def get_erc1155main_contract(self, address: str = None) -> ("Web3", "Contract"):
         return self._get_contract_by_abi(ERC1155_MAIN, address)
 
-    def get_weth_contract(self, address: str = None) -> ("Web3", "Contract"):
+    def get_token_contract(self, address: str = None) -> ("Web3", "Contract"):
         return self._get_contract_by_abi(WETH_ABI, address)

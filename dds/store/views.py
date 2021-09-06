@@ -670,10 +670,10 @@ class MakeBid(APIView):
         token = Token.objects.get(id=token_id)
         user = request.user
 
-        web3, weth_contract = token.currency.network.get_weth_contract(token.currency.address)
+        web3, token_contract = token.currency.network.get_token_contract(token.currency.address)
 
         #returns OK if valid, or error message
-        result = validate_bid(user, token_id, amount, weth_contract, quantity)
+        result = validate_bid(user, token_id, amount, token_contract, quantity)
 
         if result != 'OK':
             return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
@@ -690,11 +690,11 @@ class MakeBid(APIView):
         bid.save()
 
         #construct approve tx if not approved yet:
-        allowance = weth_contract.functions.allowance(
+        allowance = token_contract.functions.allowance(
             web3.toChecksumAddress(user.username),
             web3.toChecksumAddress(EXCHANGE),
         ).call()
-        user_balance = weth_contract.functions.balanceOf(
+        user_balance = token_contract.functions.balanceOf(
             Web3.toChecksumAddress(user.username)
         ).call()
         
@@ -707,7 +707,7 @@ class MakeBid(APIView):
                 'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(user.username), 'pending'),
                 'gasPrice': web3.eth.gasPrice,
             }
-            initial_tx = weth_contract.functions.approve(
+            initial_tx = token_contract.functions.approve(
                 web3.toChecksumAddress(EXCHANGE), 
                 user_balance,
             ).buildTransaction(tx_params)
@@ -766,9 +766,9 @@ class VerificateBetView(APIView):
         amount = max_bet.amount
         quantity = max_bet.quantity
 
-        web3, weth_contract = token.currency.network.get_weth_contract(token.currency.address)
+        web3, token_contract = token.currency.network.get_token_contract(token.currency.address)
 
-        check_valid = validate_bid(user, token_id, amount, weth_contract, quantity)
+        check_valid = validate_bid(user, token_id, amount, token_contract, quantity)
 
         if check_valid == 'OK':
             print('all ok!')
@@ -781,7 +781,7 @@ class VerificateBetView(APIView):
                 user = bet.user
                 amount = bet.amount
                 quantity = bet.quantity
-                check_valid = validate_bid(user, token_id, amount, weth_contract, quantity)
+                check_valid = validate_bid(user, token_id, amount, token_contract, quantity)
                 if check_valid == 'OK':
                     print('again ok!')
                     return Response(

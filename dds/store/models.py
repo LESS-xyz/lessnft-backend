@@ -64,6 +64,7 @@ class Collection(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices)
     deploy_hash = models.CharField(max_length=100, null=True)
     deploy_block = models.IntegerField(null=True, default=None)
+    network = models.ForeignKey('networks.Network', on_delete=models.CASCADE)
 
     @property
     def avatar(self):
