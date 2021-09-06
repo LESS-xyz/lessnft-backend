@@ -227,6 +227,7 @@ class Token(models.Model):
     name = models.CharField(max_length=200, unique=True)
     tx_hash = models.CharField(max_length=200, null=True, blank=True)
     ipfs = models.CharField(max_length=200, null=True, default=None)
+    format = models.CharField(max_length=10, null=True, default='picture')
     total_supply = models.PositiveIntegerField(validators=[validate_nonzero])
     currency_price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
     currency_minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
@@ -253,6 +254,12 @@ class Token(models.Model):
     @property
     def media(self):
         ipfs = get_ipfs_by_hash(self.ipfs).get("image")
+        if ipfs:
+            return ipfs
+        return None
+
+    def animation_irl(self):
+        ipfs = get_ipfs_by_hash(self.ipfs).get("animation_url")
         if ipfs:
             return ipfs
         return None
@@ -327,6 +334,7 @@ class Token(models.Model):
         self.status = Status.PENDING
         self.details = request.data.get('details')
         self.ipfs = ipfs
+        self.media_format = request.data.get('format')
         self.description = request.data.get('description')
         self.creator_royalty = request.data.get('creator_royalty')
         self.start_auction = request.data.get('start_auction')
