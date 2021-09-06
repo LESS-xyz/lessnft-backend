@@ -2,13 +2,14 @@ import os
 import time
 import django
 
-from dds import settings
-from dds.store.models import TransactionTracker
 from web3.exceptions import TransactionNotFound
 from web3 import Web3, HTTPProvider
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dds.settings")
 django.setup()
+
+from dds import settings
+from dds.store.models import TransactionTracker
 
 
 if __name__ == "__main__":
@@ -17,13 +18,12 @@ if __name__ == "__main__":
         w3 = Web3(HTTPProvider(settings.NETWORK_SETTINGS["ETH"]["endpoint"]))
         for tx in tx_list:
             try:
-                transaction = w3.eth.get_transaction_receipt(tx.tx_hash)
+                transaction = w3.eth.getTransactionReceipt(tx.tx_hash)
                 print(f"Transaction status success - {bool(transaction.get('status'))}")
-                if transaction.get("status"):
-                    transaction.delete()
-                else:
-                    transaction.item.selling = True
-                    transaction.item.save()
+                if not transaction.get("status"):
+                    tx.item.selling = True
+                    tx.item.save()
+                tx.delete()
             except TransactionNotFound:
                 print("Transaction not yet mined")
                 continue
