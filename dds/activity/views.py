@@ -252,6 +252,7 @@ class UserActivityView(APIView):
                     items = TokenHistory.objects.filter(
                         old_owner__username=address,
                         method=method,
+                        is_viewed=False,
                     ).order_by("-date")[:end]
                     activities.extend(items)
             for param, method in token_methods.items():
@@ -259,6 +260,7 @@ class UserActivityView(APIView):
                     items = TokenHistory.objects.filter(
                         new_owner__username=address,
                         method=method,
+                        is_viewed=False,
                     ).order_by("-date")[:end]
                     activities.extend(items)
             for param, method in action_methods.items():
@@ -266,18 +268,21 @@ class UserActivityView(APIView):
                     items = UserAction.objects.filter(
                         Q(user__username=address) | Q(whom_follow__username=address),
                         method=method,
+                        is_viewed=False,
                     ).order_by("-date")[:end]
                     activities.extend(items)
             for param, method in bids_methods.items():
                 if param in types:
                     items = BidsHistory.objects.filter(
                         user__username=address,
+                        is_viewed=False,
                         method=method,
                     ).order_by("-date")[:end]
                     activities.extend(items)
             if "list" in types:
                 listing = ListingHistory.objects.filter(
                     user__username=address,
+                    is_viewed=False,
                 ).order_by("-date")[:end]
                 activities.extend(listing)
         else:
@@ -302,7 +307,7 @@ class UserActivityView(APIView):
             activities.extend(buy)
 
             user_actions = UserAction.objects.filter(
-                whom_follow__username=address,
+                Q(user__username=address) | Q(whom_follow__username=address),
                 is_viewed=False,
             ).order_by("-date")[:end]
             activities.extend(user_actions)
