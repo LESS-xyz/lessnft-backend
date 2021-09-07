@@ -1,5 +1,5 @@
 from web3 import Web3, HTTPProvider
-from dds.settings import EXCHANGE_ADDRESS, PRIV_KEY
+from dds.settings import EXCHANGE_ADDRESS, PRIV_KEY, NETWORK_SETTINGS
 from contracts import EXCHANGE
 from dds.store.models import Bid
    
@@ -17,7 +17,6 @@ def end_auction(token):
     }
 
     web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
-    address = web3.toChecksumAddress(token.collection.address)
     contract = web3.eth.contract(address=EXCHANGE_ADDRESS, abi=EXCHANGE)
 
     tx = contract.functions.makeExchangeERC721(
