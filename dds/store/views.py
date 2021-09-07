@@ -584,44 +584,27 @@ class BuyTokenView(APIView):
         responses={200:buy_token_response, 400:"you cant buy token"}
     )
     def post(self, request):
-        #get token and collection
-        
-        try:
-            token_id = int(request.data.get('id'))
-        except TypeError:
-            token_id = None
-        seller_id = request.data.get('sellerId')
-        tradable_token = Token.objects.get(id=token_id)
-        if tradable_token.status == Status.BURNED:
-            return Response({'error': 'burned'}, status=status.HTTP_404_NOT_FOUND)
-        if tradable_token.internal_id is None:
-            return Response('token is not validated yet, please wait up to 5 minutes. If problem persists,'
-                            'please contact us through support form', status=status.HTTP_400_BAD_REQUEST)
-        if not seller_id and tradable_token.standart == "ERC1155":
-            return Response({'error': "The 'sellerId' field is required for token 1155."}, status=status.HTTP_400_BAD_REQUEST)
-
-        token_amount = int(request.data.get('tokenAmount'))
-
-        if tradable_token.selling is False:
-            return Response('token not selling', status=status.HTTP_403_FORBIDDEN)
-        
-        if tradable_token.standart == 'ERC721' and token_amount != 0:
-            return Response('wrong token amount', status=status.HTTP_400_BAD_REQUEST)
-            
-        elif tradable_token.standart == 'ERC1155' and token_amount == 0:
-            return Response('wrong token amount', status=status.HTTP_400_BAD_REQUEST) 
-
         buyer = request.user
-        try:
-            if seller_id:
-                seller = AdvUser.objects.get_by_custom_url(seller_id)
-                ownership = Ownership.objects.filter(token__id=token_id, owner=seller).filter(selling=True)
-                if not ownership:
-                    return Response({'error': 'user is not owner or token is not on sell'})
-            else:
-                seller = None
-        except ObjectDoesNotExist:
-            return Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
+        seller_id = request.data.get('sellerId')
+        token_id = request.data.get('id')
+        token_amount = request.data.get('tokenAmount')
+
+        if not token_id or not tokenid.is_digit():
+            return Response({"error": "invalid token_id"}, status=status.HTTP_400_BAD_REQUEST)
+        if not token_id or not tokenid.is_digit():
+            return Response({"error": "invalid token_amount"}, status=status.HTTP_400_BAD_REQUEST)
+
+        token_id = int(token_id)
+        token_amount = int(token_amount)
+        tradable_token = Token.objects.get(id=token_id)
+
+        is_valid, response = tradable_token.is_valid_for_buy(token_amount, seller_id)
+        if not is_valid:
+            return response
+
+        seller = None
+        if seller_id:
+            seller = AdvUser.objects.get_by_custom_url(seller_id)
 
         buy = tradable_token.buy_token(token_amount, buyer, seller)
         return Response({'initial_tx': buy}, status=status.HTTP_200_OK)

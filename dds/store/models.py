@@ -333,6 +333,44 @@ class Token(models.Model):
                     )
         return True, None
 
+    def is_valid_for_buy(self, token_amount, seller_id) -> Tuple[bool, Union[Response, None]]:
+        is_valid, response = self.is_valid()
+        if not is_valid:
+            return response
+        if self.standart == "ERC721":
+            if not self.selling:
+                return False, Response(
+                    {"error": "token not selling"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:
+            if not self.ownership_set.filter(selling=True).exists():
+                return False, Response(
+                    {"error": "token not selling"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        if self.standart == 'ERC721' and token_amount != 0:
+            return False, Response({'error': 'wrong token amount'}, status=status.HTTP_400_BAD_REQUEST)
+        elif self.standart == 'ERC1155' and token_amount == 0:
+            return False, Response({'error': 'wrong token amount'}, status=status.HTTP_400_BAD_REQUEST) 
+
+        if self.standart == "ERC1155" and not seller_id:
+            return False, Response(
+                {'error': "The 'sellerId' field is required for token 1155."}, 
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if seller_id:
+            try:
+                seller = AdvUser.objects.get_by_custom_url(seller_id)
+                ownership = token.ownership_set.filter(owner=seller).filter(selling=True)
+                if not ownership:
+                    return False, Response({'error': 'user is not owner or token is not on sell'})
+            except ObjectDoesNotExist:
+                return False, Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return True, None
+
     def save_in_db(self, request, ipfs):
         self.name = request.data.get('name')
         self.status = Status.PENDING
