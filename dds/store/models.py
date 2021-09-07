@@ -6,7 +6,7 @@ from decimal import *
 from django.db import models
 from web3 import Web3, HTTPProvider
 
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from django.db.models.signals import post_save
 from django.core.validators import MaxValueValidator, MinValueValidator
 from dds.consts import MAX_AMOUNT_LEN
@@ -19,6 +19,11 @@ from dds.settings import (
     TOKEN_TRANSFER_GAS_LIMIT,
     TOKEN_BUY_GAS_LIMIT,
     DEFAULT_AVATARS,
+    ERC721_FABRIC_ADDRESS,
+    ERC1155_FABRIC_ADDRESS,
+    EXCHANGE_ADDRESS,
+    COLLECTION_721,
+    COLLECTION_1155,
 )
 from rest_framework import status
 from rest_framework.response import Response
@@ -35,6 +40,27 @@ class Status(models.TextChoices):
     FAILED = 'Failed'
     COMMITTED = 'Committed'
     BURNED = 'Burned'
+
+
+class CollectionManager(models.Manager):
+    def get_by_short_url(self, short_url):
+        """ Return collection by id or short_url """
+        collection_id = None
+        if isinstance(short_url, int) or short_url.isdigit():
+            collection_id = int(short_url)  
+        return self.get(Q(id=collection_id) | Q(short_url=short_url))
+    
+    def user_collections(self, user):
+        """ Return committed collections for user (with default collections) """
+        return self.filter(status=Status.COMMITTED).filter(
+            Q(name__in=[COLLECTION_721, COLLECTION_1155]) | Q(creator=u)
+        )
+
+    def hot_collections(self, user):
+        """ Return committed collections for user (with default collections) """
+        return self.exclude(name__in=(COLLECTION_721, COLLECTION_1155,)).filter(
+            Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
+        )
 
 
 class Collection(models.Model):
