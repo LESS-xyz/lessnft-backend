@@ -184,6 +184,7 @@ class TokenSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "media",
+            "animation",
             "total_supply",
             "available",
             "price",

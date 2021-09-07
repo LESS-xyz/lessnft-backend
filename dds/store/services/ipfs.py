@@ -17,10 +17,10 @@ def create_ipfs(request):
         "description": description,
         "attributes": attributes,
     }
-    if animation:
-        cover = client.add(cover)
+    if cover:
+        cover_res = client.add(cover)
         ipfs_json['animation_url'] = f'https://ipfs.io/ipfs/{file_res["Hash"]}'
-        ipfs_json['image'] = f'https://ipfs.io/ipfs/{cover["Hash"]}'
+        ipfs_json['image'] = f'https://ipfs.io/ipfs/{cover_res["Hash"]}'
     else:
         ipfs_json['image'] = f'https://ipfs.io/ipfs/{file_res["Hash"]}'
     res = client.add_json(ipfs_json)

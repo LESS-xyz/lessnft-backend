@@ -146,7 +146,7 @@ def mint_transfer(latest_block, smart_contract):
         token_id = event['args'].get('tokenId')
         if token_id is None:
             token_id = event['args'].get('id')
-        logging.info('token id:', token_id)
+        # logging.info('token id:', token_id)
         
         logging.info(f'collection address: {collection.address} \n token id: {token_id}')
 
