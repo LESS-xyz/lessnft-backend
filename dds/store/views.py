@@ -794,7 +794,12 @@ class AuctionEndView(APIView):
             if seller != token.owner:
                 return Response({'error': 'user is not owner or token is not on sell'})
         else:
-            ownership = Ownership.objects.filter(token=token, owner=seller).first()
+            ownership = Ownership.objects.filter(
+                token=token, 
+                owner=seller, 
+                selling=True, 
+                minimal_bid__isnull=False,
+            ).first()
             if not ownership:
                 return Response({'error': 'user is not owner or token is not on sell'})
 
