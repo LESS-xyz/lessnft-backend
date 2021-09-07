@@ -505,10 +505,7 @@ class GetHotCollectionsView(APIView):
         responses={200: HotCollectionSerializer(many=True)},
     )
     def get(self, request):
-        collections = Collection.objects.exclude(name__in=(
-            COLLECTION_721, 
-            COLLECTION_1155,
-        )).filter(Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))).order_by('-id')[:5]
+        collections = Collection.objects.hot_collections().order_by('-id')[:5]
         response_data = HotCollectionSerializer(collections, many=True).data
         return Response(response_data, status=status.HTTP_200_OK)
 
