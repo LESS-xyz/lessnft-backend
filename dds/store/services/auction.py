@@ -1,10 +1,12 @@
 from web3 import Web3, HTTPProvider
 from dds.settings import EXCHANGE_ADDRESS, PRIV_KEY
 from contracts import EXCHANGE
+from dds.store.models import Bid
    
 
 def end_auction(token):
-    initial_tx = token.buy_token(0, buyer, seller=seller, price=price)
+    bet = Bid.objects.filter(token=token).order_by("-amount").last()
+    initial_tx = token.buy_token(0, bet.user, seller=token.owner, price=bet.amount)
     data = initial_tx.get("data")
 
     tx_params = {
