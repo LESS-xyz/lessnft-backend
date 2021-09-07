@@ -230,8 +230,9 @@ def validate_nonzero(value):
         )
 
 class TokenManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(status=Status.COMMITTED)
+    def committed(self):
+        """ Return tokens with status committed """
+        return self.filter(status=Status.COMMITTED)
 
 
 class Token(models.Model):
@@ -258,8 +259,7 @@ class Token(models.Model):
     start_auction = models.DateTimeField(blank=True, null=True, default=None)
     end_auction = models.DateTimeField(blank=True, null=True, default=None)
 
-    objects = models.Manager()
-    committed = TokenManager()
+    objects = TokenManager()
 
     @property
     def media(self):
