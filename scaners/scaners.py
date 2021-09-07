@@ -1,6 +1,6 @@
 import time
 import logging
-from web3 import Web3, HTTPProvider
+from web3 import Web3
 from utils import get_last_block, save_last_block
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F
@@ -15,7 +15,6 @@ from dds.store.models import *
 from dds.store.services.ipfs import get_ipfs, get_ipfs_by_hash
 from dds.activity.models import BidsHistory, TokenHistory
 from dds.accounts.models import AdvUser
-from dds.settings import NETWORK_SETTINGS
 
 
 def scan_deploy(latest_block, smart_contract):
@@ -480,7 +479,7 @@ def aproove_bet_scaner(latest_block, smart_contract):
     time.sleep(HOLDERS_CHECK_TIMEOUT)
 
 
-def scaner(smart_contract, standart=None, type=None):
+def scaner(w3, smart_contract, standart=None, type=None):
     '''
     connects to the contract and calls scaners
 
@@ -499,9 +498,6 @@ def scaner(smart_contract, standart=None, type=None):
     by the Invocation of thy Holy Name,
     so that these things may serve us for aid in all that we wish to perform therewith
     '''
-
-
-    w3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
 
     while True:
         latest_block = w3.eth.blockNumber

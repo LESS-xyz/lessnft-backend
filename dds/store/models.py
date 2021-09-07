@@ -166,8 +166,8 @@ class Collection(models.Model):
 
     def get_contract(self):
         if self.standart == 'ERC721':
-            return self.network.get_erc721main_contract(self.address)[1]
-        return self.network.get_erc1155main_contract(self.address)[1]
+            return self.network.get_erc721main_contract(self.address)
+        return self.network.get_erc1155main_contract(self.address)
 
 
 def collection_created_dispatcher(sender, instance, created, **kwargs):

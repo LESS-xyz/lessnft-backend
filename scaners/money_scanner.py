@@ -7,11 +7,17 @@ django.setup()
 
 from multiprocessing import Process
 from scaners import scaner
-from contracts import EXCHANGE_CONTRACT, WETH_CONTRACT
-from dds.settings import EXCHANGE_ADDRESS
+from dds.networks.models import Network
+from dds.rates.models import UsdRate
 
 
 if __name__ == '__main__':
-    Process(target=scaner, args=(EXCHANGE_CONTRACT, 'ERC_721', 'exchange')).start()
-    Process(target=scaner, args=(EXCHANGE_CONTRACT, 'ERC_1155', 'exchange')).start()
-    Process(target=scaner, args=(WETH_CONTRACT, None, 'currency')).start()
+    networks = Network.objects.all()
+    rates = UsdRate.objects.all()
+    for network in networks:
+        web3, contract = network.get_exchage_contract()
+        Process(target=scaner, args=(web3, contract, 'ERC_721', 'exchange')).start()
+        Process(target=scaner, args=(web3, contract, 'ERC_1155', 'exchange')).start()
+    for rate in rates:
+        web3, contract = rate.network.get_token_contract(rate.address)
+        Process(target=scaner, args=(web3, contract, None, 'currency')).start()
