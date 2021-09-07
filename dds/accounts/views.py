@@ -235,7 +235,7 @@ class LikeView(APIView):
         token_id = request_data.get('id')
 
         try:
-            item = Token.committed.get(id=token_id)
+            item = Token.objects.committed().get(id=token_id)
         except ObjectDoesNotExist:
             return Response({'error': 'nothing to like'}, status=status.HTTP_400_BAD_REQUEST) 
 
