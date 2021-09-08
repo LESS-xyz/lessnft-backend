@@ -24,14 +24,7 @@ def get_rate(coin_code):
     if res.status_code != 200:
         raise Exception("cannot get exchange rate for {}".format(QUERY_FSYM))
     response = res.json()
-    return {
-        "rate": response["market_data"]["current_price"][QUERY_FSYM],
-        "coin_node": response.get("id"),
-        "symbol": response.get("symbol"),
-        "name": response.get("name"),
-        "image": response.get("image", {}).get("small"),
-        "address": response.get("contract_address"),
-    }
+    return response["market_data"]["current_price"][QUERY_FSYM]
 
 
 if __name__ == "__main__":
@@ -45,14 +38,5 @@ if __name__ == "__main__":
                 time.sleep(RATES_CHECKER_TIMEOUT)
                 continue
             rates = UsdRate.objects.filter(symbol=rate["symbol"])
-            rates.update(
-                coin_node=rate["coin_node"],
-                name=rate["name"],
-                image=rate["image"],
-                address=rate["address"],
-                rate=rate["rate"],
-            )
-            if not all(rate.decimal for rate in rates):
-                for rate in rates:
-                    rate.set_decimals()
+            rates.update(rate=rate)
         time.sleep(RATES_CHECKER_TIMEOUT)
