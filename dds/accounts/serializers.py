@@ -3,7 +3,6 @@ from rest_framework.exceptions import PermissionDenied
 from rest_auth.registration.serializers import SocialLoginSerializer
 
 from dds.accounts.utils import valid_metamask_message
-from dds.settings import ALLOWED_HOSTS
 from dds.store.models import Token
 from dds.accounts.models import AdvUser
 from dds.rates.serializers import CurrencySerializer

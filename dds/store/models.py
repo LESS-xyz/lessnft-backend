@@ -15,12 +15,10 @@ from dds.accounts.models import AdvUser, MasterUser
 from dds.rates.models import UsdRate
 from dds.consts import DECIMALS
 from dds.settings import (
-    NETWORK_SETTINGS,
     TOKEN_MINT_GAS_LIMIT,
     TOKEN_TRANSFER_GAS_LIMIT,
     TOKEN_BUY_GAS_LIMIT,
     DEFAULT_AVATARS,
-    EXCHANGE_ADDRESS,
 )
 from rest_framework import status
 from rest_framework.response import Response
@@ -465,7 +463,7 @@ class Token(models.Model):
             'signature': signature
         }
         print(f'data: {data}')
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
+        web3 = self.collection.network.get_web3_connection()
 
         return {
             'nonce': web3.eth.getTransactionCount(
@@ -474,7 +472,7 @@ class Token(models.Model):
             'gasPrice': web3.eth.gasPrice,
             'chainId': web3.eth.chainId,
             'gas': TOKEN_BUY_GAS_LIMIT,
-            'to': EXCHANGE_ADDRESS,
+            'to': self.collection.network.exchange_address,
             'method': method,
             'value': 0,
             'data': data
