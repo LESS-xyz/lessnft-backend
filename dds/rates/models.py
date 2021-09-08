@@ -15,7 +15,7 @@ class UsdRate(models.Model):
     symbol = models.CharField(max_length=20, blank=True, null=True, default=None)
     name = models.CharField(max_length=100, blank=True, null=True, default=None)
     image = models.CharField(max_length=500, null=True, blank=True, default=None)
-    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True, default=None)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
     address = models.CharField(max_length=128, blank=True, null=True, default=None)
     decimal = models.PositiveSmallIntegerField(null=True, blank=True, default=None)
     network = models.ForeignKey('networks.Network', on_delete=models.CASCADE, blank=True, null=True, default=None)

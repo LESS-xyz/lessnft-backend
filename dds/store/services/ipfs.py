@@ -1,8 +1,7 @@
 import ipfshttpclient
 from web3 import Web3, HTTPProvider
 from dds.settings import IPFS_CLIENT
-from dds.store.models import Token
-
+from django.apps import apps
 
 def create_ipfs(request):
     client = ipfshttpclient.connect(IPFS_CLIENT)
@@ -38,8 +37,9 @@ def get_ipfs(token_id) -> dict:
     :param standart: token standart
     """
     if token_id != None:
-        token = Token.objects.get(id=token_id)
-        web3, contract = self.get_main_contract()
+        token_model = apps.get_model('store', 'Token')
+        token = token_model.objects.get(id=token_id)
+        web3, contract = token.get_main_contract()
         ipfs = contract.functions.tokenURI(token_id).call()
         return ipfs
 
