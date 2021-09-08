@@ -36,16 +36,14 @@ def get_rate(coin_code):
 
 if __name__ == "__main__":
     while True:
-        usd_rates = []
-
-        try:
-            for rate in UsdRate.objects.all():
-                usd_rates.append(get_rate(rate.coin_node))
-        except Exception as e:
-            print("\n".join(traceback.format_exception(*sys.exc_info())), flush=True)
-            time.sleep(RATES_CHECKER_TIMEOUT)
-            continue
-        for rate in usd_rates:
+        usd_rates = UsdRate.objects.all().values_list('coin_node', flat=True)
+        for usd_rate in usd_rates:
+            try:
+                rate = get_rate(usd_rate.coin_node)
+            except Exception as e:
+                print("\n".join(traceback.format_exception(*sys.exc_info())), flush=True)
+                time.sleep(RATES_CHECKER_TIMEOUT)
+                continue
             rates = UsdRate.objects.filter(symbol=rate["symbol"])
             rates.update(
                 coin_node=rate["coin_node"],
