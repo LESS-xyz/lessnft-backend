@@ -184,6 +184,7 @@ class TokenSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "media",
+            "animation",
             "total_supply",
             "available",
             "price",
@@ -201,6 +202,7 @@ class TokenSerializer(serializers.ModelSerializer):
             "updated_at",
             "start_auction",
             "end_auction",
+            "format"
         )
         
     def get_royalty(self, obj):
