@@ -1,15 +1,17 @@
 import os
 from web3 import Web3
+from dds.networks.models import Network
 base_dir = 'blocks'
 
-def get_last_block(network_name) -> int:
+def get_last_block(name, network_name) -> int:
     try:
-        with open(os.path.join(base_dir, network_name), 'r') as file:
+        with open(os.path.join(base_dir, name), 'r') as file:
             last_block_number = file.read()
     except FileNotFoundError:
-        last_block_number = Web3(Web3.HTTPProvider('https://rinkeby.infura.io/v3/7b0399b88fc74f07ac9318ce9fc7f855')).eth.block_number
-        save_last_block(last_block_number, network_name)
-        get_last_block(network_name)
+        network = Network.objects.get(name=network_name)
+        w3 = network.get_web3_connection()
+        last_block_number = w3.eth.block_number
+        save_last_block(last_block_number, name)
 
     return int(last_block_number)
 
