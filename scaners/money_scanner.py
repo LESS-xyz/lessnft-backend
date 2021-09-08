@@ -16,8 +16,8 @@ if __name__ == '__main__':
     rates = UsdRate.objects.all()
     for network in networks:
         web3, contract = network.get_exchage_contract()
-        Process(target=scaner, args=(web3, contract, 'ERC_721', 'exchange')).start()
-        Process(target=scaner, args=(web3, contract, 'ERC_1155', 'exchange')).start()
+        Process(target=scaner, args=(web3, contract, network.name, 'ERC_721', 'exchange')).start()
+        Process(target=scaner, args=(web3, contract, network.name, 'ERC_1155', 'exchange')).start()
     for rate in rates:
         web3, contract = rate.network.get_token_contract(rate.address)
-        Process(target=scaner, args=(web3, contract, None, 'currency')).start()
+        Process(target=scaner, args=(web3, contract, rate.network.name, None, 'currency')).start()

@@ -13,23 +13,26 @@ import time
 
 
 if __name__ == '__main__':
-    collections = Collection.objects.filter(standart='ERC1155', address__isnull=False)
     networks = Network.objects.all()
     for network in networks:
         web3, contract = network.get_erc1155fabric_contract()
-        Process(target=scaner, args=(web3, contract, None, 'fabric')).start()
+        Process(target=scaner, args=(web3, contract, network.name, None, 'fabric')).start()
 
-    for i in collections:
-        web3, contract = i.get_contract()
-        Process(target=scaner, args=(web3, contract,)).start()
+        collections = Collection.objects.filter(standart='ERC1155', network=network, address__isnull=False)
+        for i in collections:
+            web3, contract = i.get_contract()
+            Process(target=scaner, args=(web3, contract,)).start()
+        network_collections[network.name] = collections
 
     while True:
+        # get new collections and add them to subprocesses
         time.sleep(60)
-        updated_collections = Collection.objects.filter(standart='ERC1155', address__isnull=False)
+        for network in networks:
+            updated_collections = Collection.objects.filter(standart='ERC1155', network=network, address__isnull=False)
 
-        new_collections = list(set(updated_collections) - set(collections))
-        if new_collections:
-            for i in new_collections:
-                web3, contract = i.get_contract()
-                Process(target=scaner, args=(web3, contract,)).start()
-            collections = updated_collections
+            new_collections = list(set(updated_collections) - set(network_collections[network.name]))
+            if new_collections:
+                for i in new_collections:
+                    web3, contract = i.get_contract()
+                    Process(target=scaner, args=(web3, contract,)).start()
+                network_collections[network.name] = updated_collections

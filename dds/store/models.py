@@ -82,6 +82,7 @@ class Collection(models.Model):
         self.save()
 
     def create_token(self, creator, ipfs, signature, amount):
+        web3 = self.network.get_web3_connection()
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': TOKEN_MINT_GAS_LIMIT,
@@ -89,10 +90,10 @@ class Collection(models.Model):
             'gasPrice': web3.eth.gasPrice,
         }
         if self.standart == 'ERC721':
-            web3, contract = self.network.get_erc721main_contract(self.address)
+            _, contract = self.network.get_erc721main_contract(self.address)
             initial_tx = contract.functions.mint( ipfs, signature).buildTransaction(tx_params)
         else:
-            web3, contract = self.network.get_erc1155main_contract(self.address)
+            _, contract = self.network.get_erc1155main_contract(self.address)
             initial_tx = contract.functions.mint( int(amount), ipfs, signature).buildTransaction(tx_params)
         #Just for tests
         '''
@@ -116,6 +117,7 @@ class Collection(models.Model):
     def create_contract(cls, name, symbol, standart, owner, network):
         baseURI = ''
         signature = sign_message(['address'], [SIGNER_ADDRESS])
+        web3 = network.get_web3_connection()
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': COLLECTION_CREATION_GAS_LIMIT,
@@ -123,7 +125,7 @@ class Collection(models.Model):
             'gasPrice': web3.eth.gasPrice,
         }
         if standart == 'ERC721':
-            web3, contract = network.get_erc721fabric_contract()
+            _, contract = network.get_erc721fabric_contract()
             '''
             # JUST FOR TESTS
             tx = myContract.functions.makeERC721(
@@ -145,7 +147,7 @@ class Collection(models.Model):
                 signature
             ).buildTransaction(tx_params)
 
-        web3, contract = network.get_erc1155fabric_contract()
+        _, contract = network.get_erc1155fabric_contract()
         '''
         # JUST FOR TESTS
         tx = myContract.functions.makeERC1155(
