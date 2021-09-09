@@ -355,7 +355,7 @@ class TokenFullSerializer(TokenSerializer):
             "-amount"
         ) 
         if bids:
-            return bids.first().amount
+            return BidSerializer(bids.first()).data
 
     def get_bids(self, obj):
         return BidSerializer(obj.bid_set.all(), many=True).data
