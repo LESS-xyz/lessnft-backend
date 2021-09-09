@@ -586,9 +586,9 @@ class BuyTokenView(APIView):
         token_id = request.data.get('id')
         token_amount = request.data.get('tokenAmount')
 
-        if not token_id or not tokenid.is_digit():
+        if token_id is None:
             return Response({"error": "invalid token_id"}, status=status.HTTP_400_BAD_REQUEST)
-        if not token_id or not tokenid.is_digit():
+        if token_amount is None:
             return Response({"error": "invalid token_amount"}, status=status.HTTP_400_BAD_REQUEST)
 
         token_id = int(token_id)
@@ -798,7 +798,7 @@ class AuctionEndView(APIView):
                 token=token, 
                 owner=seller, 
                 selling=True, 
-                minimal_bid__isnull=False,
+                currency_minimal_bid__isnull=False,
             ).first()
             if not ownership:
                 return Response({'error': 'user is not owner or token is not on sell'})

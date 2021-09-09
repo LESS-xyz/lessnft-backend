@@ -64,7 +64,7 @@ class CollectionManager(models.Manager):
     def user_collections(self, user):
         """ Return committed collections for user (with default collections) """
         return self.filter(status=Status.COMMITTED).filter(
-            Q(name__in=[COLLECTION_721, COLLECTION_1155]) | Q(creator=u)
+            Q(name__in=[COLLECTION_721, COLLECTION_1155]) | Q(creator=user)
         )
 
     def hot_collections(self, user):
@@ -385,7 +385,7 @@ class Token(models.Model):
         if seller_id:
             try:
                 seller = AdvUser.objects.get_by_custom_url(seller_id)
-                ownership = token.ownership_set.filter(owner=seller).filter(selling=True)
+                ownership = self.ownership_set.filter(owner=seller).filter(selling=True)
                 if not ownership:
                     return False, Response({'error': 'user is not owner or token is not on sell'})
             except ObjectDoesNotExist:
@@ -410,6 +410,7 @@ class Token(models.Model):
 
         price = request.data.get('price')
         if price:
+            print(f'price is {price}')
             price = Decimal(price)
         minimal_bid = request.data.get('minimal_bid')
         if minimal_bid:

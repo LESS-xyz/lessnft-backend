@@ -2,7 +2,7 @@ import random
 
 from django.db import models
 from django.db.models import Q
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 
@@ -20,7 +20,7 @@ class MasterUser(models.Model):
         return super(MasterUser, self).save(*args, **kwargs)
 
 
-class AdvUserManager(models.Manager):
+class AdvUserManager(UserManager):
     def get_by_custom_url(self, custom_url):
         """
         Return user by id or custom_url.
