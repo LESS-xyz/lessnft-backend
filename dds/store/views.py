@@ -279,12 +279,13 @@ class GetOwnedView(APIView):
     )
 
     def get(self, request, address, page):
+        network = request.query_params.get('network')
         try:
             user = AdvUser.objects.get(username=address)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
-        tokens = Token.objects.committed().filter(Q(owner=user) | Q(owners=user)).order_by('-id')
+        tokens = Token.objects.committed().network(network).filter(Q(owner=user) | Q(owners=user)).order_by('-id')
 
         start, end = get_page_slice(page, len(tokens))
 
@@ -303,12 +304,13 @@ class GetCreatedView(APIView):
     )
 
     def get(self, request, address, page):
+        network = request.query_params.get('network')
         try:
             user = AdvUser.objects.get(username=address)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
-        tokens = Token.objects.committed().filter(creator=user).order_by('-id')
+        tokens = Token.objects.committed().network(network).filter(creator=user).order_by('-id')
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
@@ -326,6 +328,7 @@ class GetLikedView(APIView):
     )
 
     def get(self, request, address, page):
+        network = request.query_params.get('network')
         try:
             user = AdvUser.objects.get(username=address)
         except ObjectDoesNotExist:
@@ -338,6 +341,8 @@ class GetLikedView(APIView):
         tokens_action = UserAction.objects.filter(method='like', user__in=ids).order_by('-date')
         
         tokens = [action.token for action in tokens_action]
+        if network:
+            tokens = [token for token in tokens if token.collection.network.symbol.lower() == network.lower()]
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
@@ -482,13 +487,15 @@ class GetHotView(APIView):
     def get(self, request, page):
         sort = request.query_params.get('sort', 'recent')
         tag = request.query_params.get('tag')
+        network = request.query_params.get('network')
 
         order = SORT_STATUSES[sort]
 
+        tokens = Token.objects.committed().network(network)
         if tag:
-            tokens = Token.objects.committed().filter(tags__name__contains=tag).order_by(order)
+            tokens = tokens.filter(tags__name__contains=tag).order_by(order)
         else:
-            tokens = Token.objects.committed().order_by(order)
+            tokens = tokens.order_by(order)
         if sort in ('cheapest', 'highest'):
             tokens = tokens.exclude(price=None).exclude(selling=False).exclude(status=Status.BURNED)
         length = tokens.count()
@@ -510,7 +517,8 @@ class GetHotCollectionsView(APIView):
         responses={200: HotCollectionSerializer(many=True)},
     )
     def get(self, request):
-        collections = Collection.objects.hot_collections().order_by('-id')[:5]
+        network = request.query_params.get('network')
+        collections = Collection.objects.network(network).hot_collections().order_by('-id')[:5]
         response_data = HotCollectionSerializer(collections, many=True).data
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -525,15 +533,13 @@ class GetCollectionView(APIView):
     )
 
     def get(self, request, param, page):
+        network = request.query_params.get('network')
         try:
-            id_ = int(param) if isinstance(param, int) or param.isdigit() else None
-            collection = Collection.objects.get(
-                Q(id=id_) | Q(short_url=param)
-            )
+            collection = Collection.objects.get_by_short_url(param)
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        tokens = Token.objects.committed().filter(collection=collection)
+        tokens = Token.objects.committed().network(network).filter(collection=collection)
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
@@ -896,10 +902,7 @@ class SetCoverView(APIView):
         user = request.user
         collection_id = request.data.get('id')
         try:
-            int_collection_id = int(collection_id) if isinstance(collection_id, int) or collection_id.isdigit() else None
-            collection = Collection.objects.get(
-                Q(id=int_collection_id) | Q(short_url=collection_id)
-            )
+            collection = Collection.objects.get_by_short_url(collection_id)
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
         if collection.creator != user:
@@ -919,15 +922,17 @@ def get_fee(request):
 
 @api_view(http_method_names=['GET'])
 def get_favorites(request):
-    token_list = Token.objects.committed().filter(is_favorite=True).order_by("-updated_at")
+    network = request.query_params.get('network')
+    token_list = Token.objects.committed().network(network).filter(is_favorite=True).order_by("-updated_at")
     response_data = TokenSerializer(token_list, many=True, context={"user": request.user}).data
     return Response(response_data, status=status.HTTP_200_OK)
 
 
 @api_view(http_method_names=['GET'])
 def get_hot_bids(request):
+    network = request.query_params.get('network')
     bids = Bid.objects.filter(state=Status.COMMITTED).order_by('-id')[:6]
-    token_list= [bid.token for bid in bids]
+    token_list= [bid.token for bid in bids if bid.token.collection.network.native_symbol.lower() == network.lower()]
     response_data = TokenFullSerializer(token_list, context={"user": request.user}, many=True).data
     return Response(response_data, status=status.HTTP_200_OK)
 

@@ -56,11 +56,15 @@ class CollectionManager(models.Manager):
             Q(name__in=[COLLECTION_721, COLLECTION_1155]) | Q(creator=user)
         )
 
-    def hot_collections(self, user):
-        """ Return committed collections for user (with default collections) """
+    def hot_collections(self):
+        """ Return hot collections (without default collections) """
         return self.exclude(name__in=(COLLECTION_721, COLLECTION_1155,)).filter(
             Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
         )
+
+    def network(self, network):
+        """ Return collections filtered by network symbol """
+        return self.filter(network__native_symbol__iexact=network)
 
 
 class Collection(models.Model):
@@ -215,6 +219,12 @@ class TokenManager(models.Manager):
     def committed(self):
         """ Return tokens with status committed """
         return self.filter(status=Status.COMMITTED)
+
+    def network(self, network):
+        """ Return token filtered by collection network symbol """
+        if network:
+            return self.filter(collection__network__native_symbol__iexact=network)
+        return self
 
 
 class Token(models.Model):
