@@ -50,6 +50,7 @@ class OwnershipSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
     price = serializers.SerializerMethodField()
+    quantity = serializers.SerializerMethodField()
     avatar = serializers.CharField(read_only=True, source='owner.avatar')
     currency = serializers.SerializerMethodField()
 
@@ -75,6 +76,9 @@ class OwnershipSerializer(serializers.ModelSerializer):
 
     def get_name(self, obj):
         return obj.owner.get_name()
+
+    def get_quantity(self, obj):
+        return obj.quantity - obj.transactiontracker_set.first().amount
 
 
 class BetSerializer(serializers.ModelSerializer):

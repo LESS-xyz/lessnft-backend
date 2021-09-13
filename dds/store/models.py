@@ -692,6 +692,7 @@ class TransactionTracker(models.Model):
     tx_hash = models.CharField(max_length=200, null=True, blank=True)
     token = models.ForeignKey('Token', on_delete=models.CASCADE, null=True, blank=True, default=None)
     ownership = models.ForeignKey('Ownership', on_delete=models.CASCADE, null=True, blank=True, default=None)
+    amount = models.PositiveSmallIntegerField(null=True, blank=True, default=None)
 
     def __str__(self):
         return self.tx_hash

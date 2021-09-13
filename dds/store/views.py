@@ -974,11 +974,17 @@ class TransactionTrackerView(APIView):
             return Response({"error": "token not found"}, status=status.HTTP_400_BAD_REQUEST)
         if token.standart == "ERC1155":
             owner_url = request.data.get("ownership")
+            amount = request.data.get("amount")
             user = AdvUser.objects.get_by_custom_url(owner_url)
             ownership = Ownership.objects.filter(token_id=token_id, owner=user).first()
-            ownership.selling = False
-            ownership.save()
-            TransactionTracker.objects.create(ownership=ownership, tx_hash=tx_hash)
+            if int(amount) == ownership.quantity:
+                ownership.selling = False
+                ownership.save()
+            TransactionTracker.objects.create(
+                ownership=ownership, 
+                tx_hash=tx_hash, 
+                amount=amount,
+            )
             return Response({"success": "trancsaction is tracked"}, status=status.HTTP_200_OK)
         token.selling = False
         token.save()
