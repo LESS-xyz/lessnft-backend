@@ -78,7 +78,10 @@ class OwnershipSerializer(serializers.ModelSerializer):
         return obj.owner.get_name()
 
     def get_quantity(self, obj):
-        return obj.quantity - obj.transactiontracker_set.first().amount
+        tracker = obj.transactiontracker_set.first()
+        if tracker and obj.quantity:
+            return obj.quantity + obj.transactiontracker_set.first().amount
+        return obj.quantity 
 
 
 class BetSerializer(serializers.ModelSerializer):

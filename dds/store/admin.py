@@ -73,7 +73,7 @@ class OwnershipAdmin(admin.ModelAdmin):
 
 class TxTrackerAdmin(admin.ModelAdmin):
     model = TransactionTracker
-    list_display = ('token', 'tx_hash', 'ownership')
+    list_display = ('tx_hash', 'token', 'ownership', 'amount')
 
 
 admin.site.register(Tags)

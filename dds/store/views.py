@@ -977,7 +977,7 @@ class TransactionTrackerView(APIView):
             amount = request.data.get("amount")
             user = AdvUser.objects.get_by_custom_url(owner_url)
             ownership = Ownership.objects.filter(token_id=token_id, owner=user).first()
-            if int(amount) == ownership.quantity:
+            if amount and int(amount) == ownership.quantity:
                 ownership.selling = False
                 ownership.save()
             TransactionTracker.objects.create(
