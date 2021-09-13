@@ -10,6 +10,10 @@ from dds.settings import DEFAULT_AVATARS
 from dds.utilities import get_media_from_ipfs
 
 
+class DefaultAvatar(models.Model):
+    image = models.CharField(max_length=200, blank=True, null=True, default=None)
+
+
 class MasterUser(models.Model):
     address = models.CharField(max_length=42, default=None, null=True, blank=True, unique=True)
     commission = models.IntegerField()
@@ -68,7 +72,8 @@ class AdvUser(AbstractUser):
 
 def user_registrated_dispatcher(sender, instance, created, **kwargs):
     if created:
-        instance.avatar_ipfs = random.choice(DEFAULT_AVATARS)
+        default_avatars = DefaultAvatar.objects.all().values_list('image', flat=True)
+        instance.avatar_ipfs = random.choice(default_avatars)
         instance.save()
 
 
