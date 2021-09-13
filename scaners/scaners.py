@@ -93,7 +93,7 @@ def scan_deploy(latest_block, smart_contract):
 
 
 def mint_transfer(latest_block, smart_contract):
-    collection = Collection.objects.get(address=smart_contract.address)
+    collection = Collection.objects.filter(address=smart_contract.address).first()
     logging.basicConfig(
         level=logging.INFO, 
         filename=f'logs/scaner_{collection.name}.log',
@@ -208,8 +208,12 @@ def mint_transfer(latest_block, smart_contract):
                 elif token.first().standart == 'ERC1155':
                     if token.first().total_supply:
                         token.update(total_supply=F('total_supply')-event['args']['value'])
-                    # token[0].total_supply -= event['args']['value']
                     token[0].save()
+                    ownership = Ownership.objects.get(owner=old_owner, token=token[0])
+                    ownership.quantity = ownership.quantity - event['args']['value']
+                    ownership.save()
+                    if ownership.quantity == 0:
+                        ownership.delete()
                     if token[0].total_supply == 0:
                         token.update(status=Status.BURNED)
                 
@@ -246,6 +250,7 @@ def mint_transfer(latest_block, smart_contract):
                 if not owner.exists():
                     logging.info('old_owner is not exist!')
                 else:
+                    price = owner.first().currency_price
                     if owner.first().quantity:
                         owner.update(quantity=F('quantity')-event['args']['value'])
                         if owner.first().quantity <= 0:
@@ -253,7 +258,7 @@ def mint_transfer(latest_block, smart_contract):
 
                 owner = Ownership.objects.filter(owner=new_owner[0], token=token.first())
                 if owner.exists():
-                    owner.update(quantity=F('quantity')+event['args']['value'])
+                    owner.update(quantity=F('quantity')+event['args']['value'], currency_price=price)
                 else:
                     if not new_owner[0]:
                         continue
@@ -262,7 +267,8 @@ def mint_transfer(latest_block, smart_contract):
                     owner = Ownership.objects.create(
                         owner=new_owner[0],
                         token=token.first(),
-                        quantity=event['args']['value']
+                        quantity=event['args']['value'],
+                        currency_price=price,
                     )
                     owner.save()
                     token.first().owners.add(new_owner[0])
@@ -286,6 +292,7 @@ def buy_scanner(latest_block, smart_contract, standart):
     logging.info('buy scanner!')
     block_count = HOLDERS_CHECK_CHAIN_LENGTH + HOLDERS_CHECK_COMMITMENT_LENGTH
     block = get_last_block(f'BUY_LAST_BLOCK_{standart}')
+    logging.info(f'last block: {latest_block} \n block: {HOLDERS_CHECK_COMMITMENT_LENGTH}')
 
     logging.info(f'last block: {latest_block} \n block: {block}')
     if not (latest_block - block > block_count):
@@ -319,23 +326,21 @@ def buy_scanner(latest_block, smart_contract, standart):
     
     logging.info('we have event!')
     for event in events:
-        logging.info('event:', event)
+        logging.info(f'event: {event}')
         sell_token = event['args']['sellTokenAddress']
-        new_owner = AdvUser.objects.get(username=event['args']['buyer'].lower())
         token_id = event['args']['sellId']
         tx_hash = event['transactionHash'].hex()
-        old_owner = AdvUser.objects.get(username=event['args']['seller'].lower())
+        new_owner = AdvUser.objects.filter(username=event['args']['buyer'].lower()).first()
+        old_owner = AdvUser.objects.filter(username=event['args']['seller'].lower()).first()
         
         token = Token.objects.filter(
             collection__address=sell_token, 
             internal_id=token_id,
         )
-        logging.info('new owner:', new_owner)
         if not token.exists():
             continue
 
-        logging.info('tokens:', token)
-        logging.info('token standart:', token[0].standart)
+        logging.info(f'token standart: {token[0].standart}')
         if token[0].standart == 'ERC721':
             price = token[0].currency_price
             currency = token[0].currency
@@ -343,15 +348,19 @@ def buy_scanner(latest_block, smart_contract, standart):
             Bid.objects.filter(token=token[0]).delete()
             logging.info('all bids deleted!')
         elif token[0].standart == 'ERC1155':
-            old_ownership = token[0].ownership_set.filter(owner=old_owner).first()
-            price = old_ownership.currency_price
-            currency = old_ownership.currency
             owner = Ownership.objects.filter(
                 owner=new_owner,
                 token=token[0]
             )
+            logging.info(f'owner is {owner}')
+            price = Ownership.objects.filter(
+                owner=old_owner,
+                token=token[0]
+            ).first().currency_price
+            logging.info(f'price is {price}')
 
             token_history_exist = TokenHistory.objects.filter(tx_hash=tx_hash, method='Transfer').exists()
+            logging.info(f'token history {token_history_exist}')
             if owner.exists() and not token_history_exist:
                 owner.update(quantity=F('quantity')+event['args']['sellAmount'])
             elif not owner.exists():
@@ -361,8 +370,8 @@ def buy_scanner(latest_block, smart_contract, standart):
                     token=token[0],
                     quantity=event['args']['sellAmount'],
                 )
-                logging.info('create owner:', owner)
-                logging.info('who is owner? It is', owner.owner)
+                logging.info(f'create owner: {owner}')
+                logging.info('who is owner? It is {owner.owner}')
                 token[0].owners.add(new_owner)
 
             if not token_history_exist:
@@ -377,33 +386,34 @@ def buy_scanner(latest_block, smart_contract, standart):
                     owner.delete()
 
             bet = Bid.objects.filter(token=token[0]).order_by('-amount')
-            logging.info('bet:', bet)
+            logging.info(f'bet: {bet}')
             sell_amount = event['args']['sellAmount']
             if bet.exists():
                 if sell_amount == bet.first().quantity:
-                    logging.info('bet:', bet.first())
                     bet.delete()
                 else:
-                    quantity = bet.first().quantity - sell_amount
-                    Bid.objects.filter(id=bet.first().id).update(quantity=quantity)
+                    bet = bet.first()
+                    bet.quantity = bet.quantity - sell_amount
+                    bet.save()
                 logging.info('bet upgraded')
 
         logging.info(f'{token} update!')
 
         token_history = TokenHistory.objects.filter(tx_hash=tx_hash)
-        history_params = {
-            "method": "Buy",
-            "price": price,
-        }
+        logging.info(f"token history: {token_history}")
         if token_history.exists():
-            token_history.update(**history_params)
+            token_history.update(
+                method="Buy",
+                price=price,
+            )
         else:
             TokenHistory.objects.get_or_create(
                 token=token[0],
                 tx_hash=tx_hash,
                 new_owner=new_owner,
                 old_owner=old_owner,
-                **history_params,
+                method="Buy",
+                price=price,
             )
 
     save_last_block(
