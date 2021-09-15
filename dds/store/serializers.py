@@ -404,14 +404,14 @@ class CollectionMetadataSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Collection
-        fields = (
-            "name",
-            "description",
+        read_only_fields = (
             "image",
             "seller_fee_basis_points",
             "fee_recipient",
-
-
+        )
+        fields = read_only_fields + (
+            "name",
+            "description",
         )
 
     def get_image(self, obj):

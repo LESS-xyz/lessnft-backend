@@ -28,5 +28,5 @@ urlpatterns = [
     path('fee/', get_fee),
     path('favorites/', get_favorites),
     path('support/', SupportView.as_view()),
-    path('metadata/<str:address>', GetCollectionByAdressView.as_view()),
+    path('metadata/<str:address>/', GetCollectionByAdressView.as_view()),
 ]
