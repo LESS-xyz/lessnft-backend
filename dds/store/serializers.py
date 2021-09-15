@@ -394,3 +394,33 @@ class TokenFullSerializer(TokenSerializer):
         if user and not user.is_anonymous:
             return UserAction.objects.filter(method="like", token=obj, user=user).exists()
         return False
+
+
+class CollectionMetadataSerializer(serializers.ModelSerializer):
+
+    image = serializers.SerializerMethodField()
+    seller_fee_basis_points = serializers.SerializerMethodField()
+    fee_recipient = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Collection
+        fields = (
+            "name",
+            "description",
+            "image",
+            "seller_fee_basis_points",
+            "fee_recipient",
+
+
+        )
+
+    def get_image(self, obj):
+        image = obj.avatar
+        return image
+
+    def get_seller_fee_basis_points(self):
+        return 1000
+
+    def get_fee_recipient(self, obj):
+        fee_recipient = obj.creator.username
+        return fee_recipient
