@@ -412,6 +412,8 @@ class Token(models.Model):
         if price:
             print(f'price is {price}')
             price = Decimal(price)
+        else:
+            price = None
         minimal_bid = request.data.get('minimal_bid')
         if minimal_bid:
             minimal_bid = Decimal(minimal_bid)
@@ -598,8 +600,8 @@ class Token(models.Model):
         owners_auction_info = []
         for owner in owners_auction:
             info = {
-                'id': owner.owner.id,
-                'name': owner.owner.display_name,
+                'id': owner.owner.url,
+                'name': owner.owner.get_name(),
                 'address': owner.owner.username,
                 'avatar': owner.owner.avatar,
                 'quantity': owner.quantity
