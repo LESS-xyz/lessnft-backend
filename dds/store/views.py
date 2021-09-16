@@ -15,6 +15,8 @@ from dds.store.serializers import (
     HotCollectionSerializer,
     BetSerializer,
     BidSerializer,
+
+    CollectionMetadataSerializer,
 )
 from dds.utilities import sign_message, get_page_slice
 from django.core.exceptions import ObjectDoesNotExist
@@ -990,3 +992,23 @@ class TransactionTrackerView(APIView):
         token.save()
         TransactionTracker.objects.create(token=token, tx_hash=tx_hash)
         return Response({"success": "trancsaction is tracked"}, status=status.HTTP_200_OK)
+
+
+
+class GetCollectionByAdressView(APIView):
+    '''
+    View for get collection metadata by adress.
+    '''
+    @swagger_auto_schema(
+        operation_description="get collection metadata by adress",
+        responses={200: CollectionMetadataSerializer, 400: 'collection not found'},
+    )
+
+    def get(self, request, address):
+        try:
+            collection = Collection.objects.get(address=address)
+        except ObjectDoesNotExist:
+            return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+        response_data = CollectionMetadataSerializer(collection).data
+        return Response(response_data, status=status.HTTP_200_OK)
