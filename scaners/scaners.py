@@ -5,7 +5,7 @@ from utils import get_last_block, save_last_block
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F
 
-from local_settings import (
+from dds.settings_local import (
     HOLDERS_CHECK_CHAIN_LENGTH,
     HOLDERS_CHECK_COMMITMENT_LENGTH,
     HOLDERS_CHECK_TIMEOUT
