@@ -1,6 +1,6 @@
 from dds.accounts.models import AdvUser, MasterUser
 from dds.activity.models import BidsHistory, ListingHistory, UserAction
-from dds.consts import DECIMALS
+from dds.consts import DECIMALS, APPROVE_GAS_LIMIT
 from dds.settings import *
 from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid, token_search, collection_search)
 from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs

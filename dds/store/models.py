@@ -13,12 +13,15 @@ from dds.consts import MAX_AMOUNT_LEN
 from dds.utilities import sign_message, get_media_from_ipfs
 from dds.accounts.models import AdvUser, MasterUser
 from dds.rates.models import UsdRate
-from dds.consts import DECIMALS
+from dds.consts import ( 
+    DECIMALS, 
+    TOKEN_MINT_GAS_LIMIT,  
+    TOKEN_TRANSFER_GAS_LIMIT, 
+    TOKEN_BUY_GAS_LIMIT, 
+    COLLECTION_CREATION_GAS_LIMIT
+)
 from dds.settings import (
     NETWORK_SETTINGS,
-    TOKEN_MINT_GAS_LIMIT,
-    TOKEN_TRANSFER_GAS_LIMIT,
-    TOKEN_BUY_GAS_LIMIT,
     ERC20_ADDRESS,
     DEFAULT_AVATARS,
     ERC721_FABRIC_ADDRESS,
@@ -42,7 +45,6 @@ from contracts import (
 )
 from dds.settings import (
     SIGNER_ADDRESS,
-    COLLECTION_CREATION_GAS_LIMIT,
 )
 
 
