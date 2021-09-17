@@ -17,6 +17,7 @@ from dds.activity.models import UserAction
 from dds.rates.models import UsdRate
 from dds.rates.serializers import CurrencySerializer
 from django.db.models import Min
+import dds.settings_local
 
 try:
     service_fee = MasterUser.objects.get().commission
@@ -418,8 +419,11 @@ class CollectionMetadataSerializer(serializers.ModelSerializer):
         image = obj.avatar
         return image
 
-    def get_seller_fee_basis_points(self):
-        return 1000
+    def get_seller_fee_basis_points(self, obj):
+        if obj.name == dds.settings_local.COLLECTION_721 or obj.name == dds.settings_local.COLLECTION_1155:
+            return 0
+        else:
+            return 1000
 
     def get_fee_recipient(self, obj):
         fee_recipient = obj.creator.username
