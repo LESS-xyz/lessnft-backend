@@ -1006,7 +1006,7 @@ class GetCollectionByAdressView(APIView):
 
     def get(self, request, address):
         try:
-            collection = Collection.objects.get(address=address)
+            collection = Collection.objects.get(address__iexact=address)
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
