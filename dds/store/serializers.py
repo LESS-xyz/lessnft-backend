@@ -17,6 +17,7 @@ from dds.activity.models import UserAction
 from dds.rates.models import UsdRate
 from dds.rates.serializers import CurrencySerializer
 from django.db.models import Min
+import dds.settings_local
 
 try:
     service_fee = MasterUser.objects.get().commission
@@ -176,6 +177,7 @@ class TokenSerializer(serializers.ModelSerializer):
     royalty = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     price = serializers.SerializerMethodField()
+    digital_key = serializers.SerializerMethodField()
     creator = CreatorSerializer()
     collection = CollectionSlimSerializer()
     currency = CurrencySerializer()
@@ -209,7 +211,8 @@ class TokenSerializer(serializers.ModelSerializer):
             "updated_at",
             "start_auction",
             "end_auction",
-            "format"
+            "format",
+            "digital_key",
         )
         
     def get_royalty(self, obj):
@@ -252,6 +255,14 @@ class TokenSerializer(serializers.ModelSerializer):
         if user and not user.is_anonymous:
             return UserAction.objects.filter(method="like", token=obj, user=user).exists()
         return False
+
+    def get_digital_key(self, obj):
+        user = self.context.get("user") 
+        if self.standart=="ERC721" and user==self.owner:
+            return self.digital_key
+        if self.standart=="ERC1155" and user in self.owners.all():
+            return self.digital_key
+        return None
 
 
 class HotCollectionSerializer(CollectionSlimSerializer):
@@ -419,7 +430,10 @@ class CollectionMetadataSerializer(serializers.ModelSerializer):
         return image
 
     def get_seller_fee_basis_points(self, obj):
-        return 1000
+        if obj.name == dds.settings_local.COLLECTION_721 or obj.name == dds.settings_local.COLLECTION_1155:
+            return 0
+        else:
+            return 1000
 
     def get_fee_recipient(self, obj):
         fee_recipient = obj.creator.username

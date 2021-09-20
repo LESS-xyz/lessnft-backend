@@ -273,6 +273,7 @@ class Token(models.Model):
     is_favorite = models.BooleanField(default=False)
     start_auction = models.DateTimeField(blank=True, null=True, default=None)
     end_auction = models.DateTimeField(blank=True, null=True, default=None)
+    digital_key = models.CharField(max_length=1000, blank=True, null=True, default=None)
 
     objects = TokenManager()
 
@@ -407,6 +408,7 @@ class Token(models.Model):
         collection = request.data.get('collection')
         self.collection = Collection.objects.get_by_short_url(collection)
         self.total_supply = request.data.get('total_supply')
+        self.digital_key = request.data.get('digital_key')
 
         price = request.data.get('price')
         if price:
