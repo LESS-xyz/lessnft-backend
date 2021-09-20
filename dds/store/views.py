@@ -397,11 +397,11 @@ class GetView(APIView):
         if price:
             request_data.pop('price', None)
             price = Decimal(str(price))
-            request_data['currency_price'] = price 
+        request_data['currency_price'] = price 
         if minimal_bid:
             request_data.pop('minimal_bid')
             minimal_bid = Decimal(str(minimal_bid))
-            request_data['currency_minimal_bid'] = minimal_bid
+        request_data['currency_minimal_bid'] = minimal_bid
         
         if token.standart == "ERC721":
             old_price = token.currency_price
@@ -507,7 +507,8 @@ class GetHotCollectionsView(APIView):
         responses={200: HotCollectionSerializer(many=True)},
     )
     def get(self, request):
-        collections = Collection.objects.hot_collections().order_by('-id')[:5]
+        user = request.user
+        collections = Collection.objects.hot_collections(user).order_by('-id')[:5]
         response_data = HotCollectionSerializer(collections, many=True).data
         return Response(response_data, status=status.HTTP_200_OK)
 

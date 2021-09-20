@@ -45,11 +45,7 @@ class MetamaskLoginSerializer(SocialLoginSerializer):
     def validate(self, attrs):
         address = attrs["address"]
         signature = attrs["signed_msg"]
-        session = self.context["request"].session
-        message = session.get("metamask_message")
-
-        if message is None:
-            message = attrs["msg"]
+        message = attrs["msg"]
 
         print(
             "metamask login, address",

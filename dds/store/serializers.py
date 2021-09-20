@@ -418,7 +418,7 @@ class CollectionMetadataSerializer(serializers.ModelSerializer):
         image = obj.avatar
         return image
 
-    def get_seller_fee_basis_points(self):
+    def get_seller_fee_basis_points(self, obj):
         return 1000
 
     def get_fee_recipient(self, obj):

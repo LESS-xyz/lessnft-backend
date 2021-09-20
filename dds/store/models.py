@@ -209,10 +209,10 @@ class Collection(models.Model):
         return tx_hash.hex()
         '''
         return myContract.functions.makeERC1155(
+            name,
             baseURI, 
             SIGNER_ADDRESS, 
-            name,
-            signature
+            signature,
         ).buildTransaction(tx_params)
 
     def get_contract(self):
