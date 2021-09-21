@@ -28,7 +28,7 @@ class UsdRate(models.Model):
         return 10 ** self.decimal
 
     def set_decimals(self) -> None:
-        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS.ETH.endpoint))
         address = web3.toChecksumAddress(self.address)
         contract = web3.eth.contract(address=address, abi=WETH_ABI)
         self.decimal = contract.functions.decimals().call()

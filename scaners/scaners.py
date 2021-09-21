@@ -503,7 +503,7 @@ def scaner(smart_contract, standart=None, type=None):
     '''
 
 
-    w3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
+    w3 = Web3(HTTPProvider(config.NETWORK_SETTINGS.ETH.endpoint))
 
     while True:
         latest_block = w3.eth.blockNumber

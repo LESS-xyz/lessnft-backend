@@ -106,7 +106,7 @@ class Collection(models.Model):
         self.save()
 
     def create_token(self, creator, ipfs, signature, amount):
-        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS.ETH.endpoint))
         if self.standart == 'ERC721':
             abi = ERC721_MAIN
         else:
@@ -145,7 +145,7 @@ class Collection(models.Model):
 
     @classmethod
     def create_contract(cls, name, symbol, standart, owner):
-        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS.ETH.endpoint))
         baseURI = ''
         signature = sign_message(['address'], [config.SIGNER_ADDRESS])
         tx_params = {
@@ -204,7 +204,7 @@ class Collection(models.Model):
         ).buildTransaction(tx_params)
 
     def get_contract(self):
-        w3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
+        w3 = Web3(HTTPProvider(config.NETWORK_SETTINGS.ETH.endpoint))
         if self.standart == 'ERC1155':
             abi = ERC1155_MAIN
         else:
@@ -436,7 +436,7 @@ class Token(models.Model):
         self.save()
 
     def transfer(self, old_owner, new_owner, amount=None):
-        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS.ETH.endpoint))
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': TOKEN_TRANSFER_GAS_LIMIT,
@@ -466,7 +466,7 @@ class Token(models.Model):
         ).buildTransaction(tx_params)
 
     def burn(self, user=None, amount=None):
-        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS["ETH"]["endpoint"]))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS.ETH.endpoint))
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': TOKEN_MINT_GAS_LIMIT,
@@ -567,7 +567,7 @@ class Token(models.Model):
             'signature': signature
         }
         print(f'data: {data}')
-        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS.ETH.endpoint))
 
         return {
             'nonce': web3.eth.getTransactionCount(

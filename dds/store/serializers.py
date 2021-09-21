@@ -144,7 +144,7 @@ class CollectionSearchSerializer(serializers.ModelSerializer):
 
 
     def get_tokens(self, obj):
-        tokens = obj.token_set.order_by(config.SORT_STATUSES["recent"])[:6]
+        tokens = obj.token_set.order_by(config.SORT_STATUSES.recent)[:6]
         return [token.media for token in tokens]
 
 
@@ -274,7 +274,7 @@ class HotCollectionSerializer(CollectionSlimSerializer):
 
     def get_tokens(self, obj):
         tokens = obj.token_set.exclude(status=Status.BURNED).order_by(
-            config.SORT_STATUSES["recent"]
+            config.SORT_STATUSES.recent
         )[:6]
         return [token.media for token in tokens]
 

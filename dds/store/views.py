@@ -1,3 +1,4 @@
+from dds.settings_local import SEARCH_TYPES
 from dds.accounts.models import AdvUser, MasterUser
 from dds.activity.models import BidsHistory, ListingHistory, UserAction
 from dds.consts import DECIMALS, APPROVE_GAS_LIMIT
@@ -133,7 +134,8 @@ class SearchView(APIView):
         params = request.query_params
         sort = params.get('type', 'items')
 
-        search_result = globals()[config.SEARCH_TYPES[sort] + '_search'](words, page, user=request.user, **params)
+        sort_type = getattr(config.SEARCH_TYPES, sort)
+        search_result = globals()[sort_type + '_search'](words, page, user=request.user, **params)
 
         return Response(search_result, status=status.HTTP_200_OK)
 
@@ -480,7 +482,7 @@ class GetHotView(APIView):
         sort = request.query_params.get('sort', 'recent')
         tag = request.query_params.get('tag')
 
-        order = config.SORT_STATUSES[sort]
+        order = config.SORT_STATUSES.sort
 
         if tag:
             tokens = Token.objects.committed().filter(tags__name__contains=tag).order_by(order)
@@ -639,7 +641,7 @@ class MakeBid(APIView):
         amount = Decimal(str(request_data.get('amount')))
         quantity = int(request_data.get('quantity'))
 
-        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS.ETH.endpoint))
 
         user = request.user
 
@@ -725,7 +727,7 @@ class VerificateBetView(APIView):
     )
     def get(self, request, token_id):
         print('virificate!')
-        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS.ETH.endpoint))
 
         bets = Bid.objects.filter(token__id=token_id).order_by('-amount')
         max_bet = bets.first()

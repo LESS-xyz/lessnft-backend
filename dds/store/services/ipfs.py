@@ -40,7 +40,7 @@ def get_ipfs(token_id, address, standart) -> dict:
     :param standart: token standart
     """
     if token_id != None:
-        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS["ETH"]["endpoint"]))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS.ETH.endpoint))
         if standart == "ERC721":
             abi = ERC721_MAIN
         else:

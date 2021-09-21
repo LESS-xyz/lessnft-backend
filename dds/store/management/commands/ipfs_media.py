@@ -12,7 +12,7 @@ class Command(BaseCommand):
     help = "Transfer meida to ipfs"
 
     def handle(self, *args, **options):
-        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS["ETH"]["endpoint"]))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS.ETH.endpoint))
         tokens = Token.objects.filter(ipfs=None)  
 
         for token in tokens:

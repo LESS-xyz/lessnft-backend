@@ -16,7 +16,7 @@ def end_auction(token):
         'gasPrice': initial_tx.get("gasPrice"),
     }
 
-    web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
+    web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS.ETH.endpoint))
     contract = web3.eth.contract(address=config.EXCHANGE_ADDRESS, abi=EXCHANGE)
 
     tx = contract.functions.makeExchangeERC721(

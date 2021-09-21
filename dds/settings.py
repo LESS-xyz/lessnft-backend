@@ -14,7 +14,8 @@ from celery.schedules import crontab
 
 import os
 
-from .config import *
+#from .config import *
+from .config import config
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -171,8 +172,3 @@ REST_FRAMEWORK = {
 
 CELERY_BROKER_URL = "redis://redis:6379"
 CELERY_RESULT_BACKEND = "redis://redis:6379"
-
-with open(os.path.dirname(__file__) + '/../config.yaml') as f:
-    config_data = yaml.safe_load(f)
-
-config: Config = class_schema(Config)().load(config_data)
