@@ -13,6 +13,7 @@ from dds.consts import DECIMALS
 from .models import BidsHistory, ListingHistory, TokenHistory, UserAction
 from .utils import quick_sort
 from .api import get_activity_response
+from dds.accounts.serializers import UserSerializer
 
 
 class ActivityView(APIView):
@@ -429,34 +430,11 @@ class FollowingActivityView(APIView):
 
 
 class GetBestDealView(APIView):
-
     def get(self, request, days):
+        type_ = request.query_params.get("type")                # seller, buyer
+        sort_period = request.query_params.get("sort_period")   # day, week, month
 
-        end_date = datetime.datetime.today()
-        start_date = end_date - datetime.timedelta(days=days)
+        top_users = get_top_users(type_, sort_period)
+        response_data = UserSerializer(top_users, many=True).data 
 
-        tokens = TokenHistory.objects.filter(method='Buy').filter(date__range=[start_date, end_date])
-
-        buyers = {}
-        sellers = {}
-        for token in tokens:
-            buyer = token.new_owner.username
-            seller = token.old_owner.username
-            cost = token.price
-            if len(buyers) < 15:
-                if buyers.get(buyer):
-                    buyers[buyer] += cost
-                else:
-                    buyers[buyer] = cost
-            if len(sellers) < 15:
-                if sellers.get(seller):
-                    sellers[seller] += cost
-                else:
-                    sellers[seller] = cost
-
-        buyers_list = []
-        sellers_list = []
-        buyers_list.append(buyers)
-        sellers_list.append(sellers)
-
-        return Response({'buyers': buyers_list, 'sellers': sellers_list}, status=status.HTTP_200_OK)
+        return Response(response_data, status=status.HTTP_200_OK)

@@ -84,3 +84,16 @@ class BidsHistory(models.Model):
     price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=18, default=None, blank=True, null=True)
     method = models.CharField(choices=[('Bet', 'Bet')], default='Bet', max_length=3)
     is_viewed = models.BooleanField(default=False)
+
+
+class UserStat(models.Model):
+    user = models.OneToOneField('accounts.AdvUser', on_delete=models.CASCADE)
+    buyer_day = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, default=None)
+    buyer_week = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, default=None)
+    buyer_month = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, default=None)
+    seller_day = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, default=None)
+    seller_week = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, default=None)
+    seller_month = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, default=None)
+
+    def __str__(self):
+        return self.user.get_name()
