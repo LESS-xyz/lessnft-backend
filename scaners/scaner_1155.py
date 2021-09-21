@@ -14,6 +14,7 @@ import time
 
 if __name__ == '__main__':
     networks = Network.objects.all()
+    network_collections = {}
     for network in networks:
         web3, contract = network.get_erc1155fabric_contract()
         Process(target=scaner, args=(web3, contract, network.name, None, 'fabric')).start()

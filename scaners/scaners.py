@@ -15,6 +15,7 @@ from dds.store.models import *
 from dds.store.services.ipfs import get_ipfs, get_ipfs_by_hash
 from dds.activity.models import BidsHistory, TokenHistory
 from dds.accounts.models import AdvUser
+from dds.networks.models import Network
 
 
 def scan_deploy(latest_block, smart_contract, network_name):
@@ -39,7 +40,9 @@ def scan_deploy(latest_block, smart_contract, network_name):
         time.sleep(HOLDERS_CHECK_TIMEOUT)
         return 
 
-    if smart_contract.address.lower() == ERC721_FABRIC_ADDRESS.lower():
+    network = Network.objects.get(name=network_name)
+
+    if smart_contract.address.lower() == network.fabric721_address.lower():
         event_filter = smart_contract.events.ERC721Made.createFilter(
             fromBlock=block,
             toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
