@@ -8,7 +8,7 @@ django.setup()
 from multiprocessing import Process
 from scaners import scaner
 from contracts import EXCHANGE_CONTRACT, WETH_CONTRACT
-from dds.settings import EXCHANGE_ADDRESS
+from dds.settings import config
 
 
 if __name__ == '__main__':

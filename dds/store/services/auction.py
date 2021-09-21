@@ -1,5 +1,5 @@
 from web3 import Web3, HTTPProvider
-from dds.settings import EXCHANGE_ADDRESS, PRIV_KEY, NETWORK_SETTINGS
+from dds.settings import config
 from contracts import EXCHANGE
 from dds.store.models import Bid
    
@@ -16,8 +16,8 @@ def end_auction(token):
         'gasPrice': initial_tx.get("gasPrice"),
     }
 
-    web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
-    contract = web3.eth.contract(address=EXCHANGE_ADDRESS, abi=EXCHANGE)
+    web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
+    contract = web3.eth.contract(address=config.EXCHANGE_ADDRESS, abi=EXCHANGE)
 
     tx = contract.functions.makeExchangeERC721(
         idOrder = data.get("idOrder"),
@@ -45,6 +45,6 @@ def end_auction(token):
         ],
         signature = data.get("signature"),
     ).buildTransaction(tx_params)
-    signed_tx = web3.eth.account.sign_transaction(tx, PRIV_KEY)
+    signed_tx = web3.eth.account.sign_transaction(tx, config.PRIV_KEY)
     tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
     print(f"Auction for token {token} ended. Tx hash: {tx_hash.hex()}")

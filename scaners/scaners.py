@@ -4,19 +4,11 @@ from web3 import Web3, HTTPProvider
 from utils import get_last_block, save_last_block
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F
-
-from dds.settings_local import (
-    HOLDERS_CHECK_CHAIN_LENGTH,
-    HOLDERS_CHECK_COMMITMENT_LENGTH,
-    HOLDERS_CHECK_TIMEOUT
-)
-
+from dds.settings import config
 from dds.store.models import *
 from dds.store.services.ipfs import get_ipfs, get_ipfs_by_hash
 from dds.activity.models import BidsHistory, TokenHistory
 from dds.accounts.models import AdvUser
-from dds.settings import NETWORK_SETTINGS
-
 
 def scan_deploy(latest_block, smart_contract):
     '''
@@ -30,26 +22,26 @@ def scan_deploy(latest_block, smart_contract):
     logging.info('start scan deploy')
 
     # check all events for next 20 blocks and saves new addres
-    block_count = HOLDERS_CHECK_CHAIN_LENGTH + HOLDERS_CHECK_COMMITMENT_LENGTH
+    block_count = config.HOLDERS_CHECK_CHAIN_LENGTH + config.HOLDERS_CHECK_COMMITMENT_LENGTH
     block = get_last_block(f'DEPLOY_LAST_BLOCK_{smart_contract.address}')
     
     logging.info(f'latest_block: {latest_block} \n block: {block} \n block count: {block_count}')
 
     if not (latest_block - block > block_count):
         logging.info(f'\n Not enough block passed from block {block} \n')
-        time.sleep(HOLDERS_CHECK_TIMEOUT)
+        time.sleep(config.HOLDERS_CHECK_TIMEOUT)
         return 
 
-    if smart_contract.address.lower() == ERC721_FABRIC_ADDRESS.lower():
+    if smart_contract.address.lower() == config.ERC721_FABRIC_ADDRESS.lower():
         event_filter = smart_contract.events.ERC721Made.createFilter(
             fromBlock=block,
-            toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
+            toBlock=latest_block - config.HOLDERS_CHECK_COMMITMENT_LENGTH,
         )
         logging.info('collection is 721_FABRIC')
     else:
         event_filter = smart_contract.events.ERC1155Made.createFilter(
             fromBlock=block,
-            toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
+            toBlock=latest_block - config.HOLDERS_CHECK_COMMITMENT_LENGTH,
         )
         logging.info('Collection is 1155_FABRIC')
 
@@ -59,10 +51,10 @@ def scan_deploy(latest_block, smart_contract):
     if not events:
         logging.info('filter not found \n')
         save_last_block(
-            latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH, 
+            latest_block - config.HOLDERS_CHECK_COMMITMENT_LENGTH, 
             f'DEPLOY_LAST_BLOCK_{smart_contract.address}',
         )
-        time.sleep(HOLDERS_CHECK_TIMEOUT)
+        time.sleep(config.HOLDERS_CHECK_TIMEOUT)
         return 
     for event in events:
         deploy_hash = event['transactionHash'].hex()
@@ -86,10 +78,10 @@ def scan_deploy(latest_block, smart_contract):
         logging.info(f'{collection} update! \n')
 
     save_last_block(
-        latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH, 
+        latest_block - config.HOLDERS_CHECK_COMMITMENT_LENGTH, 
         f'DEPLOY_LAST_BLOCK_{smart_contract.address}',
     )
-    time.sleep(HOLDERS_CHECK_TIMEOUT)
+    time.sleep(config.HOLDERS_CHECK_TIMEOUT)
 
 
 def mint_transfer(latest_block, smart_contract):
@@ -100,13 +92,13 @@ def mint_transfer(latest_block, smart_contract):
         format='%(asctime)s %(levelname)s:%(message)s',
     )
     logging.info('start mint/transfer scan')
-    block_count = HOLDERS_CHECK_CHAIN_LENGTH + HOLDERS_CHECK_COMMITMENT_LENGTH
+    block_count = config.HOLDERS_CHECK_CHAIN_LENGTH + config.HOLDERS_CHECK_COMMITMENT_LENGTH
     block = get_last_block(f'MINT_TRANSFER_LAST_BLOCK_{collection.name}')
     logging.info(f' last block: {latest_block} \n block: {block}')
 
     if not (latest_block - block > block_count):
         logging.info(f'\n Not enough block passed from block {block} \n')
-        time.sleep(HOLDERS_CHECK_TIMEOUT)
+        time.sleep(config.HOLDERS_CHECK_TIMEOUT)
         return
     logging.info('go ahead!')
 
@@ -116,12 +108,12 @@ def mint_transfer(latest_block, smart_contract):
     if contract_standart == 'ERC721':
         event_filter = smart_contract.events.Transfer.createFilter(
             fromBlock=block,
-            toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
+            toBlock=latest_block - config.HOLDERS_CHECK_COMMITMENT_LENGTH,
         )
     elif contract_standart == 'ERC1155':
         event_filter = smart_contract.events.TransferSingle().createFilter(
             fromBlock=block,
-            toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
+            toBlock=latest_block - config.HOLDERS_CHECK_COMMITMENT_LENGTH,
         )
     else:
         logging.warning('something wrong')
@@ -132,10 +124,10 @@ def mint_transfer(latest_block, smart_contract):
     if not events:
         logging.info('filter not found')
         save_last_block(
-            latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH, 
+            latest_block - config.HOLDERS_CHECK_COMMITMENT_LENGTH, 
             f'MINT_TRANSFER_LAST_BLOCK_{collection.name}',
         )
-        time.sleep(HOLDERS_CHECK_TIMEOUT)
+        time.sleep(config.HOLDERS_CHECK_TIMEOUT)
         return
     
     logging.info('got events!')
@@ -275,10 +267,10 @@ def mint_transfer(latest_block, smart_contract):
                     token.first().save()
 
     save_last_block(
-        latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH, 
+        latest_block - config.HOLDERS_CHECK_COMMITMENT_LENGTH, 
         f'MINT_TRANSFER_LAST_BLOCK_{collection.name}',
     )
-    time.sleep(HOLDERS_CHECK_TIMEOUT)
+    time.sleep(config.HOLDERS_CHECK_TIMEOUT)
 
 
 
@@ -290,26 +282,26 @@ def buy_scanner(latest_block, smart_contract, standart):
     format = '%(asctime)s %(levelname)s:%(message)s',
     )
     logging.info('buy scanner!')
-    block_count = HOLDERS_CHECK_CHAIN_LENGTH + HOLDERS_CHECK_COMMITMENT_LENGTH
+    block_count = config.HOLDERS_CHECK_CHAIN_LENGTH + config.HOLDERS_CHECK_COMMITMENT_LENGTH
     block = get_last_block(f'BUY_LAST_BLOCK_{standart}')
-    logging.info(f'last block: {latest_block} \n block: {HOLDERS_CHECK_COMMITMENT_LENGTH}')
+    logging.info(f'last block: {latest_block} \n block: {config.HOLDERS_CHECK_COMMITMENT_LENGTH}')
 
     logging.info(f'last block: {latest_block} \n block: {block}')
     if not (latest_block - block > block_count):
         logging.info(f'\n Not enough block passed from block {block} \n')
-        time.sleep(HOLDERS_CHECK_TIMEOUT)
+        time.sleep(config.HOLDERS_CHECK_TIMEOUT)
         return
     logging.info('lets go!')
     logging.info(f'it is {standart}!')
     if standart == 'ERC_721':
         event_filter = smart_contract.events.ExchangeMadeErc721.createFilter(
             fromBlock=block,
-            toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
+            toBlock=latest_block - config.HOLDERS_CHECK_COMMITMENT_LENGTH,
         )
     elif standart == 'ERC_1155':
         event_filter = smart_contract.events.ExchangeMadeErc1155.createFilter(
             fromBlock=block,
-            toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
+            toBlock=latest_block - config.HOLDERS_CHECK_COMMITMENT_LENGTH,
         )
 
     events = event_filter.get_all_entries()
@@ -318,10 +310,10 @@ def buy_scanner(latest_block, smart_contract, standart):
         logging.info('no records found matching the filter condition')
 
         save_last_block(
-            latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH, 
+            latest_block - config.HOLDERS_CHECK_COMMITMENT_LENGTH, 
             f'BUY_LAST_BLOCK_{standart}',
         )
-        time.sleep(HOLDERS_CHECK_TIMEOUT)
+        time.sleep(config.HOLDERS_CHECK_TIMEOUT)
         return
     
     logging.info('we have event!')
@@ -417,10 +409,10 @@ def buy_scanner(latest_block, smart_contract, standart):
             )
 
     save_last_block(
-        latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH, 
+        latest_block - config.HOLDERS_CHECK_COMMITMENT_LENGTH, 
         f'BUY_LAST_BLOCK_{standart}',
     )
-    time.sleep(HOLDERS_CHECK_TIMEOUT)
+    time.sleep(config.HOLDERS_CHECK_TIMEOUT)
 
 
 def aproove_bet_scaner(latest_block, smart_contract):
@@ -429,25 +421,25 @@ def aproove_bet_scaner(latest_block, smart_contract):
         filename=f'logs/scaner_bet.log',
         format='%(asctime)s %(levelname)s:%(message)s',
     )
-    block_count = HOLDERS_CHECK_CHAIN_LENGTH + HOLDERS_CHECK_COMMITMENT_LENGTH
+    block_count = config.HOLDERS_CHECK_CHAIN_LENGTH + config.HOLDERS_CHECK_COMMITMENT_LENGTH
     block = get_last_block(f'BET_LAST_BLOCK')
     logging.info(f'last block: {latest_block} \n block: {block}') 
 
     if not(latest_block - block > block_count):
         logging.info(f'\n Not enough block passed from block {block} \n ________________')
-        time.sleep(HOLDERS_CHECK_TIMEOUT)
+        time.sleep(config.HOLDERS_CHECK_TIMEOUT)
         return 
 
     event_filter = smart_contract.events.Approval.createFilter(
         fromBlock=block,
-        toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH
+        toBlock=latest_block - config.HOLDERS_CHECK_COMMITMENT_LENGTH
     )
     events = event_filter.get_all_entries()
 
     if not events:
         logging.info('no events! \n ___________')
-        save_last_block(latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH, 'BET_LAST_BLOCK')
-        time.sleep(HOLDERS_CHECK_TIMEOUT)
+        save_last_block(latest_block - config.HOLDERS_CHECK_COMMITMENT_LENGTH, 'BET_LAST_BLOCK')
+        time.sleep(config.HOLDERS_CHECK_TIMEOUT)
         return
 
     logging.info('have events!')
@@ -457,7 +449,7 @@ def aproove_bet_scaner(latest_block, smart_contract):
         exchange = event['args']['guy']
         logging.info(f'exchange: {exchange} \n user: {user}')
 
-        if exchange != EXCHANGE_ADDRESS:
+        if exchange != config.EXCHANGE_ADDRESS:
             logging.info('not our wxchage')
             continue
 
@@ -486,8 +478,8 @@ def aproove_bet_scaner(latest_block, smart_contract):
                 logging.info('no money!')
                 continue
 
-    save_last_block(latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH, 'BET_LAST_BLOCK')
-    time.sleep(HOLDERS_CHECK_TIMEOUT)
+    save_last_block(latest_block - config.HOLDERS_CHECK_COMMITMENT_LENGTH, 'BET_LAST_BLOCK')
+    time.sleep(config.HOLDERS_CHECK_TIMEOUT)
 
 
 def scaner(smart_contract, standart=None, type=None):
@@ -511,7 +503,7 @@ def scaner(smart_contract, standart=None, type=None):
     '''
 
 
-    w3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
+    w3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
 
     while True:
         latest_block = w3.eth.blockNumber

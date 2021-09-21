@@ -14,6 +14,7 @@ from celery.schedules import crontab
 
 import os
 
+from .config import *
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -155,12 +156,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 RATES_CHECKER_TIMEOUT = 300
-
+'''
 try:
     from dds.settings_local import *
 except ImportError:
     print('SETTINGS: cannot import local settings', flush=True)
-
+'''
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -170,3 +171,8 @@ REST_FRAMEWORK = {
 
 CELERY_BROKER_URL = "redis://redis:6379"
 CELERY_RESULT_BACKEND = "redis://redis:6379"
+
+with open(os.path.dirname(__file__) + '/../config.yaml') as f:
+    config_data = yaml.safe_load(f)
+
+config: Config = class_schema(Config)().load(config_data)

@@ -20,16 +20,7 @@ from dds.consts import (
     TOKEN_BUY_GAS_LIMIT, 
     COLLECTION_CREATION_GAS_LIMIT
 )
-from dds.settings import (
-    NETWORK_SETTINGS,
-    ERC20_ADDRESS,
-    DEFAULT_AVATARS,
-    ERC721_FABRIC_ADDRESS,
-    ERC1155_FABRIC_ADDRESS,
-    EXCHANGE_ADDRESS,
-    COLLECTION_721,
-    COLLECTION_1155,
-)
+from dds.settings import config
 from contracts import (
     EXCHANGE,
     ERC721_MAIN,
@@ -43,11 +34,6 @@ from contracts import (
     ERC721_FABRIC,
     ERC1155_FABRIC,
 )
-from dds.settings import (
-    SIGNER_ADDRESS,
-)
-
-
 class Status(models.TextChoices):
     PENDING = 'Pending'
     FAILED = 'Failed'
@@ -66,12 +52,12 @@ class CollectionManager(models.Manager):
     def user_collections(self, user):
         """ Return committed collections for user (with default collections) """
         return self.filter(status=Status.COMMITTED).filter(
-            Q(name__in=[COLLECTION_721, COLLECTION_1155]) | Q(creator=user)
+            Q(name__in=[config.COLLECTION_721, config.COLLECTION_1155]) | Q(creator=user)
         )
 
     def hot_collections(self, user):
         """ Return committed collections for user (with default collections) """
-        return self.exclude(name__in=(COLLECTION_721, COLLECTION_1155,)).filter(
+        return self.exclude(name__in=(config.COLLECTION_721, config.COLLECTION_1155,)).filter(
             Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
         )
 
@@ -120,7 +106,7 @@ class Collection(models.Model):
         self.save()
 
     def create_token(self, creator, ipfs, signature, amount):
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
         if self.standart == 'ERC721':
             abi = ERC721_MAIN
         else:
@@ -159,9 +145,9 @@ class Collection(models.Model):
 
     @classmethod
     def create_contract(cls, name, symbol, standart, owner):
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
         baseURI = ''
-        signature = sign_message(['address'], [SIGNER_ADDRESS])
+        signature = sign_message(['address'], [config.SIGNER_ADDRESS])
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': COLLECTION_CREATION_GAS_LIMIT,
@@ -170,7 +156,7 @@ class Collection(models.Model):
         }
         if standart == 'ERC721':
             myContract = web3.eth.contract(
-                address=web3.toChecksumAddress(ERC721_FABRIC_ADDRESS),
+                address=web3.toChecksumAddress(config.ERC721_FABRIC_ADDRESS),
                 abi=ERC721_FABRIC,
             )
             '''
@@ -179,7 +165,7 @@ class Collection(models.Model):
                 name,
                 symbol,
                 baseURI,
-                SIGNER_ADDRESS,
+                config.SIGNER_ADDRESS,
                 signature
             ).buildTransaction(tx_params)
             signed_tx = web3.eth.account.sign_transaction(tx,'92cf3cee409da87ce5eb2137f2befce69d4ebaab14f898a8211677d77f91e6b0')
@@ -191,19 +177,19 @@ class Collection(models.Model):
                 name, 
                 symbol, 
                 baseURI, 
-                SIGNER_ADDRESS, 
+                config.SIGNER_ADDRESS, 
                 signature
             ).buildTransaction(tx_params)
 
         myContract = web3.eth.contract(
-            address=web3.toChecksumAddress(ERC1155_FABRIC_ADDRESS),
+            address=web3.toChecksumAddress(config.ERC1155_FABRIC_ADDRESS),
             abi=ERC1155_FABRIC,
         )
         '''
         # JUST FOR TESTS
         tx = myContract.functions.makeERC1155(
             baseURI,
-            SIGNER_ADDRESS,
+            config.SIGNER_ADDRESS,
             signature
         ).buildTransaction(tx_params)
         signed_tx = web3.eth.account.sign_transaction(tx,'92cf3cee409da87ce5eb2137f2befce69d4ebaab14f898a8211677d77f91e6b0')
@@ -212,13 +198,13 @@ class Collection(models.Model):
         '''
         return myContract.functions.makeERC1155(
             baseURI, 
-            SIGNER_ADDRESS, 
+            config.SIGNER_ADDRESS, 
             name,
             signature
         ).buildTransaction(tx_params)
 
     def get_contract(self):
-        w3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
+        w3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
         if self.standart == 'ERC1155':
             abi = ERC1155_MAIN
         else:
@@ -232,7 +218,7 @@ class Collection(models.Model):
 
 def collection_created_dispatcher(sender, instance, created, **kwargs):
     if created:
-        instance.avatar_ipfs = random.choice(DEFAULT_AVATARS)
+        instance.avatar_ipfs = random.choice(config.DEFAULT_AVATARS)
         instance.save()
 
 
@@ -450,7 +436,7 @@ class Token(models.Model):
         self.save()
 
     def transfer(self, old_owner, new_owner, amount=None):
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': TOKEN_TRANSFER_GAS_LIMIT,
@@ -480,7 +466,7 @@ class Token(models.Model):
         ).buildTransaction(tx_params)
 
     def burn(self, user=None, amount=None):
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS["ETH"]["endpoint"]))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS["ETH"]["endpoint"]))
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': TOKEN_MINT_GAS_LIMIT,
@@ -581,7 +567,7 @@ class Token(models.Model):
             'signature': signature
         }
         print(f'data: {data}')
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
 
         return {
             'nonce': web3.eth.getTransactionCount(
@@ -590,7 +576,7 @@ class Token(models.Model):
             'gasPrice': web3.eth.gasPrice,
             'chainId': web3.eth.chainId,
             'gas': TOKEN_BUY_GAS_LIMIT,
-            'to': EXCHANGE_ADDRESS,
+            'to': config.EXCHANGE_ADDRESS,
             'method': method,
             'value': 0,
             'data': data

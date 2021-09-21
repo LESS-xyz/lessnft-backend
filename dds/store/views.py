@@ -33,7 +33,7 @@ from rest_framework.views import APIView
 from web3 import HTTPProvider, Web3
 
 from dds.accounts.api import user_search
-from dds.settings import NETWORK_SETTINGS, WETH_ADDRESS
+from dds.settings import config
 from contracts import (
     EXCHANGE,
     WETH_CONTRACT,
@@ -133,7 +133,7 @@ class SearchView(APIView):
         params = request.query_params
         sort = params.get('type', 'items')
 
-        search_result = globals()[SEARCH_TYPES[sort] + '_search'](words, page, user=request.user, **params)
+        search_result = globals()[config.SEARCH_TYPES[sort] + '_search'](words, page, user=request.user, **params)
 
         return Response(search_result, status=status.HTTP_200_OK)
 
@@ -480,7 +480,7 @@ class GetHotView(APIView):
         sort = request.query_params.get('sort', 'recent')
         tag = request.query_params.get('tag')
 
-        order = SORT_STATUSES[sort]
+        order = config.SORT_STATUSES[sort]
 
         if tag:
             tokens = Token.objects.committed().filter(tags__name__contains=tag).order_by(order)
@@ -639,7 +639,7 @@ class MakeBid(APIView):
         amount = Decimal(str(request_data.get('amount')))
         quantity = int(request_data.get('quantity'))
 
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
 
         user = request.user
 
@@ -663,7 +663,7 @@ class MakeBid(APIView):
         #construct approve tx if not approved yet:
         allowance = WETH_CONTRACT.functions.allowance(
             web3.toChecksumAddress(user.username),
-            web3.toChecksumAddress(EXCHANGE_ADDRESS),
+            web3.toChecksumAddress(config.EXCHANGE_ADDRESS),
         ).call()
         user_balance = WETH_CONTRACT.functions.balanceOf(
             Web3.toChecksumAddress(user.username)
@@ -679,7 +679,7 @@ class MakeBid(APIView):
                 'gasPrice': web3.eth.gasPrice,
             }
             initial_tx = WETH_CONTRACT.functions.approve(
-                web3.toChecksumAddress(EXCHANGE_ADDRESS), 
+                web3.toChecksumAddress(config.EXCHANGE_ADDRESS), 
                 user_balance,
             ).buildTransaction(tx_params)
             return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
@@ -725,7 +725,7 @@ class VerificateBetView(APIView):
     )
     def get(self, request, token_id):
         print('virificate!')
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS['ETH']['endpoint']))
 
         bets = Bid.objects.filter(token__id=token_id).order_by('-amount')
         max_bet = bets.first()
@@ -848,8 +848,8 @@ class ReportView(APIView):
             send_mail(
                 'Report from digital dollar store',
                 text,
-                DDS_HOST_USER,
-                [DDS_MAIL],
+                config.DDS_HOST_USER,
+                [config.DDS_MAIL],
                 connection=connection,
             )
             print('message sent')
@@ -943,8 +943,8 @@ class SupportView(APIView):
             send_mail(
                 'Support form from digital dollar store',
                 text,
-                DDS_HOST_USER,
-                [DDS_MAIL],
+                config.DDS_HOST_USER,
+                [config.DDS_MAIL],
                 connection=connection,
             )
             print('message sent')

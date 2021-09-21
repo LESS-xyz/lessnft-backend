@@ -1,11 +1,11 @@
 import ipfshttpclient
 from web3 import Web3, HTTPProvider
-from dds.settings import NETWORK_SETTINGS, IPFS_CLIENT
+from dds.settings import config
 from contracts import ERC721_MAIN, ERC1155_MAIN
 
 
 def create_ipfs(request):
-    client = ipfshttpclient.connect(IPFS_CLIENT)
+    client = ipfshttpclient.connect(config.IPFS_CLIENT)
     name = request.data.get("name")
     description = request.data.get("description")
     media = request.FILES.get("media")
@@ -27,7 +27,7 @@ def create_ipfs(request):
     return res
 
 def send_to_ipfs(media):
-    client = ipfshttpclient.connect(IPFS_CLIENT)
+    client = ipfshttpclient.connect(config.IPFS_CLIENT)
     file_res = client.add(media)
     return file_res["Hash"]
 
@@ -40,7 +40,7 @@ def get_ipfs(token_id, address, standart) -> dict:
     :param standart: token standart
     """
     if token_id != None:
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS["ETH"]["endpoint"]))
+        web3 = Web3(HTTPProvider(config.NETWORK_SETTINGS["ETH"]["endpoint"]))
         if standart == "ERC721":
             abi = ERC721_MAIN
         else:
@@ -57,5 +57,5 @@ def get_ipfs_by_hash(ipfs_hash) -> dict:
     """
     return ipfs by hash
     """
-    client = ipfshttpclient.connect(IPFS_CLIENT)
+    client = ipfshttpclient.connect(config.IPFS_CLIENT)
     return client.get_json(ipfs_hash)

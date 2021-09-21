@@ -6,15 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import get_connection
 from django.db.models import Q
 
-from dds.settings import (
-    EMAIL_HOST, 
-    DDS_HOST_USER,
-    DDS_HOST_PASSWORD, 
-    EMAIL_PORT, 
-    EMAIL_USE_TLS, 
-    CAPTCHA_SECRET, 
-    CAPTCHA_URL
-)
+from dds.settings import config
 from dds.utilities import get_page_slice
 from dds.store.models import Token, Collection, Ownership, Status
 from dds.store.serializers import TokenSerializer, CollectionSearchSerializer
@@ -159,20 +151,20 @@ def validate_bid(user, token_id, amount, weth_contract, quantity):
 
 def get_dds_email_connection():
     return get_connection(
-        host=EMAIL_HOST,
-        port=EMAIL_PORT,
-        username=DDS_HOST_USER,
-        password=DDS_HOST_PASSWORD,
-        use_tls=EMAIL_USE_TLS,
+        host=config.EMAIL_HOST,
+        port=config.EMAIL_PORT,
+        username=config.DDS_HOST_USER,
+        password=config.DDS_HOST_PASSWORD,
+        use_tls=config.EMAIL_USE_TLS,
     )
 
 def check_captcha(response):
     print(response)
     data = {
-        'secret': CAPTCHA_SECRET,
+        'secret': config.CAPTCHA_SECRET,
         'response': response
     }
-    response = requests.post(CAPTCHA_URL, data=data)
+    response = requests.post(config.CAPTCHA_URL, data=data)
     print(response)
     answer = json.loads(response.text)
     print(answer)

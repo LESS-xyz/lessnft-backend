@@ -350,8 +350,8 @@ class VerificationView(APIView):
         send_mail(
             'New verification request',
             text,
-            DDS_HOST_USER,
-            [DDS_MAIL],
+            config.DDS_HOST_USER,
+            [config.DDS_MAIL],
             connection=connection,
         )
         print('message sent')

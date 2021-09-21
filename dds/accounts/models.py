@@ -6,7 +6,8 @@ from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 
-from dds.settings import DEFAULT_AVATARS
+#from dds.settings import DEFAULT_AVATARS
+from dds.settings import config
 from dds.utilities import get_media_from_ipfs
 
 
