@@ -64,7 +64,7 @@ def token_search(words, page, **kwargs):
     if currency is not None:
         currency = currency[0]
 
-    tokens = Token.objects.committed().network(network).select_related("currency", "owner")
+    tokens = Token.objects.network(network).select_related("currency", "owner")
 
     # Below are the tokens in the form of a QUERYSET
     for word in words:

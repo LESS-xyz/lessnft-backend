@@ -40,6 +40,10 @@ def scan_deploy(latest_block, smart_contract, network_name):
         time.sleep(HOLDERS_CHECK_TIMEOUT)
         return 
 
+    # filter cannot support more than 5000 blocks at one query
+    if latest_block - block > 5000:
+        latest_block = block + 4990
+
     network = Network.objects.get(name=network_name)
 
     if smart_contract.address.lower() == network.fabric721_address.lower():
@@ -56,7 +60,12 @@ def scan_deploy(latest_block, smart_contract, network_name):
         logging.info('Collection is 1155_FABRIC')
 
     # to try get events and update collection fields
-    events = event_filter.get_all_entries()
+    try:
+        events = event_filter.get_all_entries()
+    except Exception as e:
+        logging.error(f'can not get entries for {network_name} with blocks {block} to {latest_block-HOLDERS_CHECK_COMMITMENT_LENGTH}')
+        logging.error(repr(e))
+        return
     logging.info('get entries')
     if not events:
         logging.info('filter not found \n')
@@ -110,6 +119,12 @@ def mint_transfer(latest_block, smart_contract):
         logging.info(f'\n Not enough block passed from block {block} \n')
         time.sleep(HOLDERS_CHECK_TIMEOUT)
         return
+
+    # filter cannot support more than 5000 blocks at one query
+    if latest_block - block > 5000:
+        latest_block = block + 4990
+
+
     logging.info('go ahead!')
 
     # get all events with name 'Transfer'
@@ -130,7 +145,12 @@ def mint_transfer(latest_block, smart_contract):
 
     empty_address = '0x0000000000000000000000000000000000000000'
     
-    events = event_filter.get_all_entries()
+    try:
+        events = event_filter.get_all_entries()
+    except Exception as e:
+        logging.error(f'can not get entries for {network_name} with blocks {block} to {latest_block-HOLDERS_CHECK_COMMITMENT_LENGTH}')
+        logging.error(repr(e))
+
     if not events:
         logging.info('filter not found')
         save_last_block(
@@ -294,6 +314,12 @@ def buy_scanner(latest_block, smart_contract, network_name, standart):
         logging.info(f'\n Not enough block passed from block {block} \n')
         time.sleep(HOLDERS_CHECK_TIMEOUT)
         return
+
+    # filter cannot support more than 5000 blocks at one query
+    if latest_block - block > 5000:
+        latest_block = block + 4990
+
+
     logging.info('lets go!')
     logging.info(f'it is {standart}!')
     if standart == 'ERC_721':
@@ -307,7 +333,11 @@ def buy_scanner(latest_block, smart_contract, network_name, standart):
             toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
         )
 
-    events = event_filter.get_all_entries()
+    try:
+        events = event_filter.get_all_entries()
+    except Exception as e:
+        logging.error(f'can not get entries for {network_name} with blocks {block} to {latest_block-HOLDERS_CHECK_COMMITMENT_LENGTH}')
+        logging.error(repr(e))
 
     if not events:
         logging.info('no records found matching the filter condition')
@@ -430,11 +460,21 @@ def aproove_bet_scaner(latest_block, smart_contract, network_name):
         time.sleep(HOLDERS_CHECK_TIMEOUT)
         return 
 
+    # filter cannot support more than 5000 blocks at one query
+    if latest_block - block > 5000:
+        latest_block = block + 4990
+
+
     event_filter = smart_contract.events.Approval.createFilter(
         fromBlock=block,
         toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH
     )
-    events = event_filter.get_all_entries()
+
+    try:
+        events = event_filter.get_all_entries()
+    except Exception as e:
+        logging.error(f'can not get entries for {network_name} with blocks {block} to {latest_block-HOLDERS_CHECK_COMMITMENT_LENGTH}')
+        logging.error(repr(e))
 
     if not events:
         logging.info('no events! \n ___________')

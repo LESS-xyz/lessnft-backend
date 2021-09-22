@@ -12,6 +12,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from dds.consts import MAX_AMOUNT_LEN
 from dds.utilities import sign_message, get_media_from_ipfs
 from dds.accounts.models import AdvUser, MasterUser
+from dds.networks.models import Network
 from dds.rates.models import UsdRate
 from dds.consts import DECIMALS
 from dds.settings import (
@@ -19,9 +20,6 @@ from dds.settings import (
     TOKEN_TRANSFER_GAS_LIMIT,
     TOKEN_BUY_GAS_LIMIT,
     DEFAULT_AVATARS,
-    ERC721_FABRIC_ADDRESS,
-    ERC1155_FABRIC_ADDRESS,
-    EXCHANGE_ADDRESS,
     COLLECTION_721,
     COLLECTION_1155,
 )
@@ -50,25 +48,34 @@ class CollectionManager(models.Manager):
             collection_id = int(short_url)  
         return self.get(Q(id=collection_id) | Q(short_url=short_url))
     
-    def user_collections(self, user):
+    def user_collections(self, user, network=None):
         """ Return committed collections for user (with default collections) """
-        return self.filter(status=Status.COMMITTED).filter(
+        if not network:
+            return self.filter(status=Status.COMMITTED).filter(
+                Q(name__in=[COLLECTION_721, COLLECTION_1155]) | Q(creator=user)
+            )
+        return self.filter(network__name__icontains=network).filter(status=Status.COMMITTED).filter(
             Q(name__in=[COLLECTION_721, COLLECTION_1155]) | Q(creator=user)
         )
 
-    def hot_collections(self):
+    def hot_collections(self, network=None):
         """ Return hot collections (without default collections) """
+        if not network:
+            return self.exclude(name__in=(COLLECTION_721, COLLECTION_1155,)).filter(
+                Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
+            )
         return self.exclude(name__in=(COLLECTION_721, COLLECTION_1155,)).filter(
-            Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
+            network__name__icontains=network).filter(
+            Exists(Token.objects.committed().filter(collection__id=OuterRef('id'))),
         )
 
     def network(self, network):
         """ Return collections filtered by network symbol """
-        return self.filter(network__native_symbol__iexact=network)
+        return self.filter(network__name__icontains=network)
 
 
 class Collection(models.Model):
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50)
     avatar_ipfs = models.CharField(max_length=200, null=True, default=None)
     cover_ipfs = models.CharField(max_length=200, null=True, default=None)
     address = models.CharField(max_length=60, unique=True, null=True, blank=True)
@@ -81,6 +88,11 @@ class Collection(models.Model):
     deploy_hash = models.CharField(max_length=100, null=True)
     deploy_block = models.IntegerField(null=True, default=None)
     network = models.ForeignKey('networks.Network', on_delete=models.CASCADE)
+
+    objects = CollectionManager()
+
+    class Meta:
+        unique_together = [['name', 'network']]
 
     @property
     def avatar(self):
@@ -101,6 +113,9 @@ class Collection(models.Model):
         self.name = request.data.get('name')
         self.symbol = request.data.get('symbol')
         self.address = request.data.get('address')
+        network = request.query_params.get('network')
+        network = Network.objects.filter(name__icontains=network).first()
+        self.network = network
         self.avatar_ipfs = avatar
         self.standart = request.data.get('standart')
         self.description = request.data.get('description')
@@ -216,15 +231,18 @@ def validate_nonzero(value):
         )
 
 class TokenManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(status=Status.COMMITTED)
+
     def committed(self):
         """ Return tokens with status committed """
-        return self.filter(status=Status.COMMITTED)
+        return self.get_queryset()
 
     def network(self, network):
         """ Return token filtered by collection network symbol """
         if network:
-            return self.filter(collection__network__native_symbol__iexact=network)
-        return self
+            return self.get_queryset().filter(collection__network__name__icontains=network)
+        return self.get_queryset()
 
 
 class Token(models.Model):
@@ -367,12 +385,14 @@ class Token(models.Model):
             self.save()
             self.owners.add(request.user)
             self.save()
+            print(self.__dict__)
             ownership = Ownership.objects.get(owner=self.creator, token=self)
             ownership.quantity = request.data.get('total_supply')
             ownership.selling = selling
             ownership.currency_price = price
             ownership.currency = currency
             ownership.currency_minimal_bid = minimal_bid
+            print(ownership.__dict__)
             ownership.full_clean()
             ownership.save()
         self.full_clean()

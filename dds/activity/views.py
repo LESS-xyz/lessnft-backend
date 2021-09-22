@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 
+from dds.settings import DEFAULT_NETWORK
 from dds.utilities import get_page_slice
 from dds.consts import DECIMALS
 from .models import BidsHistory, ListingHistory, TokenHistory, UserAction
@@ -28,7 +29,7 @@ class ActivityView(APIView):
         ],
     )
     def get(self, request):
-        network = request.query_params.get('network')
+        network = request.query_params.get('network', DEFAULT_NETWORK)
         types = request.query_params.get("type")
         page = int(request.query_params.get("page"))
 
@@ -119,7 +120,7 @@ class NotificationActivityView(APIView):
     )
     def get(self, request):
         address = request.user.username
-        network = request.query_params.get('network')
+        network = request.query_params.get('network', DEFAULT_NETWORK)
         activities = list()
         end = 5
 
@@ -247,7 +248,7 @@ class UserActivityView(APIView):
         ],
     )
     def get(self, request, address):
-        network = request.query_params.get('network')
+        network = request.query_params.get('network', DEFAULT_NETWORK)
         types = request.query_params.get("type")
         page = int(request.query_params.get("page"))
 
@@ -373,7 +374,7 @@ class FollowingActivityView(APIView):
         ],
     )
     def get(self, request, address):
-        network = request.query_params.get('network')
+        network = request.query_params.get('network', DEFAULT_NETWORK)
         types = request.query_params.get("type")
         page = int(request.query_params.get("page"))
 

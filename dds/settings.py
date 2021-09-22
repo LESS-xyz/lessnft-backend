@@ -27,7 +27,7 @@ SECRET_KEY = 'm3%r==z=1j(9e43(7rb(3jzzcz-7(91c#3!$u29w-4gd)gd&9w'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['lessnft.rocknblock.io', '144.76.201.50', '127.0.0.1',]
+ALLOWED_HOSTS = ['kephi.rocknblock.io', '144.76.201.50', '127.0.0.1',]
 
 
 # Application definition
@@ -96,9 +96,9 @@ WSGI_APPLICATION = 'dds.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'dds'),
-        'USER': os.getenv('POSTGRES_USER', 'dds'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'dds'),
+        'NAME': os.getenv('POSTGRES_DB', 'kephi'),
+        'USER': os.getenv('POSTGRES_USER', 'kephi'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'kephi'),
         'HOST': os.getenv('POSTGRES_HOST', 'db'),
         'PORT': '5432',
     }

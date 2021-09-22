@@ -6,6 +6,7 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from dds.rates.serializers import UsdRateSerializer
 from dds.rates.models import UsdRate
+from dds.settings import DEFAULT_NETWORK
 
 
 rates_response = openapi.Response(
@@ -27,7 +28,7 @@ class RateRequest(APIView):
         responses={200: rates_response}
     )
     def get(self, request):
-        network = request.query_params.get('network')
-        rates = UsdRate.objects.filter(network__native_symbol__iexact==network)
+        network = request.query_params.get('network', DEFAULT_NETWORK)
+        rates = UsdRate.objects.filter(network__native_symbol__iexact=network)
         response_data = UsdRateSerializer(rates, many=True).data
         return Response(response_data, status=status.HTTP_200_OK)

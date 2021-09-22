@@ -220,7 +220,7 @@ class CreateCollectionView(APIView):
         symbol = request.data.get('symbol')
         short_url = request.data.get('short_url')
         standart = request.data.get('standart')
-        network = request.data.get('network')
+        network = request.query_params.get('network', DEFAULT_NETWORK)
         owner = request.user
 
         is_unique, response = Collection.collection_is_unique(name, symbol, short_url)
@@ -230,7 +230,7 @@ class CreateCollectionView(APIView):
         if standart not in ["ERC721", "ERC1155"]:
             return Response('invalid collection type', status=status.HTTP_400_BAD_REQUEST)
         
-        network = Network.objects.filter(name=network)
+        network = Network.objects.filter(name__icontains=network)
         if not network:
             return Response('invalid network name', status=status.HTTP_400_BAD_REQUEST)
         initial_tx = Collection.create_contract(name, symbol, standart, owner, network.first())
@@ -279,13 +279,13 @@ class GetOwnedView(APIView):
     )
 
     def get(self, request, address, page):
-        network = request.query_params.get('network')
+        network = request.query_params.get('network', DEFAULT_NETWORK)
         try:
             user = AdvUser.objects.get(username=address)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
-        tokens = Token.objects.committed().network(network).filter(Q(owner=user) | Q(owners=user)).order_by('-id')
+        tokens = Token.objects.network(network).filter(Q(owner=user) | Q(owners=user)).order_by('-id')
 
         start, end = get_page_slice(page, len(tokens))
 
@@ -304,13 +304,13 @@ class GetCreatedView(APIView):
     )
 
     def get(self, request, address, page):
-        network = request.query_params.get('network')
+        network = request.query_params.get('network', DEFAULT_NETWORK)
         try:
             user = AdvUser.objects.get(username=address)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
-        tokens = Token.objects.committed().network(network).filter(creator=user).order_by('-id')
+        tokens = Token.objects.network(network).filter(creator=user).order_by('-id')
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
@@ -328,7 +328,7 @@ class GetLikedView(APIView):
     )
 
     def get(self, request, address, page):
-        network = request.query_params.get('network')
+        network = request.query_params.get('network', DEFAULT_NETWORK)
         try:
             user = AdvUser.objects.get(username=address)
         except ObjectDoesNotExist:
@@ -487,11 +487,11 @@ class GetHotView(APIView):
     def get(self, request, page):
         sort = request.query_params.get('sort', 'recent')
         tag = request.query_params.get('tag')
-        network = request.query_params.get('network')
+        network = request.query_params.get('network', DEFAULT_NETWORK)
 
         order = SORT_STATUSES[sort]
 
-        tokens = Token.objects.committed().network(network)
+        tokens = Token.objects.network(network)
         if tag:
             tokens = tokens.filter(tags__name__contains=tag).order_by(order)
         else:
@@ -517,8 +517,8 @@ class GetHotCollectionsView(APIView):
         responses={200: HotCollectionSerializer(many=True)},
     )
     def get(self, request):
-        network = request.query_params.get('network')
-        collections = Collection.objects.network(network).hot_collections().order_by('-id')[:5]
+        network = request.query_params.get('network', DEFAULT_NETWORK)
+        collections = Collection.objects.hot_collections(network).order_by('-id')[:5]
         response_data = HotCollectionSerializer(collections, many=True).data
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -533,13 +533,13 @@ class GetCollectionView(APIView):
     )
 
     def get(self, request, param, page):
-        network = request.query_params.get('network')
+        network = request.query_params.get('network', DEFAULT_NETWORK)
         try:
             collection = Collection.objects.get_by_short_url(param)
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        tokens = Token.objects.committed().network(network).filter(collection=collection)
+        tokens = Token.objects.network(network).filter(collection=collection)
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
@@ -922,15 +922,15 @@ def get_fee(request):
 
 @api_view(http_method_names=['GET'])
 def get_favorites(request):
-    network = request.query_params.get('network')
-    token_list = Token.objects.committed().network(network).filter(is_favorite=True).order_by("-updated_at")
+    network = request.query_params.get('network', DEFAULT_NETWORK)
+    token_list = Token.objects.network(network).filter(is_favorite=True).order_by("-updated_at")
     response_data = TokenSerializer(token_list, many=True, context={"user": request.user}).data
     return Response(response_data, status=status.HTTP_200_OK)
 
 
 @api_view(http_method_names=['GET'])
 def get_hot_bids(request):
-    network = request.query_params.get('network')
+    network = request.query_params.get('network', DEFAULT_NETWORK)
     bids = Bid.objects.filter(state=Status.COMMITTED).order_by('-id')[:6]
     token_list= [bid.token for bid in bids if bid.token.collection.network.native_symbol.lower() == network.lower()]
     response_data = TokenFullSerializer(token_list, context={"user": request.user}, many=True).data
