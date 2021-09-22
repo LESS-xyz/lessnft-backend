@@ -59,11 +59,12 @@ def token_search(words, page, **kwargs):
     order_by = kwargs.get("order_by")
     on_sale = kwargs.get("on_sale")
     currency = kwargs.get("currency")
+    network = kwargs.get("network")
     user = kwargs.get("user")
     if currency is not None:
         currency = currency[0]
 
-    tokens = Token.objects.committed().select_related("currency", "owner")
+    tokens = Token.objects.network(network).select_related("currency", "owner")
 
     # Below are the tokens in the form of a QUERYSET
     for word in words:
@@ -140,7 +141,7 @@ def collection_search(words, page):
     return CollectionSearchSerializer(collections[start:end]).data
     
 
-def validate_bid(user, token_id, amount, weth_contract, quantity):
+def validate_bid(user, token_id, amount, token_contract, quantity):
     try:
         token = Token.objects.committed().get(id=token_id)
     except ObjectDoesNotExist:
@@ -151,7 +152,7 @@ def validate_bid(user, token_id, amount, weth_contract, quantity):
         return 'Your bid is too low'
     if token.total_supply < quantity:
         return 'Token quantity is lower'
-    user_balance = weth_contract.functions.balanceOf(Web3.toChecksumAddress(user.username)).call()
+    user_balance = token_contract.functions.balanceOf(Web3.toChecksumAddress(user.username)).call()
     if user_balance < amount * quantity:
         return 'Your bidding balance is too small'
 

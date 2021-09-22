@@ -6,6 +6,7 @@ from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid
 from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs
 
 from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token, TransactionTracker
+from dds.networks.models import Network
 from dds.store.serializers import (
     TokenPatchSerializer, 
     TokenSerializer,
@@ -33,13 +34,7 @@ from rest_framework.views import APIView
 from web3 import HTTPProvider, Web3
 
 from dds.accounts.api import user_search
-from dds.settings import NETWORK_SETTINGS, WETH_ADDRESS
-from contracts import (
-    EXCHANGE,
-    WETH_CONTRACT,
-    ERC721_MAIN,
-    ERC1155_MAIN,
-)
+from contracts import EXCHANGE
 from dds.rates.api import get_decimals, calculate_amount
 from dds.rates.models import UsdRate
 
@@ -221,6 +216,7 @@ class CreateCollectionView(APIView):
         symbol = request.data.get('symbol')
         short_url = request.data.get('short_url')
         standart = request.data.get('standart')
+        network = request.query_params.get('network', DEFAULT_NETWORK)
         owner = request.user
 
         is_unique, response = Collection.collection_is_unique(name, symbol, short_url)
@@ -229,8 +225,11 @@ class CreateCollectionView(APIView):
 
         if standart not in ["ERC721", "ERC1155"]:
             return Response('invalid collection type', status=status.HTTP_400_BAD_REQUEST)
-
-        initial_tx = Collection.create_contract(name, symbol, standart, owner)
+        
+        network = Network.objects.filter(name__icontains=network)
+        if not network:
+            return Response('invalid network name', status=status.HTTP_400_BAD_REQUEST)
+        initial_tx = Collection.create_contract(name, symbol, standart, owner, network.first())
         return Response(initial_tx, status=status.HTTP_200_OK)
 
 
@@ -276,12 +275,13 @@ class GetOwnedView(APIView):
     )
 
     def get(self, request, address, page):
+        network = request.query_params.get('network', DEFAULT_NETWORK)
         try:
             user = AdvUser.objects.get(username=address)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
-        tokens = Token.objects.committed().filter(Q(owner=user) | Q(owners=user)).order_by('-id')
+        tokens = Token.objects.network(network).filter(Q(owner=user) | Q(owners=user)).order_by('-id')
 
         start, end = get_page_slice(page, len(tokens))
 
@@ -300,12 +300,13 @@ class GetCreatedView(APIView):
     )
 
     def get(self, request, address, page):
+        network = request.query_params.get('network', DEFAULT_NETWORK)
         try:
             user = AdvUser.objects.get(username=address)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
-        tokens = Token.objects.committed().filter(creator=user).order_by('-id')
+        tokens = Token.objects.network(network).filter(creator=user).order_by('-id')
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
@@ -323,6 +324,7 @@ class GetLikedView(APIView):
     )
 
     def get(self, request, address, page):
+        network = request.query_params.get('network', DEFAULT_NETWORK)
         try:
             user = AdvUser.objects.get(username=address)
         except ObjectDoesNotExist:
@@ -335,6 +337,8 @@ class GetLikedView(APIView):
         tokens_action = UserAction.objects.filter(method='like', user__in=ids).order_by('-date')
         
         tokens = [action.token for action in tokens_action]
+        if network:
+            tokens = [token for token in tokens if token.collection.network.symbol.lower() == network.lower()]
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
@@ -479,13 +483,15 @@ class GetHotView(APIView):
     def get(self, request, page):
         sort = request.query_params.get('sort', 'recent')
         tag = request.query_params.get('tag')
+        network = request.query_params.get('network', DEFAULT_NETWORK)
 
         order = SORT_STATUSES[sort]
 
+        tokens = Token.objects.network(network)
         if tag:
-            tokens = Token.objects.committed().filter(tags__name__contains=tag).order_by(order)
+            tokens = tokens.filter(tags__name__contains=tag).order_by(order)
         else:
-            tokens = Token.objects.committed().order_by(order)
+            tokens = tokens.order_by(order)
         if sort in ('cheapest', 'highest'):
             tokens = tokens.exclude(price=None).exclude(selling=False).exclude(status=Status.BURNED)
         length = tokens.count()
@@ -507,8 +513,8 @@ class GetHotCollectionsView(APIView):
         responses={200: HotCollectionSerializer(many=True)},
     )
     def get(self, request):
-        user = request.user
-        collections = Collection.objects.hot_collections(user).order_by('-id')[:5]
+        network = request.query_params.get('network', DEFAULT_NETWORK)
+        collections = Collection.objects.hot_collections(network).order_by('-id')[:5]
         response_data = HotCollectionSerializer(collections, many=True).data
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -523,12 +529,13 @@ class GetCollectionView(APIView):
     )
 
     def get(self, request, param, page):
+        network = request.query_params.get('network', DEFAULT_NETWORK)
         try:
             collection = Collection.objects.get_by_short_url(param)
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        tokens = Token.objects.committed().filter(collection=collection)
+        tokens = Token.objects.network(network).filter(collection=collection)
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
@@ -602,9 +609,17 @@ class BuyTokenView(APIView):
         if not is_valid:
             return response
 
-        seller = None
-        if seller_id:
-            seller = AdvUser.objects.get_by_custom_url(seller_id)
+        buyer = request.user
+        try:
+            if seller_id:
+                seller = AdvUser.objects.get_by_custom_url(seller_id)
+                ownership = Ownership.objects.filter(token__id=token_id, owner=seller).filter(selling=True)
+                if not ownership:
+                    return Response({'error': 'user is not owner or token is not on sell'})
+            else:
+                seller = None
+        except ObjectDoesNotExist:
+            return Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
 
         buy = tradable_token.buy_token(token_amount, buyer, seller)
         return Response({'initial_tx': buy}, status=status.HTTP_200_OK)
@@ -639,13 +654,13 @@ class MakeBid(APIView):
         token_id = request_data.get('token_id')
         amount = Decimal(str(request_data.get('amount')))
         quantity = int(request_data.get('quantity'))
-
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
-
+        token = Token.objects.get(id=token_id)
         user = request.user
 
+        web3, token_contract = token.currency.network.get_token_contract(token.currency.address)
+
         #returns OK if valid, or error message
-        result = validate_bid(user, token_id, amount, WETH_CONTRACT, quantity)
+        result = validate_bid(user, token_id, amount, token_contract, quantity)
 
         if result != 'OK':
             return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
@@ -662,11 +677,11 @@ class MakeBid(APIView):
         bid.save()
 
         #construct approve tx if not approved yet:
-        allowance = WETH_CONTRACT.functions.allowance(
+        allowance = token_contract.functions.allowance(
             web3.toChecksumAddress(user.username),
-            web3.toChecksumAddress(EXCHANGE_ADDRESS),
+            web3.toChecksumAddress(EXCHANGE),
         ).call()
-        user_balance = WETH_CONTRACT.functions.balanceOf(
+        user_balance = token_contract.functions.balanceOf(
             Web3.toChecksumAddress(user.username)
         ).call()
         
@@ -679,8 +694,8 @@ class MakeBid(APIView):
                 'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(user.username), 'pending'),
                 'gasPrice': web3.eth.gasPrice,
             }
-            initial_tx = WETH_CONTRACT.functions.approve(
-                web3.toChecksumAddress(EXCHANGE_ADDRESS), 
+            initial_tx = token_contract.functions.approve(
+                web3.toChecksumAddress(EXCHANGE), 
                 user_balance,
             ).buildTransaction(tx_params)
             return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
@@ -726,9 +741,8 @@ class VerificateBetView(APIView):
     )
     def get(self, request, token_id):
         print('virificate!')
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
-
-        bets = Bid.objects.filter(token__id=token_id).order_by('-amount')
+        token = Token.objects.get(id=token_id)
+        bets = Bid.objects.filter(token=token).order_by('-amount')
         max_bet = bets.first()
         if not max_bet:
             return Response(
@@ -739,7 +753,9 @@ class VerificateBetView(APIView):
         amount = max_bet.amount
         quantity = max_bet.quantity
 
-        check_valid = validate_bid(user, token_id, amount, WETH_CONTRACT, quantity)
+        web3, token_contract = token.currency.network.get_token_contract(token.currency.address)
+
+        check_valid = validate_bid(user, token_id, amount, token_contract, quantity)
 
         if check_valid == 'OK':
             print('all ok!')
@@ -752,7 +768,7 @@ class VerificateBetView(APIView):
                 user = bet.user
                 amount = bet.amount
                 quantity = bet.quantity
-                check_valid = validate_bid(user, token_id, amount, WETH_CONTRACT, quantity)
+                check_valid = validate_bid(user, token_id, amount, token_contract, quantity)
                 if check_valid == 'OK':
                     print('again ok!')
                     return Response(
@@ -905,8 +921,9 @@ def get_favorites(request):
 
 @api_view(http_method_names=['GET'])
 def get_hot_bids(request):
+    network = request.query_params.get('network', DEFAULT_NETWORK)
     bids = Bid.objects.filter(state=Status.COMMITTED).order_by('-id')[:6]
-    token_list= [bid.token for bid in bids]
+    token_list= [bid.token for bid in bids if bid.token.collection.network.native_symbol.lower() == network.lower()]
     response_data = TokenFullSerializer(token_list, context={"user": request.user}, many=True).data
     return Response(response_data, status=status.HTTP_200_OK)
 
@@ -977,23 +994,16 @@ class TransactionTrackerView(APIView):
             return Response({"error": "token not found"}, status=status.HTTP_400_BAD_REQUEST)
         if token.standart == "ERC1155":
             owner_url = request.data.get("ownership")
-            amount = request.data.get("amount")
             user = AdvUser.objects.get_by_custom_url(owner_url)
             ownership = Ownership.objects.filter(token_id=token_id, owner=user).first()
-            if amount and int(amount) == ownership.quantity:
-                ownership.selling = False
-                ownership.save()
-            TransactionTracker.objects.create(
-                ownership=ownership, 
-                tx_hash=tx_hash, 
-                amount=amount,
-            )
+            ownership.selling = False
+            ownership.save()
+            TransactionTracker.objects.create(ownership=ownership, tx_hash=tx_hash)
             return Response({"success": "trancsaction is tracked"}, status=status.HTTP_200_OK)
         token.selling = False
         token.save()
         TransactionTracker.objects.create(token=token, tx_hash=tx_hash)
         return Response({"success": "trancsaction is tracked"}, status=status.HTTP_200_OK)
-
 
 
 class GetCollectionByAdressView(APIView):

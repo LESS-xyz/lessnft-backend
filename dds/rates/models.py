@@ -3,7 +3,6 @@ from django.db import models
 from dds.consts import MAX_AMOUNT_LEN
 
 from web3 import Web3, HTTPProvider
-from dds.settings import NETWORK_SETTINGS
 from contracts import WETH_ABI
 
 
@@ -11,14 +10,15 @@ class UsdRate(models.Model):
     '''
     Absolutely typical rate app for winter 2021.
     '''
-    rate = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=8)
-    coin_node = models.CharField(max_length=100, unique=True)
-    symbol = models.CharField(max_length=20)
-    name = models.CharField(max_length=100)
-    image = models.CharField(max_length=500, null=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    address = models.CharField(max_length=128)
-    decimal = models.PositiveSmallIntegerField(null=True)
+    rate = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=8, blank=True, null=True, default=None)
+    coin_node = models.CharField(max_length=100)
+    symbol = models.CharField(max_length=20, blank=True, null=True, default=None)
+    name = models.CharField(max_length=100, blank=True, null=True, default=None)
+    image = models.CharField(max_length=500, null=True, blank=True, default=None)
+    updated_at = models.DateTimeField(auto_now=True, blank=True, null=True)
+    address = models.CharField(max_length=128, blank=True, null=True, default=None)
+    decimal = models.PositiveSmallIntegerField(null=True, blank=True, default=None)
+    network = models.ForeignKey('networks.Network', on_delete=models.CASCADE, blank=True, null=True, default=None)
 
     def __str__(self):
         return self.symbol
@@ -28,8 +28,7 @@ class UsdRate(models.Model):
         return 10 ** self.decimal
 
     def set_decimals(self) -> None:
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
-        address = web3.toChecksumAddress(self.address)
-        contract = web3.eth.contract(address=address, abi=WETH_ABI)
+        address = Web3.toChecksumAddress(self.address)
+        web3, contract = self.network.get_token_contract(address)
         self.decimal = contract.functions.decimals().call()
         self.save()

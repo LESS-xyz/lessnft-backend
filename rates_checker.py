@@ -3,9 +3,8 @@ import sys
 import time
 import requests
 import traceback
-from dds.settings import ERC20_ADDRESS
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dds.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dds.settings")
 import django
 
 django.setup()
@@ -14,49 +13,30 @@ from dds.rates.models import UsdRate
 from dds.settings import RATES_CHECKER_TIMEOUT
 
 
-API_URL = 'https://api.coingecko.com/api/v3/coins/{coin_code}'
+API_URL = "https://api.coingecko.com/api/v3/coins/{coin_code}"
 
 
-QUERY_FSYM = 'usd'
+QUERY_FSYM = "usd"
 
 
-def get_rate(tsym):
-    res = requests.get(API_URL.format(coin_code=tsym))
+def get_rate(coin_code):
+    res = requests.get(API_URL.format(coin_code=coin_code))
     if res.status_code != 200:
-        raise Exception('cannot get exchange rate for {}'.format(QUERY_FSYM))
+        raise Exception("cannot get exchange rate for {}".format(QUERY_FSYM))
     response = res.json()
-    return {
-        "rate": response['market_data']['current_price'][QUERY_FSYM],
-        "coin_node": response.get("id"),
-        "symbol": response.get("symbol"),
-        "name": response.get("name"),
-        "image": response.get("image", {}).get("small"),
-        "address": response.get("contract_address"),
-    }
+    return response["symbol"], response["market_data"]["current_price"][QUERY_FSYM]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     while True:
-        usd_rates = []
-
-        try:
-            for rate in UsdRate.objects.all():
-                usd_rates.append(get_rate(rate.coin_node))
-        except Exception as e:
-            print('\n'.join(traceback.format_exception(*sys.exc_info())), flush=True)
-            time.sleep(RATES_CHECKER_TIMEOUT)
-            continue
-        for rate in usd_rates:
+        coin_nodes = UsdRate.objects.all().values_list('coin_node', flat=True)
+        for coin_node in coin_nodes:
             try:
-                rate_object = UsdRate.objects.get(symbol=rate["symbol"])
-            except UsdRate.DoesNotExist:
-                rate_object = UsdRate(symbol=rate["symbol"])
-                rate_object.coin_node = rate["coin_node"]
-                rate_object.name = rate["name"]
-                rate_object.image = rate["image"]
-                rate_object.address = rate["address"]
-            rate_object.rate = rate["rate"]
-            rate_object.save()
-            if not rate_object.decimal:
-                rate_object.set_decimals()
+                symbol, rate = get_rate(coin_node)
+            except Exception as e:
+                print("\n".join(traceback.format_exception(*sys.exc_info())), flush=True)
+                time.sleep(RATES_CHECKER_TIMEOUT)
+                continue
+            rates = UsdRate.objects.filter(symbol=symbol)
+            rates.update(rate=rate)
         time.sleep(RATES_CHECKER_TIMEOUT)

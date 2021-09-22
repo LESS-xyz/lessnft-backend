@@ -1,7 +1,5 @@
 from web3 import Web3, HTTPProvider
-from dds.settings import EXCHANGE_ADDRESS, PRIV_KEY, NETWORK_SETTINGS
-from contracts import EXCHANGE
-from dds.store.models import Bid
+from dds.settings import PRIV_KEY
    
 
 def end_auction(token):
@@ -16,8 +14,7 @@ def end_auction(token):
         'gasPrice': initial_tx.get("gasPrice"),
     }
 
-    web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
-    contract = web3.eth.contract(address=EXCHANGE_ADDRESS, abi=EXCHANGE)
+    web3, contract = token.collection.network.get_exchage_contract()
 
     tx = contract.functions.makeExchangeERC721(
         idOrder = data.get("idOrder"),

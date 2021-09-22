@@ -1,9 +1,8 @@
 import json
 import ipfshttpclient
 from web3 import Web3, HTTPProvider
-from dds.settings import NETWORK_SETTINGS, IPFS_CLIENT
-from contracts import ERC721_MAIN, ERC1155_MAIN
-
+from dds.settings import IPFS_CLIENT
+from django.apps import apps
 
 def create_ipfs(request):
     client = ipfshttpclient.connect(IPFS_CLIENT)
@@ -34,7 +33,7 @@ def send_to_ipfs(media):
     file_res = client.add(media)
     return file_res["Hash"]
 
-def get_ipfs(token_id, address, standart) -> dict:
+def get_ipfs(token_id) -> dict:
     """
     return ipfs by token
 
@@ -43,16 +42,10 @@ def get_ipfs(token_id, address, standart) -> dict:
     :param standart: token standart
     """
     if token_id != None:
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS["ETH"]["endpoint"]))
-        if standart == "ERC721":
-            abi = ERC721_MAIN
-        else:
-            abi = ERC1155_MAIN
-        myContract = web3.eth.contract(
-            address=web3.toChecksumAddress(address),
-            abi=abi,
-        )
-        ipfs = myContract.functions.tokenURI(token_id).call()
+        token_model = apps.get_model('store', 'Token')
+        token = token_model.objects.get(id=token_id)
+        web3, contract = token.get_main_contract()
+        ipfs = contract.functions.tokenURI(token_id).call()
         return ipfs
 
 

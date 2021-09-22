@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from dds.settings import ALLOWED_HOSTS, SORT_STATUSES
+from dds.settings import SORT_STATUSES
 from dds.consts import DECIMALS
 from dds.rates.api import calculate_amount
 from dds.store.models import (

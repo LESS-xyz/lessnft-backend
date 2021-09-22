@@ -13,34 +13,21 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from dds.consts import MAX_AMOUNT_LEN
 from dds.utilities import sign_message, get_media_from_ipfs
 from dds.accounts.models import AdvUser, MasterUser
+from dds.networks.models import Network
 from dds.rates.models import UsdRate
 from dds.consts import DECIMALS
 from dds.settings import (
-    NETWORK_SETTINGS,
     TOKEN_MINT_GAS_LIMIT,
     TOKEN_TRANSFER_GAS_LIMIT,
     TOKEN_BUY_GAS_LIMIT,
-    ERC20_ADDRESS,
     DEFAULT_AVATARS,
-    ERC721_FABRIC_ADDRESS,
-    ERC1155_FABRIC_ADDRESS,
-    EXCHANGE_ADDRESS,
     COLLECTION_721,
     COLLECTION_1155,
-)
-from contracts import (
-    EXCHANGE,
-    ERC721_MAIN,
-    ERC1155_MAIN
 )
 from rest_framework import status
 from rest_framework.response import Response
 from dds.consts import DECIMALS
 from .services.ipfs import get_ipfs, get_ipfs_by_hash
-from contracts import (
-    ERC721_FABRIC,
-    ERC1155_FABRIC,
-)
 from dds.settings import (
     SIGNER_ADDRESS,
     COLLECTION_CREATION_GAS_LIMIT,
@@ -62,21 +49,34 @@ class CollectionManager(models.Manager):
             collection_id = int(short_url)  
         return self.get(Q(id=collection_id) | Q(short_url=short_url))
     
-    def user_collections(self, user):
+    def user_collections(self, user, network=None):
         """ Return committed collections for user (with default collections) """
-        return self.filter(status=Status.COMMITTED).filter(
+        if not network:
+            return self.filter(status=Status.COMMITTED).filter(
+                Q(name__in=[COLLECTION_721, COLLECTION_1155]) | Q(creator=user)
+            )
+        return self.filter(network__name__icontains=network).filter(status=Status.COMMITTED).filter(
             Q(name__in=[COLLECTION_721, COLLECTION_1155]) | Q(creator=user)
         )
 
-    def hot_collections(self, user):
-        """ Return committed collections for user (with default collections) """
+    def hot_collections(self, network=None):
+        """ Return hot collections (without default collections) """
+        if not network:
+            return self.exclude(name__in=(COLLECTION_721, COLLECTION_1155,)).filter(
+                Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
+            )
         return self.exclude(name__in=(COLLECTION_721, COLLECTION_1155,)).filter(
-            Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
+            network__name__icontains=network).filter(
+            Exists(Token.objects.committed().filter(collection__id=OuterRef('id'))),
         )
+
+    def network(self, network):
+        """ Return collections filtered by network symbol """
+        return self.filter(network__name__icontains=network)
 
 
 class Collection(models.Model):
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50)
     avatar_ipfs = models.CharField(max_length=200, null=True, default=None)
     cover_ipfs = models.CharField(max_length=200, null=True, default=None)
     address = models.CharField(max_length=60, unique=True, null=True, blank=True)
@@ -88,6 +88,12 @@ class Collection(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices)
     deploy_hash = models.CharField(max_length=100, null=True)
     deploy_block = models.IntegerField(null=True, default=None)
+    network = models.ForeignKey('networks.Network', on_delete=models.CASCADE)
+
+    objects = CollectionManager()
+
+    class Meta:
+        unique_together = [['name', 'network']]
 
     objects = CollectionManager()
 
@@ -110,6 +116,9 @@ class Collection(models.Model):
         self.name = request.data.get('name')
         self.symbol = request.data.get('symbol')
         self.address = request.data.get('address')
+        network = request.query_params.get('network')
+        network = Network.objects.filter(name__icontains=network).first()
+        self.network = network
         self.avatar_ipfs = avatar
         self.standart = request.data.get('standart')
         self.description = request.data.get('description')
@@ -119,14 +128,7 @@ class Collection(models.Model):
         self.save()
 
     def create_token(self, creator, ipfs, signature, amount):
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
-        if self.standart == 'ERC721':
-            abi = ERC721_MAIN
-        else:
-            abi = ERC1155_MAIN
-        myContract = web3.eth.contract(
-            address=web3.toChecksumAddress(self.address),
-            abi=abi)
+        web3 = self.network.get_web3_connection()
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': TOKEN_MINT_GAS_LIMIT,
@@ -134,16 +136,17 @@ class Collection(models.Model):
             'gasPrice': web3.eth.gasPrice,
         }
         if self.standart == 'ERC721':
-            initial_tx = myContract.functions.mint( ipfs, signature).buildTransaction(tx_params)
+            _, contract = self.network.get_erc721main_contract(self.address)
+            initial_tx = contract.functions.mint( ipfs, signature).buildTransaction(tx_params)
         else:
-            initial_tx = myContract.functions.mint( int(amount), ipfs, signature).buildTransaction(tx_params)
+            _, contract = self.network.get_erc1155main_contract(self.address)
+            initial_tx = contract.functions.mint( int(amount), ipfs, signature).buildTransaction(tx_params)
         #Just for tests
         '''
         signed_tx = web3.eth.account.sign_transaction(initial_tx,'92cf3cee409da87ce5eb2137f2befce69d4ebaab14f898a8211677d77f91e6b0')
         tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
         return tx_hash.hex()
         '''
-        
         return initial_tx
 
     @classmethod
@@ -157,10 +160,10 @@ class Collection(models.Model):
         return True, None
 
     @classmethod
-    def create_contract(cls, name, symbol, standart, owner):
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
+    def create_contract(cls, name, symbol, standart, owner, network):
         baseURI = ''
         signature = sign_message(['address'], [SIGNER_ADDRESS])
+        web3 = network.get_web3_connection()
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': COLLECTION_CREATION_GAS_LIMIT,
@@ -168,10 +171,7 @@ class Collection(models.Model):
             'gasPrice': web3.eth.gasPrice,
         }
         if standart == 'ERC721':
-            myContract = web3.eth.contract(
-                address=web3.toChecksumAddress(ERC721_FABRIC_ADDRESS),
-                abi=ERC721_FABRIC,
-            )
+            _, contract = network.get_erc721fabric_contract()
             '''
             # JUST FOR TESTS
             tx = myContract.functions.makeERC721(
@@ -185,8 +185,7 @@ class Collection(models.Model):
             tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
             return tx_hash.hex()
             '''
-
-            return myContract.functions.makeERC721(
+            return contract.functions.makeERC721(
                 name, 
                 symbol, 
                 baseURI, 
@@ -194,10 +193,7 @@ class Collection(models.Model):
                 signature
             ).buildTransaction(tx_params)
 
-        myContract = web3.eth.contract(
-            address=web3.toChecksumAddress(ERC1155_FABRIC_ADDRESS),
-            abi=ERC1155_FABRIC,
-        )
+        _, contract = network.get_erc1155fabric_contract()
         '''
         # JUST FOR TESTS
         tx = myContract.functions.makeERC1155(
@@ -209,24 +205,16 @@ class Collection(models.Model):
         tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
         return tx_hash.hex()
         '''
-        return myContract.functions.makeERC1155(
-            name,
+        return contract.functions.makeERC1155(
             baseURI, 
             SIGNER_ADDRESS, 
             signature,
         ).buildTransaction(tx_params)
 
     def get_contract(self):
-        w3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
-        if self.standart == 'ERC1155':
-            abi = ERC1155_MAIN
-        else:
-            abi = ERC721_MAIN
-        contract = w3.eth.contract(
-            address=Web3.toChecksumAddress(self.address),
-            abi=abi
-        )
-        return contract
+        if self.standart == 'ERC721':
+            return self.network.get_erc721main_contract(self.address)
+        return self.network.get_erc1155main_contract(self.address)
 
 
 def collection_created_dispatcher(sender, instance, created, **kwargs):
@@ -248,6 +236,16 @@ class TokenManager(models.Manager):
     def committed(self):
         """ Return tokens with status committed """
         return self.filter(status=Status.COMMITTED)
+
+    def committed(self):
+        """ Return tokens with status committed """
+        return self.get_queryset()
+
+    def network(self, network):
+        """ Return token filtered by collection network symbol """
+        if network:
+            return self.get_queryset().filter(collection__network__name__icontains=network)
+        return self.get_queryset()
 
 
 class Token(models.Model):
@@ -443,19 +441,26 @@ class Token(models.Model):
             self.save()
             self.owners.add(request.user)
             self.save()
+            print(self.__dict__)
             ownership = Ownership.objects.get(owner=self.creator, token=self)
             ownership.quantity = request.data.get('total_supply')
             ownership.selling = selling
             ownership.currency_price = price
             ownership.currency = currency
             ownership.currency_minimal_bid = minimal_bid
+            print(ownership.__dict__)
             ownership.full_clean()
             ownership.save()
         self.full_clean()
         self.save()
 
+    def get_main_contract(self):
+        if self.standart == 'ERC721':
+            return self.collection.network.get_erc721main_contract(self.collection.address)
+        return self.collection.network.get_erc1155main_contract(self.collection.address)
+
     def transfer(self, old_owner, new_owner, amount=None):
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
+        web3, contract = self.get_main_contract()
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': TOKEN_TRANSFER_GAS_LIMIT,
@@ -463,19 +468,11 @@ class Token(models.Model):
             'gasPrice': web3.eth.gasPrice,
         }
         if self.standart == 'ERC721':
-            myContract = web3.eth.contract(
-                address=web3.toChecksumAddress(self.collection.address),
-                abi=ERC721_MAIN,
-            )
-            return myContract.functions.transferFrom(
+            return contract.functions.transferFrom(
                 web3.toChecksumAddress(self.owner.username),
                 web3.toChecksumAddress(new_owner), 
                 self.internal_id,
             ).buildTransaction(tx_params)
-        myContract = web3.eth.contract(
-            address=web3.toChecksumAddress(self.collection.address),
-            abi=ERC1155_MAIN,
-        )
         return myContract.functions.safeTransferFrom(
             web3.toChecksumAddress(old_owner.username),
             web3.toChecksumAddress(new_owner), 
@@ -485,7 +482,7 @@ class Token(models.Model):
         ).buildTransaction(tx_params)
 
     def burn(self, user=None, amount=None):
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS["ETH"]["endpoint"]))
+        web3, contract = self.get_main_contract()
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': TOKEN_MINT_GAS_LIMIT,
@@ -493,16 +490,8 @@ class Token(models.Model):
             'gasPrice': web3.eth.gasPrice,
         }
         if self.standart == "ERC721":
-            myContract = web3.eth.contract(
-                address=web3.toChecksumAddress(self.collection.address),
-                abi=ERC721_MAIN,
-            )
-            return myContract.functions.burn(self.internal_id).buildTransaction(tx_params)
-        myContract = web3.eth.contract(
-            address=web3.toChecksumAddress(self.collection.address),
-            abi=ERC1155_MAIN,
-        )
-        return myContract.functions.burn(
+            return contract.functions.burn(self.internal_id).buildTransaction(tx_params)
+        return contract.functions.burn(
             web3.toChecksumAddress(user.username),
             self.internal_id, 
             int(amount),
@@ -586,7 +575,7 @@ class Token(models.Model):
             'signature': signature
         }
         print(f'data: {data}')
-        web3 = Web3(HTTPProvider(NETWORK_SETTINGS['ETH']['endpoint']))
+        web3 = self.collection.network.get_web3_connection()
 
         return {
             'nonce': web3.eth.getTransactionCount(
@@ -595,7 +584,7 @@ class Token(models.Model):
             'gasPrice': web3.eth.gasPrice,
             'chainId': web3.eth.chainId,
             'gas': TOKEN_BUY_GAS_LIMIT,
-            'to': EXCHANGE_ADDRESS,
+            'to': self.collection.network.exchange_address,
             'method': method,
             'value': 0,
             'data': data

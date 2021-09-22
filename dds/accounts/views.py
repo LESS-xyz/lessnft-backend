@@ -252,6 +252,7 @@ class GetUserCollections(APIView):
         resposnes={200: UserCollectionSerializer, 401: not_found_response}
     )
     def get(self, request, param):
+        network = request.query_params.get('network', DEFAULT_NETWORK)
         try:
             if param[:2] == '0x':
                 user = AdvUser.objects.get(username=param)
@@ -261,7 +262,7 @@ class GetUserCollections(APIView):
         except:
             return Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        collections = Collection.objects.user_collections(user)
+        collections = Collection.objects.user_collections(user, network=network)
         response_data = UserCollectionSerializer(collections, many=True).data
         return Response({'collections': response_data}, status=status.HTTP_200_OK)
 
