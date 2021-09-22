@@ -17,7 +17,7 @@ def remove_pending_tokens():
 
 @shared_task(name="end_auction_checker")
 def end_auction_checker():
-    tokens = Token.objects.committed().filter(
+    tokens = Token.token_objects.committed().filter(
         end_auction__lte=datetime.today(),
     )
     for token in tokens:

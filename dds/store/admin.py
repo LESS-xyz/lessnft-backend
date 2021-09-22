@@ -51,19 +51,31 @@ class TokenAdmin(admin.ModelAdmin):
             return '(No image)'
 
     image_preview.short_description = 'Preview'
-    list_display = ('name', 'collection', 'standart', 'is_favorite')
+    list_display = ('name', 'collection', 'standart', 'is_favorite', 'get_network')
     list_editable = ('is_favorite', )
     list_filter = ('is_favorite', TokenStandartFilter)
     search_fields = ['name', 'collections']
+
+    def get_network(self, obj):
+        return obj.collection.network.name
+
+    get_network.short_description = 'Network'
+    get_network.admin_order_field = 'collection__network__name'
 
 
 class CollectionAdmin(admin.ModelAdmin):
     model = Collection
     inlines = (TokenInline,)
     readonly_fields = ('id',)
-    list_display = ('name', 'address', 'standart', 'creator')
+    list_display = ('name', 'address', 'standart', 'creator', 'get_network')
     list_filter = ('standart',)
     search_fields = ['creator', 'name']
+
+    def get_network(self, obj):
+        return obj.network.name
+
+    get_network.short_description = 'Network'
+    get_network.admin_order_field = 'collection__network__name'
 
 
 class OwnershipAdmin(admin.ModelAdmin):

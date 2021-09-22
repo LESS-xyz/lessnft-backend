@@ -285,7 +285,7 @@ class GetOwnedView(APIView):
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
-        tokens = Token.objects.network(network).filter(Q(owner=user) | Q(owners=user)).order_by('-id')
+        tokens = Token.token_objects.network(network).filter(Q(owner=user) | Q(owners=user)).order_by('-id')
 
         start, end = get_page_slice(page, len(tokens))
 
@@ -310,7 +310,7 @@ class GetCreatedView(APIView):
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
-        tokens = Token.objects.network(network).filter(creator=user).order_by('-id')
+        tokens = Token.token_objects.network(network).filter(creator=user).order_by('-id')
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
@@ -362,7 +362,7 @@ class GetView(APIView):
 
     def get(self, request, id):
         try:
-            token = Token.objects.committed().get(id=id)
+            token = Token.token_objects.committed().get(id=id)
         except ObjectDoesNotExist:
             return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
         if token.status == Status.BURNED:
@@ -389,7 +389,7 @@ class GetView(APIView):
         user = request.user
 
         try:
-            token = Token.objects.committed().get(id=id)
+            token = Token.token_objects.committed().get(id=id)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_404_NOT_FOUND)
         
@@ -463,7 +463,7 @@ class TokenBurnView(APIView):
     )
     def post(self, request, token_id):
         user = request.user
-        token = Token.objects.committed().get(id=token_id)
+        token = Token.token_objects.committed().get(id=token_id)
         amount = request.data.get("amount")
         is_valid, res = token.is_valid(user=user)
         if not is_valid:
@@ -491,7 +491,7 @@ class GetHotView(APIView):
 
         order = SORT_STATUSES[sort]
 
-        tokens = Token.objects.network(network)
+        tokens = Token.token_objects.network(network)
         if tag:
             tokens = tokens.filter(tags__name__contains=tag).order_by(order)
         else:
@@ -539,7 +539,7 @@ class GetCollectionView(APIView):
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        tokens = Token.objects.network(network).filter(collection=collection)
+        tokens = Token.token_objects.network(network).filter(collection=collection)
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
@@ -732,7 +732,7 @@ class MakeBid(APIView):
 def get_bids(request, token_id):
     #validating token and user
     try:
-        token = Token.objects.committed().get(id=token_id)
+        token = Token.token_objects.committed().get(id=token_id)
     except ObjectDoesNotExist:
         return Response({'error': 'token not found'}, status=status.HTTP_400_BAD_REQUEST)
     if token.is_auc_selling:
@@ -923,7 +923,7 @@ def get_fee(request):
 @api_view(http_method_names=['GET'])
 def get_favorites(request):
     network = request.query_params.get('network', DEFAULT_NETWORK)
-    token_list = Token.objects.network(network).filter(is_favorite=True).order_by("-updated_at")
+    token_list = Token.token_objects.network(network).filter(is_favorite=True).order_by("-updated_at")
     response_data = TokenSerializer(token_list, many=True, context={"user": request.user}).data
     return Response(response_data, status=status.HTTP_200_OK)
 

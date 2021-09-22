@@ -62,11 +62,11 @@ class CollectionManager(models.Manager):
         """ Return hot collections (without default collections) """
         if not network:
             return self.exclude(name__in=(COLLECTION_721, COLLECTION_1155,)).filter(
-                Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
+                Exists(Token.token_objects.committed().filter(collection__id=OuterRef('id')))
             )
         return self.exclude(name__in=(COLLECTION_721, COLLECTION_1155,)).filter(
             network__name__icontains=network).filter(
-            Exists(Token.objects.committed().filter(collection__id=OuterRef('id'))),
+            Exists(Token.token_objects.committed().filter(collection__id=OuterRef('id'))),
         )
 
     def network(self, network):
@@ -79,7 +79,7 @@ class Collection(models.Model):
     avatar_ipfs = models.CharField(max_length=200, null=True, default=None)
     cover_ipfs = models.CharField(max_length=200, null=True, default=None)
     address = models.CharField(max_length=60, unique=True, null=True, blank=True)
-    symbol = models.CharField(max_length=10, unique=True)
+    symbol = models.CharField(max_length=30)
     description = models.TextField(null=True, blank=True)
     standart = models.CharField(max_length=10, choices=[('ERC721', 'ERC721'), ('ERC1155', 'ERC1155')])
     short_url = models.CharField(max_length=30, default=None, null=True, blank=True, unique=True)
@@ -90,9 +90,6 @@ class Collection(models.Model):
     network = models.ForeignKey('networks.Network', on_delete=models.CASCADE)
 
     objects = CollectionManager()
-
-    class Meta:
-        unique_together = [['name', 'network']]
 
     @property
     def avatar(self):
@@ -269,7 +266,8 @@ class Token(models.Model):
     start_auction = models.DateTimeField(blank=True, null=True, default=None)
     end_auction = models.DateTimeField(blank=True, null=True, default=None)
 
-    objects = TokenManager()
+    objects = models.Manager()
+    token_objects = TokenManager()
 
     @property
     def media(self):

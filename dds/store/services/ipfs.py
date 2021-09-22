@@ -28,21 +28,11 @@ def send_to_ipfs(media):
     file_res = client.add(media)
     return file_res["Hash"]
 
-def get_ipfs(token_id) -> dict:
+def get_ipfs(token_id, contract) -> dict:
     """
     return ipfs by token
-
-    :param token_id: token internal id
-    :param address: contract address
-    :param standart: token standart
     """
-    if token_id != None:
-        token_model = apps.get_model('store', 'Token')
-        token = token_model.objects.get(id=token_id)
-        web3, contract = token.get_main_contract()
-        ipfs = contract.functions.tokenURI(token_id).call()
-        return ipfs
-
+    return contract.functions.tokenURI(token_id).call()
 
 def get_ipfs_by_hash(ipfs_hash) -> dict:
     """

@@ -112,7 +112,7 @@ def mint_transfer(latest_block, smart_contract):
     )
     logging.info('start mint/transfer scan')
     block_count = HOLDERS_CHECK_CHAIN_LENGTH + HOLDERS_CHECK_COMMITMENT_LENGTH
-    block = get_last_block(f'MINT_TRANSFER_LAST_BLOCK_{collection.name}', collection.network.name)
+    block = get_last_block(f'MINT_TRANSFER_LAST_BLOCK_{collection.network.name}_{collection.name}', collection.network.name)
     logging.info(f' last block: {latest_block} \n block: {block}')
 
     if not (latest_block - block > block_count):
@@ -155,7 +155,7 @@ def mint_transfer(latest_block, smart_contract):
         logging.info('filter not found')
         save_last_block(
             latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH, 
-            f'MINT_TRANSFER_LAST_BLOCK_{collection.name}',
+            f'MINT_TRANSFER_LAST_BLOCK_{collection.network.name}_{collection.name}',
         )
         time.sleep(HOLDERS_CHECK_TIMEOUT)
         return
@@ -168,7 +168,7 @@ def mint_transfer(latest_block, smart_contract):
         token_id = event['args'].get('tokenId')
         if token_id is None:
             token_id = event['args'].get('id')
-        logging.info('token id:', token_id)
+        logging.info(f'token id: {token_id}')
         
         logging.info(f'collection address: {collection.address} \n token id: {token_id}')
 
@@ -183,7 +183,7 @@ def mint_transfer(latest_block, smart_contract):
                 collection__address=collection.address,
             )
         else:
-            ipfs = get_ipfs(token_id, collection.address, contract_standart)
+            ipfs = get_ipfs(token_id, smart_contract)
             token = Token.objects.filter(
                 ipfs=ipfs, 
                 collection=collection,
@@ -292,7 +292,7 @@ def mint_transfer(latest_block, smart_contract):
 
     save_last_block(
         latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH, 
-        f'MINT_TRANSFER_LAST_BLOCK_{collection.name}',
+        f'MINT_TRANSFER_LAST_BLOCK_{collection.network.name}_{collection.name}',
     )
     time.sleep(HOLDERS_CHECK_TIMEOUT)
 
