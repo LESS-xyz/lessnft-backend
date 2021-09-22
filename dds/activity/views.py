@@ -14,6 +14,7 @@ from .models import BidsHistory, ListingHistory, TokenHistory, UserAction
 from .utils import quick_sort
 from .api import get_activity_response
 from dds.accounts.serializers import UserSerializer
+from dds.activity.services.top_users import get_top_users
 
 
 class ActivityView(APIView):

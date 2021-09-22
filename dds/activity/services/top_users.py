@@ -1,33 +1,44 @@
 from itertools import groupby
-from datetime import datetime, timedelta
+from django.utils import timezone
+from datetime import timedelta
 from django.db.models import Sum, F
 from dds.accounts.models import AdvUser
 from dds.activity.models import TokenHistory, UserStat
 from dds.rates.api import calculate_amount
 
 
-def update_users_stat():
-    periods = {
-        'day': datetime.today() - timedelta(days=1),
-        'week': datetime.today() - timedelta(days=7),
-        'month': datetime.today() - timedelta(days=30),
-    }
-    for period_name, time_delta in periods.values():
-        period = f'period_{period_name}'
-        buyer_history = TokenHistory.objects.filter(date__gte=time_delta, method="Buy").annotate(
-            user=F('new_owner'), 
-            currency=F('token__currency__symbol'),
-        ).values('user', 'currency').annotate(price=Sum('price'))
-        buyer_history = [{'user': h.get("user"), period: calculate_amount(h.get("price"), h.get("currency"))[1]} for h in buyer_history]
-        buyer_history.sort(key=lambda item: item['user'])
-        sorted_history = list()
-        for key, value in groupby(buyer_history,key=lambda item: item['user']):
-            sorted_history.append({'user': key, 'price':sum(v[period] for v in value)})
+# TODO: mb get from config
+PERIODS = {
+    'day': timezone.now() - timedelta(days=1),
+    'week': timezone.now() - timedelta(days=7),
+    'month': timezone.now() - timedelta(days=30),
+}
 
-        for item in sorted_history:
-            user_stat = UserStat.objects.get_or_create(user_id=item.get('user'))
-            setattr(user_stat, period, item.get('price'))
-            user_stat.save()
+
+def _update_users_stat(users, type_):
+    for user in users:
+        user_stat, _ = UserStat.objects.get_or_create(user=user)
+
+        for period, time_delta in PERIODS.items():
+            filter_data = {
+                "date__gte": time_delta, 
+                "method": "Buy", 
+                type_: user,
+            }
+            buyer_history = TokenHistory.objects.filter(**filter_data).annotate(
+                user=F('new_owner'), 
+                price=F('usd_price'),
+            ).values('user').annotate(price=Sum('price'))
+            user_stat.buyer[period] = history.get('price')
+
+        user_stat.save()
+
+
+def update_users_stat():
+    buyers = AdvUser.objects.filter(new_owner__method="Buy").distinct()
+    sellers = AdvUser.objects.filter(old_owner__method="Buy").distinct()
+    _update_users_stat(buyers, 'new_owner')
+    _update_users_stat(sellers, 'old_owner')
 
 
 def get_top_users(type_, period):

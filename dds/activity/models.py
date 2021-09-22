@@ -88,12 +88,8 @@ class BidsHistory(models.Model):
 
 class UserStat(models.Model):
     user = models.OneToOneField('accounts.AdvUser', on_delete=models.CASCADE)
-    buyer_day = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, default=None)
-    buyer_week = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, default=None)
-    buyer_month = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, default=None)
-    seller_day = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, default=None)
-    seller_week = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, default=None)
-    seller_month = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, default=None)
+    seller = models.JSONField()
+    buyer = models.JSONField()
 
     def __str__(self):
         return self.user.get_name()
