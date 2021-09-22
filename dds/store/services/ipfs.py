@@ -1,3 +1,4 @@
+import json
 import ipfshttpclient
 from web3 import Web3, HTTPProvider
 from dds.settings import NETWORK_SETTINGS, IPFS_CLIENT
@@ -11,6 +12,8 @@ def create_ipfs(request):
     media = request.FILES.get("media")
     cover = request.FILES.get("cover")
     attributes = request.data.get("details")
+    if attributes:
+        attributes = json.loads(attributes)
     file_res = client.add(media)
     ipfs_json = {
         "name": name,

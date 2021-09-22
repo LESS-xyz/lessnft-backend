@@ -1,3 +1,4 @@
+import json 
 import random
 from datetime import datetime
 import secrets
@@ -397,7 +398,11 @@ class Token(models.Model):
     def save_in_db(self, request, ipfs):
         self.name = request.data.get('name')
         self.status = Status.PENDING
-        self.details = request.data.get('details')
+        details = request.data.get('details')
+        if details:
+            self.details = json.loads(details)
+        else:
+            self.details = None
         self.ipfs = ipfs
         self.format = request.data.get('format')
         self.description = request.data.get('description')

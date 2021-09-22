@@ -258,10 +258,10 @@ class TokenSerializer(serializers.ModelSerializer):
 
     def get_digital_key(self, obj):
         user = self.context.get("user") 
-        if self.standart=="ERC721" and user==self.owner:
-            return self.digital_key
-        if self.standart=="ERC1155" and user in self.owners.all():
-            return self.digital_key
+        if obj.standart=="ERC721" and user==obj.owner:
+            return obj.digital_key
+        if obj.standart=="ERC1155" and user in obj.owners.all():
+            return obj.digital_key
         return None
 
 

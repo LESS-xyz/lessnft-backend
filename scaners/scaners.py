@@ -169,7 +169,7 @@ def mint_transfer(latest_block, smart_contract):
         if not token.exists():
             logging.warning('token 404!')
             continue
-        logging.info(f'get token {token[0].name}')
+        # logging.info(f'get token {token[0].name}')
 
         # if from equal empty_address this is mint event
         if event['args']['from'] == empty_address:
@@ -388,6 +388,7 @@ def buy_scanner(latest_block, smart_contract, standart):
             bet = Bid.objects.filter(token=token[0]).order_by('-amount')
             logging.info(f'bet: {bet}')
             sell_amount = event['args']['sellAmount']
+            logging.info(f"token amount: {sell_amount}")
             if bet.exists():
                 if sell_amount == bet.first().quantity:
                     bet.delete()
