@@ -308,7 +308,7 @@ class HotCollectionSerializer(CollectionSlimSerializer):
         )
 
     def get_tokens(self, obj):
-        tokens = obj.token_set.exclude(status=Status.BURNED).order_by(
+        tokens = Token.token_objects.committed().filter(collection=obj).order_by(
             SORT_STATUSES["recent"]
         )[:6]
         return [token.media for token in tokens]
