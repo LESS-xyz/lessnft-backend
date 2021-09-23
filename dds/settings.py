@@ -27,9 +27,6 @@ SECRET_KEY = 'm3%r==z=1j(9e43(7rb(3jzzcz-7(91c#3!$u29w-4gd)gd&9w'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['lessnft.rocknblock.io', '144.76.201.50', '127.0.0.1',]
-
-
 # Application definition
 
 INSTALLED_APPS = [

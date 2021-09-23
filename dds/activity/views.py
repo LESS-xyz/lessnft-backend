@@ -57,7 +57,7 @@ class ActivityView(APIView):
                 if param in types:
                     items = TokenHistory.objects.filter(
                         method=method,
-                        token__collection__network__native_symbol__iexact=network,
+                        token__collection__network__name__icontains=network,
                     ).order_by(
                         "-date"
                     )[:end]
@@ -65,7 +65,7 @@ class ActivityView(APIView):
             for param, method in action_methods.items():
                 if param in types:
                     items = UserAction.objects.filter(
-                        Q(token__collection__network__native_symbol__iexact=network) | Q(token__isnull=True),
+                        Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
                         method=method,
                     ).order_by("-date")[
                         :end
@@ -75,33 +75,33 @@ class ActivityView(APIView):
                 if param in types:
                     items = BidsHistory.objects.filter(
                         method=method,
-                        token__collection__network__native_symbol__iexact=network,
+                        token__collection__network__name__icontains=network,
                     ).order_by("-date")[
                         :end
                     ]
                     activities.extend(items)
             if "list" in types:
                 listing = ListingHistory.objects.filter(
-                    token__collection__network__native_symbol__iexact=network,
+                    token__collection__network__name__icontains=network,
                 ).order_by("-date")[start:end]
                 activities.extend(listing)
         else:
             actions = UserAction.objects.filter(
-                Q(token__collection__network__native_symbol__iexact=network) | Q(token__isnull=True),
+                Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
             ).order_by("-date")[:end]
             activities.extend(actions)
             history = TokenHistory.objects.filter(
-                token__collection__network__native_symbol__iexact=network,   
+                token__collection__network__name__icontains=network,   
             ).exclude(
                 Q(method="Burn") | Q(method="Transfer")
             ).order_by("-date")[:end]
             activities.extend(history)
             bit = BidsHistory.objects.filter(
-                token__collection__network__native_symbol__iexact=network,
+                token__collection__network__name__icontains=network,
             ).order_by("-date")[:end]
             activities.extend(bit)
             listing = ListingHistory.objects.filter(
-                token__collection__network__native_symbol__iexact=network,
+                token__collection__network__name__icontains=network,
             ).order_by("-date")[:end]
             activities.extend(listing)
 
@@ -131,7 +131,7 @@ class NotificationActivityView(APIView):
         ]
 
         items = TokenHistory.objects.filter(
-            token__collection__network__native_symbol__iexact=network,
+            token__collection__network__name__icontains=network,
             new_owner__username=address,
             method__in=new_owner_methods,
             is_viewed=False,
@@ -139,7 +139,7 @@ class NotificationActivityView(APIView):
         activities.extend(items)
 
         buy = TokenHistory.objects.filter(
-            token__collection__network__native_symbol__iexact=network,
+            token__collection__network__name__icontains=network,
             old_owner__username=address,
             method='Buy',
             is_viewed=False,
@@ -147,21 +147,21 @@ class NotificationActivityView(APIView):
         activities.extend(buy)
 
         user_actions = UserAction.objects.filter(
-            Q(token__collection__network__native_symbol__iexact=network) | Q(token__isnull=True),
+            Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
             whom_follow__username=address,
             is_viewed=False,
         ).order_by("-date")[:end]
         activities.extend(user_actions)
 
         bids = BidsHistory.objects.filter(
-            token__collection__network__native_symbol__iexact=network,
+            token__collection__network__name__icontains=network,
             user__username=address,
             is_viewed=False,
         ).order_by("-date")[:end]
         activities.extend(bids)
 
         listing = ListingHistory.objects.filter(
-            token__collection__network__native_symbol__iexact=network,
+            token__collection__network__name__icontains=network,
             user__username=address,
             is_viewed=False,
         ).order_by("-date")[:end]
@@ -277,7 +277,7 @@ class UserActivityView(APIView):
             for param, method in token_transfer_methods.items():
                 if param in types:
                     items = TokenHistory.objects.filter(
-                        token__collection__network__native_symbol__iexact=network,
+                        token__collection__network__name__icontains=network,
                         old_owner__username=address,
                         method=method,
                         is_viewed=False,
@@ -287,7 +287,7 @@ class UserActivityView(APIView):
                 if param in types:
                     items = TokenHistory.objects.filter(
                         new_owner__username=address,
-                        token__collection__network__native_symbol__iexact=network,
+                        token__collection__network__name__icontains=network,
                         method=method,
                         is_viewed=False,
                     ).order_by("-date")[:end]
@@ -296,7 +296,7 @@ class UserActivityView(APIView):
                 if param in types:
                     items = UserAction.objects.filter(
                         Q(user__username=address) | Q(whom_follow__username=address),
-                        Q(token__collection__network__native_symbol__iexact=network) | Q(token__isnull=True),
+                        Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
                         method=method,
                         is_viewed=False,
                     ).order_by("-date")[:end]
@@ -304,7 +304,7 @@ class UserActivityView(APIView):
             for param, method in bids_methods.items():
                 if param in types:
                     items = BidsHistory.objects.filter(
-                        token__collection__network__native_symbol__iexact=network,
+                        token__collection__network__name__icontains=ntwork,
                         user__username=address,
                         is_viewed=False,
                         method=method,
@@ -312,7 +312,7 @@ class UserActivityView(APIView):
                     activities.extend(items)
             if "list" in types:
                 listing = ListingHistory.objects.filter(
-                    token__collection__network__native_symbol__iexact=network,
+                    token__collection__network__name__icontains=network,
                     user__username=address,
                     is_viewed=False,
                 ).order_by("-date")[:end]
@@ -325,7 +325,7 @@ class UserActivityView(APIView):
             ]
 
             items = TokenHistory.objects.filter(
-                token__collection__network__native_symbol__iexact=network,
+                token__collection__network__name__icontains=network,
                 new_owner__username=address,
                 method__in=new_owner_methods,
                 is_viewed=False,
@@ -333,7 +333,7 @@ class UserActivityView(APIView):
             activities.extend(items)
 
             buy = TokenHistory.objects.filter(
-                token__collection__network__native_symbol__iexact=network,
+                token__collection__network__name__icontains=network,
                 old_owner__username=address,
                 method='Buy',
                 is_viewed=False,
@@ -341,7 +341,7 @@ class UserActivityView(APIView):
             activities.extend(buy)
 
             user_actions = UserAction.objects.filter(
-                Q(token__collection__network__native_symbol__iexact=network) | Q(token__isnull=True),
+                Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
                 whom_follow__username=address,
                 is_viewed=False,
             ).order_by("-date")[:end]
@@ -349,7 +349,7 @@ class UserActivityView(APIView):
 
             listing = ListingHistory.objects.filter(
                 user__username=address,
-                token__collection__network__native_symbol__iexact=network,
+                token__collection__network__name__icontains=network,
             ).order_by(
                 "-date"
             )[:end]
@@ -357,7 +357,7 @@ class UserActivityView(APIView):
 
             bit = BidsHistory.objects.filter(
                 user__username=address,
-                token__collection__network__native_symbol__iexact=network,
+                token__collection__network__name__icontains=network,
             ).order_by("-date")[:end]
             activities.extend(bit)
 
@@ -405,7 +405,7 @@ class FollowingActivityView(APIView):
         activities = list()
 
         following_ids = UserAction.objects.filter(
-            Q(token__collection__network__native_symbol__iexact=network) | Q(token__isnull=True),
+            Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
             method="follow",
             user__username=address,
         ).values_list("whom_follow_id", flat=True)
@@ -416,14 +416,14 @@ class FollowingActivityView(APIView):
                     items = TokenHistory.objects.filter(
                         Q(new_owner__id__in=following_ids)
                         | Q(old_owner__id__in=following_ids),
-                        token__collection__network__native_symbol__iexact=network,
+                        token__collection__network__name__icontains=network,
                         method=method,
                     ).order_by("-date")[:end]
                     activities.extend(items)
             for param, method in action_methods.items():
                 if param in types:
                     items = UserAction.objects.filter(
-                        Q(token__collection__network__native_symbol__iexact=network) | Q(token__isnull=True),
+                        Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
                         Q(user__id__in=following_ids)
                         | Q(whom_follow__id__in=following_ids),
                         method=method,
@@ -441,25 +441,25 @@ class FollowingActivityView(APIView):
                     items = BidsHistory.objects.filter(
                         user__id__in=following_ids,
                         method=method,
-                        token__collection__network__native_symbol__iexact=network,
+                        token__collection__network__name__icontains=network,
                     ).order_by("-date")[:end]
                     activities.extend(items)
             if "list" in types:
                 listing = ListingHistory.objects.filter(
                     user__id__in=following_ids,
-                    token__collection__network__native_symbol__iexact=network,
+                    token__collection__network__name__icontains=network,
                 ).order_by("-date")[:end]
         else:
             actions = UserAction.objects.filter(
                 Q(user__id__in=following_ids) | Q(whom_follow__id__in=following_ids),
-                Q(token__collection__network__native_symbol__iexact=network) | Q(token__isnull=True),
+                Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
             ).order_by("-date")[:end]
             activities.extend(actions)
             history = (
                 TokenHistory.objects.filter(
                     Q(new_owner__id__in=following_ids)
                     | Q(old_owner__id__in=following_ids),
-                    token__collection__network__native_symbol__iexact=network,
+                    token__collection__network__name__icontains=network,
                 )
                 .exclude(Q(method="Burn") | Q(method="Transfer"))
                 .order_by("-date")[:end]
@@ -467,12 +467,12 @@ class FollowingActivityView(APIView):
             activities.extend(history)
             listing = ListingHistory.objects.filter(
                 user__id__in=following_ids,
-                token__collection__network__native_symbol__iexact=network,
+                token__collection__network__name__icontains=network,
             ).order_by("-date")[:end]
             activities.extend(listing)
             bit = BidsHistory.objects.filter(
                 user__id__in=following_ids,
-                token__collection__network__native_symbol__iexact=network,
+                token__collection__network__name__icontains=network,
             ).order_by("-date")[:end]
             activities.extend(bit)
 

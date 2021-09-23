@@ -24,6 +24,7 @@ class DefaultAvatarForm(forms.ModelForm):
 
 class DefaultAvatarAdmin(admin.ModelAdmin):
     form = DefaultAvatarForm
+    list_display = ('image', )
     fieldsets = (
         (None, {
             'fields': ('avatar', 'image', ),

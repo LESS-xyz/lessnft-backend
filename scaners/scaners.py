@@ -208,6 +208,7 @@ def mint_transfer(latest_block, smart_contract):
                 new_owner=new_owner[0],
                 old_owner=None,
                 price=None,
+                amount=event['args']['value'],
             )
 
         # if from not equal empty_address tis is transfer event
@@ -224,6 +225,7 @@ def mint_transfer(latest_block, smart_contract):
                     new_owner=None,
                     old_owner=None,
                     price=None,
+                    amount=event['args']['value'],
                 )
                 if token.first().standart == 'ERC721':
                     token.update(status=Status.BURNED)
@@ -261,6 +263,7 @@ def mint_transfer(latest_block, smart_contract):
                         new_owner=new_owner[0],
                         old_owner=old_owner,
                         price=None,
+                        amount=event['args']['value'],
                     )
                 
             if token[0].standart == 'ERC1155':
@@ -437,6 +440,7 @@ def buy_scanner(latest_block, smart_contract, network_name, standart):
             token_history.update(
                 method="Buy",
                 price=price,
+                amount=event['args']['sellAmount'],
             )
         else:
             TokenHistory.objects.get_or_create(
@@ -446,6 +450,7 @@ def buy_scanner(latest_block, smart_contract, network_name, standart):
                 old_owner=old_owner,
                 method="Buy",
                 price=price,
+                amount=event['args']['sellAmount'],
             )
 
     save_last_block(
@@ -464,6 +469,8 @@ def aproove_bet_scaner(latest_block, smart_contract, network_name):
     block_count = HOLDERS_CHECK_CHAIN_LENGTH + HOLDERS_CHECK_COMMITMENT_LENGTH
     block = get_last_block(f'BET_LAST_BLOCK_{network_name}', network_name)
     logging.info(f'last block: {latest_block} \n block: {block}') 
+
+    network = Network.objects.get(name=network_name)
 
     if not(latest_block - block > block_count):
         logging.info(f'\n Not enough block passed from block {block} \n ________________')
@@ -499,7 +506,7 @@ def aproove_bet_scaner(latest_block, smart_contract, network_name):
         exchange = event['args']['guy']
         logging.info(f'exchange: {exchange} \n user: {user}')
 
-        if exchange != EXCHANGE_ADDRESS:
+        if exchange != network.exchange_address:
             logging.info('not our wxchage')
             continue
 

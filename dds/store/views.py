@@ -34,7 +34,6 @@ from rest_framework.views import APIView
 from web3 import HTTPProvider, Web3
 
 from dds.accounts.api import user_search
-from contracts import EXCHANGE
 from dds.rates.api import get_decimals, calculate_amount
 from dds.rates.models import UsdRate
 
@@ -219,7 +218,7 @@ class CreateCollectionView(APIView):
         network = request.query_params.get('network', DEFAULT_NETWORK)
         owner = request.user
 
-        is_unique, response = Collection.collection_is_unique(name, symbol, short_url)
+        is_unique, response = Collection.collection_is_unique(name, symbol, short_url, network)
         if not is_unique:
             return response
 
@@ -338,7 +337,7 @@ class GetLikedView(APIView):
         
         tokens = [action.token for action in tokens_action]
         if network:
-            tokens = [token for token in tokens if token.collection.network.symbol.lower() == network.lower()]
+            tokens = [token for token in tokens if token.collection.network.native_symbol.lower() == network.lower()]
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
@@ -662,6 +661,12 @@ class MakeBid(APIView):
         #returns OK if valid, or error message
         result = validate_bid(user, token_id, amount, token_contract, quantity)
 
+        if token.currency.address == "0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE":
+            return Response(
+                {'error': 'You cannot bet on native currencies'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         if result != 'OK':
             return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -679,7 +684,7 @@ class MakeBid(APIView):
         #construct approve tx if not approved yet:
         allowance = token_contract.functions.allowance(
             web3.toChecksumAddress(user.username),
-            web3.toChecksumAddress(EXCHANGE),
+            web3.toChecksumAddress(token.collection.network.exchange_address),
         ).call()
         user_balance = token_contract.functions.balanceOf(
             Web3.toChecksumAddress(user.username)
@@ -695,7 +700,7 @@ class MakeBid(APIView):
                 'gasPrice': web3.eth.gasPrice,
             }
             initial_tx = token_contract.functions.approve(
-                web3.toChecksumAddress(EXCHANGE), 
+                web3.toChecksumAddress(token.collection.network.exchange_address), 
                 user_balance,
             ).buildTransaction(tx_params)
             return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
@@ -924,7 +929,7 @@ def get_favorites(request):
 def get_hot_bids(request):
     network = request.query_params.get('network', DEFAULT_NETWORK)
     bids = Bid.objects.filter(state=Status.COMMITTED).order_by('-id')[:6]
-    token_list= [bid.token for bid in bids if bid.token.collection.network.native_symbol.lower() == network.lower()]
+    token_list= [bid.token for bid in bids if network.lower() in bid.token.collection.network.name.lower()]
     response_data = TokenFullSerializer(token_list, context={"user": request.user}, many=True).data
     return Response(response_data, status=status.HTTP_200_OK)
 

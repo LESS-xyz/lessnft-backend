@@ -177,10 +177,14 @@ class TokenSerializer(serializers.ModelSerializer):
     royalty = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     price = serializers.SerializerMethodField()
+    bids = serializers.SerializerMethodField()
     digital_key = serializers.SerializerMethodField()
+    highest_bid = serializers.SerializerMethodField()
+    highest_bid_USD = serializers.SerializerMethodField()
     creator = CreatorSerializer()
     collection = CollectionSlimSerializer()
     currency = CurrencySerializer()
+    minimal_bid = serializers.SerializerMethodField()
 
     class Meta:
         model = Token
@@ -203,6 +207,7 @@ class TokenSerializer(serializers.ModelSerializer):
             "standart",
             "creator",
             "collection",
+            "minimal_bid",
             "description",
             "details",
             "royalty",
@@ -213,10 +218,30 @@ class TokenSerializer(serializers.ModelSerializer):
             "end_auction",
             "format",
             "digital_key",
+            "bids",
+            "highest_bid",
+            "highest_bid_USD",
         )
         
     def get_royalty(self, obj):
         return obj.creator_royalty
+
+    def get_highest_bid(self, obj):
+        bids = obj.bid_set.filter(state=Status.COMMITTED).order_by(
+            "-amount"
+        ) 
+        if bids:
+            return BidSerializer(bids.first()).data
+
+    def get_minimal_bid(self, obj):
+        return obj.currency_minimal_bid
+
+    def get_highest_bid_USD(self, obj):
+        if self.get_highest_bid(obj) and obj.currency:
+            return calculate_amount(self.get_highest_bid(obj).get('amount'), obj.currency.symbol)[0]
+
+    def get_bids(self, obj):
+        return BidSerializer(obj.bid_set.filter(state=Status.COMMITTED), many=True).data
 
     def get_USD_price(self, obj):
         if obj.price:
@@ -333,10 +358,7 @@ class CollectionSerializer(CollectionSlimSerializer):
 
 
 class TokenFullSerializer(TokenSerializer):
-    bids = serializers.SerializerMethodField()
     selling = serializers.SerializerMethodField()
-    minimal_bid = serializers.SerializerMethodField()
-    highest_bid = serializers.SerializerMethodField()
     history = serializers.SerializerMethodField()
     tags = serializers.SerializerMethodField()
     sellers = serializers.SerializerMethodField()
@@ -347,9 +369,6 @@ class TokenFullSerializer(TokenSerializer):
 
     class Meta(TokenSerializer.Meta):
         fields = TokenSerializer.Meta.fields + (
-            "bids",
-            "highest_bid",
-            "minimal_bid",
             "tags",
             "history",
             "sellers",
@@ -364,19 +383,6 @@ class TokenFullSerializer(TokenSerializer):
         if obj.standart == "ERC721":
             return obj.selling
         return obj.ownership_set.filter(selling=True).exists() 
-
-    def get_minimal_bid(self, obj):
-        return obj.currency_minimal_bid
-
-    def get_highest_bid(self, obj):
-        bids = obj.bid_set.filter(state=Status.COMMITTED).order_by(
-            "-amount"
-        ) 
-        if bids:
-            return BidSerializer(bids.first()).data
-
-    def get_bids(self, obj):
-        return BidSerializer(obj.bid_set.all(), many=True).data
 
     def get_history(self, obj):
         history = obj.tokenhistory_set.exclude(method="Burn").order_by("-id")

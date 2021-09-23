@@ -12,7 +12,7 @@ from django.db.models.signals import post_save
 from django.core.validators import MaxValueValidator, MinValueValidator
 from dds.consts import MAX_AMOUNT_LEN
 from dds.utilities import sign_message, get_media_from_ipfs
-from dds.accounts.models import AdvUser, MasterUser
+from dds.accounts.models import AdvUser, MasterUser, DefaultAvatar
 from dds.networks.models import Network
 from dds.rates.models import UsdRate
 from dds.consts import DECIMALS
@@ -20,7 +20,6 @@ from dds.settings import (
     TOKEN_MINT_GAS_LIMIT,
     TOKEN_TRANSFER_GAS_LIMIT,
     TOKEN_BUY_GAS_LIMIT,
-    DEFAULT_AVATARS,
     COLLECTION_721,
     COLLECTION_1155,
 )
@@ -145,10 +144,12 @@ class Collection(models.Model):
         return initial_tx
 
     @classmethod
-    def collection_is_unique(cls, name, symbol, short_url) -> Tuple[bool, Union[Response, None]]:
-        if Collection.objects.filter(name=name):
+    def collection_is_unique(cls, name, symbol, short_url, network) -> Tuple[bool, Union[Response, None]]:
+        print(name, network)
+        network = Network.objects.get(name__icontains=network)
+        if Collection.objects.filter(name=name).filter(network=network):
             return False, Response({'name': 'this collection name is occupied'}, status=status.HTTP_400_BAD_REQUEST)
-        if Collection.objects.filter(symbol=symbol):
+        if Collection.objects.filter(symbol=symbol).filter(network=network):
             return False, Response({'symbol': 'this collection symbol is occupied'}, status=status.HTTP_400_BAD_REQUEST)
         if short_url and Collection.objects.filter(short_url=short_url):
             return False, Response({'short_url': 'this collection short_url is occupied'}, status=status.HTTP_400_BAD_REQUEST)
@@ -201,6 +202,7 @@ class Collection(models.Model):
         return tx_hash.hex()
         '''
         return contract.functions.makeERC1155(
+            name,
             baseURI, 
             SIGNER_ADDRESS, 
             signature,
@@ -214,8 +216,10 @@ class Collection(models.Model):
 
 def collection_created_dispatcher(sender, instance, created, **kwargs):
     if created:
-        instance.avatar_ipfs = random.choice(DEFAULT_AVATARS)
-        instance.save()
+        default_avatars = DefaultAvatar.objects.all().values_list('image', flat=True)
+        if default_avatars:
+            instance.avatar_ipfs = random.choice(default_avatars)
+            instance.save()
 
 
 post_save.connect(collection_created_dispatcher, sender=Collection)
@@ -228,9 +232,9 @@ def validate_nonzero(value):
         )
 
 class TokenManager(models.Manager):
-    def committed(self):
+    def get_queryset(self):
         """ Return tokens with status committed """
-        return self.filter(status=Status.COMMITTED)
+        return super().get_queryset().filter(status=Status.COMMITTED)
 
     def committed(self):
         """ Return tokens with status committed """
@@ -354,7 +358,7 @@ class Token(models.Model):
     def is_valid_for_buy(self, token_amount, seller_id) -> Tuple[bool, Union[Response, None]]:
         is_valid, response = self.is_valid()
         if not is_valid:
-            return response
+            return False, response
         if self.standart == "ERC721":
             if not self.selling:
                 return False, Response(
@@ -469,7 +473,7 @@ class Token(models.Model):
                 web3.toChecksumAddress(new_owner), 
                 self.internal_id,
             ).buildTransaction(tx_params)
-        return myContract.functions.safeTransferFrom(
+        return contract.functions.safeTransferFrom(
             web3.toChecksumAddress(old_owner.username),
             web3.toChecksumAddress(new_owner), 
             self.internal_id,
@@ -509,6 +513,9 @@ class Token(models.Model):
             else:
                 price = Ownership.objects.get(token=self, owner=seller, selling=True).price
         address = self.currency.address
+        value = 0
+        if address == '0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE':
+            value = int(price)
         types_list = [
             'bytes32', 
             'address', 
@@ -582,7 +589,7 @@ class Token(models.Model):
             'gas': TOKEN_BUY_GAS_LIMIT,
             'to': self.collection.network.exchange_address,
             'method': method,
-            'value': 0,
+            'value': value,
             'data': data
         }
 

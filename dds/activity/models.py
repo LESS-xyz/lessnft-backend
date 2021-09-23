@@ -65,6 +65,7 @@ class TokenHistory(models.Model):
     )
     price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=18, default=None, blank=True, null=True)
     is_viewed = models.BooleanField(default=False)
+    amount = models.PositiveIntegerField(default=None, blank=True, null=True)
 
 
 class ListingHistory(models.Model):

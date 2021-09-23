@@ -29,6 +29,6 @@ class RateRequest(APIView):
     )
     def get(self, request):
         network = request.query_params.get('network', DEFAULT_NETWORK)
-        rates = UsdRate.objects.filter(network__native_symbol__iexact=network)
+        rates = UsdRate.objects.filter(network__name__icontains=network).order_by('-address')
         response_data = UsdRateSerializer(rates, many=True).data
         return Response(response_data, status=status.HTTP_200_OK)
