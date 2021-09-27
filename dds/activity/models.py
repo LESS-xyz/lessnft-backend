@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models.signals import post_save
+from dds.rates.api import calculate_amount
 
 from dds.consts import MAX_AMOUNT_LEN
 
@@ -64,8 +66,23 @@ class TokenHistory(models.Model):
         related_name='old_owner'
     )
     price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=18, default=None, blank=True, null=True)
+    USD_price = models.DecimalField(max_digits=18, decimal_places=2, default=None, blank=True, null=True)
     is_viewed = models.BooleanField(default=False)
     amount = models.PositiveIntegerField(default=None, blank=True, null=True)
+
+
+def token_history_dispatcher(sender, instance, created, **kwargs):
+    if instance.price and instance.token:
+        instance.USD_price = calculate_amount(
+            instance.price, 
+            instance.token.currency.symbol,
+        )[0]
+        post_save.disconnect(token_history_dispatcher, sender=sender)
+        instance.save(update_fields=['USD_price', ])
+        post_save.connect(token_history_dispatcher, sender=sender)
+
+
+post_save.connect(token_history_dispatcher, sender=TokenHistory)
 
 
 class ListingHistory(models.Model):
@@ -85,3 +102,12 @@ class BidsHistory(models.Model):
     price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=18, default=None, blank=True, null=True)
     method = models.CharField(choices=[('Bet', 'Bet')], default='Bet', max_length=3)
     is_viewed = models.BooleanField(default=False)
+
+
+class UserStat(models.Model):
+    user = models.OneToOneField('accounts.AdvUser', on_delete=models.CASCADE)
+    seller = models.JSONField()
+    buyer = models.JSONField()
+
+    def __str__(self):
+        return self.user.get_name()
