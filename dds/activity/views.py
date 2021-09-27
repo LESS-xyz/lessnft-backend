@@ -14,6 +14,9 @@ from dds.consts import DECIMALS
 from .models import BidsHistory, ListingHistory, TokenHistory, UserAction
 from .utils import quick_sort
 from .api import get_activity_response
+from dds.accounts.serializers import UserSerializer
+from dds.activity.serializers import UserStatSerializer
+from dds.activity.services.top_users import get_top_users
 
 
 class ActivityView(APIView):
@@ -482,34 +485,21 @@ class FollowingActivityView(APIView):
 
 
 class GetBestDealView(APIView):
-
+    @swagger_auto_schema(
+        operation_description="get top users",
+        manual_parameters=[
+            openapi.Parameter("type", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("sort_period", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        ],
+    )
     def get(self, request, days):
+        type_ = request.query_params.get("type")                # seller, buyer
+        sort_period = request.query_params.get("sort_period")   # day, week, month
 
-        end_date = datetime.datetime.today()
-        start_date = end_date - datetime.timedelta(days=days)
+        top_users = get_top_users(type_, sort_period)
+        response_data = UserStatSerializer(top_users, many=True, context={
+            "status": type_, 
+            "time_range": sort_period,
+        }).data 
 
-        tokens = TokenHistory.objects.filter(method='Buy').filter(date__range=[start_date, end_date])
-
-        buyers = {}
-        sellers = {}
-        for token in tokens:
-            buyer = token.new_owner.username
-            seller = token.old_owner.username
-            cost = token.price
-            if len(buyers) < 15:
-                if buyers.get(buyer):
-                    buyers[buyer] += cost
-                else:
-                    buyers[buyer] = cost
-            if len(sellers) < 15:
-                if sellers.get(seller):
-                    sellers[seller] += cost
-                else:
-                    sellers[seller] = cost
-
-        buyers_list = []
-        sellers_list = []
-        buyers_list.append(buyers)
-        sellers_list.append(sellers)
-
-        return Response({'buyers': buyers_list, 'sellers': sellers_list}, status=status.HTTP_200_OK)
+        return Response(response_data, status=status.HTTP_200_OK)
