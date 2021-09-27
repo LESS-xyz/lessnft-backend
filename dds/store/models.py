@@ -321,7 +321,7 @@ class Token(models.Model):
                 currency_price__isnull=True,
                 currency_minimal_bid__isnull=False,
             ).exists()
-        return bool(self.selling and not self.price  and self.currency)
+        return bool(self.selling and self.minimal_bid and self.currency)
 
     @property
     def is_timed_auc_selling(self):
@@ -497,16 +497,17 @@ class Token(models.Model):
             int(amount),
         ).buildTransaction(tx_params)
 
-    def buy_token(self, token_amount, buyer, seller=None, price=None):
+    def buy_token(self, token_amount, buyer, seller=None, price=None, auc=False):
         print(f'seller: {seller}')  
         master_account = MasterUser.objects.get()
 
         id_order = '0x%s' % secrets.token_hex(32)
 
-        if seller:
-            seller_address = seller.username
-        else:
+        if self.standart == "ERC721":
             seller_address = self.owner.username
+        else:
+            seller_address = seller.username
+
         if not price:
             if self.standart == 'ERC721':
                 price = self.price
@@ -580,9 +581,13 @@ class Token(models.Model):
         print(f'data: {data}')
         web3 = self.collection.network.get_web3_connection()
 
+        buyer_nonce = buyer.username
+        if auc:
+            buyer_nonce = seller_address
+
         return {
             'nonce': web3.eth.getTransactionCount(
-                web3.toChecksumAddress(buyer.username), 'pending'
+                web3.toChecksumAddress(buyer_nonce), 'pending'
             ),
             'gasPrice': web3.eth.gasPrice,
             'chainId': web3.eth.chainId,
@@ -653,8 +658,8 @@ class Ownership(models.Model):
     @property
     def get_currency_price(self):
         if self.currency_price:
-            return self.currency_price
-        return self.currency_minimal_bid
+            return self.price
+        return self.minimal_bid
 
     @property
     def get_price(self):

@@ -44,7 +44,7 @@ def scan_deploy(latest_block, smart_contract, network_name):
     if latest_block - block > 5000:
         latest_block = block + 4990
 
-    network = Network.objects.get(name=network_name)
+    network = Network.objects.get(name__icontains=network_name)
 
     if smart_contract.address.lower() == network.fabric721_address.lower():
         event_filter = smart_contract.events.ERC721Made.createFilter(
@@ -162,6 +162,7 @@ def mint_transfer(latest_block, smart_contract):
     
     logging.info('got events!')
     for event in events:
+        logging.info(f"args {event['args']}")
         logging.info(event)
         tx_hash = event['transactionHash'].hex()
 
@@ -208,7 +209,6 @@ def mint_transfer(latest_block, smart_contract):
                 new_owner=new_owner[0],
                 old_owner=None,
                 price=None,
-                amount=event['args']['value'],
             )
 
         # if from not equal empty_address tis is transfer event
@@ -225,7 +225,7 @@ def mint_transfer(latest_block, smart_contract):
                     new_owner=None,
                     old_owner=None,
                     price=None,
-                    amount=event['args']['value'],
+                    amount=event['args'].get('value'),
                 )
                 if token.first().standart == 'ERC721':
                     token.update(status=Status.BURNED)
@@ -240,7 +240,6 @@ def mint_transfer(latest_block, smart_contract):
                         ownership.delete()
                     if token[0].total_supply == 0:
                         token.update(status=Status.BURNED)
-                
             else:
                 logging.info('Transfer!')
 
@@ -263,7 +262,7 @@ def mint_transfer(latest_block, smart_contract):
                         new_owner=new_owner[0],
                         old_owner=old_owner,
                         price=None,
-                        amount=event['args']['value'],
+                        amount=event['args'].get('value'),
                     )
                 
             if token[0].standart == 'ERC1155':
@@ -288,7 +287,7 @@ def mint_transfer(latest_block, smart_contract):
                     if not new_owner[0]:
                         continue
                     logging.info('ownership for new owner is not exist!')
-                    logging.info('new_owner:', new_owner)
+                    logging.info(f'new_owner: {new_owner}')
                     owner = Ownership.objects.create(
                         owner=new_owner[0],
                         token=token.first(),

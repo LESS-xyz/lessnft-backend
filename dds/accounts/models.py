@@ -45,6 +45,7 @@ class AdvUser(AbstractUser):
     bio = models.TextField(default=None, null=True, blank=True)
     twitter = models.CharField(max_length=80, default=None, null=True, blank=True)
     instagram = models.CharField(max_length=80, default=None, null=True, blank=True)
+    facebook = models.CharField(max_length=80, default=None, null=True, blank=True)
     site = models.CharField(max_length = 200, default=None, null=True, blank=True)
     is_verificated = models.BooleanField(default=False)
 

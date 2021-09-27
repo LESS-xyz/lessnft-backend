@@ -34,7 +34,7 @@ def token_sort_price(token, reverse=False):
     if not (token.is_selling or token.is_auc_selling):
         return 0
     if token.standart=="ERC721":
-        price = token.currency_price if token.currency_price else token.minimal_bid
+        price = token.price if token.currency_price else token.minimal_bid
         return calculate_amount(price, currency)[0]
     owners = token.ownership_set.all()
     prices = [calculate_amount(owner.get_currency_price, currency)[0] for owner in owners]
@@ -123,8 +123,8 @@ def token_search(words, page, **kwargs):
         tokens = sorted(tokens, key=token_sort_likes, reverse=reverse)
 
     page = int(page)
-    start, end = get_page_slice(page, len(tokens))
-    return TokenSerializer(tokens[start:end], context={"user": user}, many=True).data
+    start, end = get_page_slice(page, len(tokens), items_per_page=8)
+    return len(tokens), TokenSerializer(tokens[start:end], context={"user": user}, many=True).data
 
 
 def collection_search(words, page):

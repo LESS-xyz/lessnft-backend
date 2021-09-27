@@ -20,7 +20,7 @@ class PatchSerializer(serializers.ModelSerializer):
     '''
     class Meta:
         model = AdvUser
-        fields = ('display_name', 'custom_url', 'bio', 'twitter', 'instagram', 'site')
+        fields = ('display_name', 'custom_url', 'bio', 'twitter', 'instagram', 'facebook', 'site')
 
     def update(self, instance, validated_data):
         print('started patch')
@@ -193,6 +193,7 @@ class UserSlimSerializer(serializers.ModelSerializer):
             "bio",
             "twitter",
             "instagram",
+            "facebook",
             "site",
             "is_verificated",
         )

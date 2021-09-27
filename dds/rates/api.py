@@ -26,5 +26,6 @@ def calculate_amount(original_amount, from_currency, to_currency='USD'):
     if to_currency == 'USD':
         usd_rates[to_currency] = 1
     currency_rate = usd_rates[from_currency] / usd_rates[to_currency]
+    foo = float(original_amount) / get_decimals(from_currency)
     amount = float(original_amount) / get_decimals(from_currency) * float(currency_rate)
     return float("{0:.2f}".format(amount)), currency_rate

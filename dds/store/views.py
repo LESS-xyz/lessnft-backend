@@ -7,6 +7,7 @@ from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs
 
 from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token, TransactionTracker
 from dds.networks.models import Network
+from dds.store.api import token_sort_price
 from dds.store.serializers import (
     TokenPatchSerializer, 
     TokenSerializer,
@@ -127,9 +128,10 @@ class SearchView(APIView):
         params = request.query_params
         sort = params.get('type', 'items')
 
-        search_result = globals()[SEARCH_TYPES[sort] + '_search'](words, page, user=request.user, **params)
+        token_count, search_result = globals()[SEARCH_TYPES[sort] + '_search'](words, page, user=request.user, **params)
+        response_data = {"total_tokens": token_count, "items": search_result}
 
-        return Response(search_result, status=status.HTTP_200_OK)
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class CreateView(APIView):
@@ -337,7 +339,7 @@ class GetLikedView(APIView):
         
         tokens = [action.token for action in tokens_action]
         if network:
-            tokens = [token for token in tokens if token.collection.network.native_symbol.lower() == network.lower()]
+            tokens = [token for token in tokens if network.lower() in token.collection.network.name.lower()]
 
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
@@ -829,11 +831,10 @@ class AuctionEndView(APIView):
 
         if token.standart == 'ERC721':
             token_amount = 0
-            seller=None
         else:
             token_amount = min(bet.quantity, ownership.quantity)
 
-        sell = token.buy_token(token_amount, buyer,seller=seller, price=price)
+        sell = token.buy_token(token_amount, buyer,seller=seller, price=price, auc=True)
         return Response({'initial_tx': sell}, status=status.HTTP_200_OK)
 
 
@@ -1029,3 +1030,26 @@ class GetCollectionByAdressView(APIView):
 
         response_data = CollectionMetadataSerializer(collection).data
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+def get_token_max_price(token):
+    if not (token.is_selling or token.is_auc_selling):
+        return 0
+    if token.standart=="ERC721":
+        return token.currency_price if token.currency_price else token.currency_minimal_bid
+    owners = token.ownership_set.all()
+    prices = [owner.currency_price if owner.currency_price else owner.currency_minimal_bid for owner in owners]
+    return max(prices)
+
+
+@api_view(http_method_names=['GET'])
+def get_max_price(request):
+    network = request.query_params.get('network', DEFAULT_NETWORK)
+    currency = request.query_params.get('currency')
+    tokens = Token.token_objects.network(network).filter(currency__symbol=currency)
+    token_prices = [get_token_max_price(t) for t in tokens]
+    max_price = 100
+    if token_prices:
+        max_price = max(token_prices)
+    return Response({'max_price': max_price}, status=status.HTTP_200_OK)
+

@@ -18,6 +18,7 @@ urlpatterns = [
     path('<int:token_id>/burn/', TokenBurnView.as_view()),
     path('buy/', BuyTokenView.as_view()),
     path('tags/', get_tags),
+    path('max_price/', get_max_price),
     path('bids/make_bid/', MakeBid.as_view()),
     path('get_bids/<int:token_id>/', get_bids),
     path('hot_bids/', get_hot_bids),
