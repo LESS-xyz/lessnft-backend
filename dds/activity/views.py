@@ -14,6 +14,7 @@ from .models import BidsHistory, ListingHistory, TokenHistory, UserAction
 from .utils import quick_sort
 from .api import get_activity_response
 from dds.accounts.serializers import UserSerializer
+from dds.activity.serializers import UserStatSerializer
 from dds.activity.services.top_users import get_top_users
 
 
@@ -431,11 +432,21 @@ class FollowingActivityView(APIView):
 
 
 class GetBestDealView(APIView):
+    @swagger_auto_schema(
+        operation_description="get top users",
+        manual_parameters=[
+            openapi.Parameter("type", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("sort_period", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        ],
+    )
     def get(self, request, days):
         type_ = request.query_params.get("type")                # seller, buyer
         sort_period = request.query_params.get("sort_period")   # day, week, month
 
         top_users = get_top_users(type_, sort_period)
-        response_data = UserSerializer(top_users, many=True).data 
+        response_data = UserStatSerializer(top_users, many=True, context={
+            "status": type_, 
+            "time_range": sort_period,
+        }).data 
 
         return Response(response_data, status=status.HTTP_200_OK)

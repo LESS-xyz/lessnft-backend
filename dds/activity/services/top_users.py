@@ -29,7 +29,7 @@ def update_users_stat():
                 }
                 history = TokenHistory.objects.filter(**filter_data).annotate(
                     user=F(type_), 
-                    price=F('usd_price'),
+                    price=F('USD_price'),
                 ).values('user').annotate(price=Sum('price'))
                 getattr(user_stat, type_)[period] = history.get('price')
 
@@ -37,4 +37,6 @@ def update_users_stat():
 
 
 def get_top_users(type_, period):
-    ...
+    stat_data = f"{type_}__{period}"
+    user_filter = {f"{stat_data}__isnull": False}
+    return UserStat.objects.filter(**user_filter).order_by(f"-{stat_data}")[:15]
