@@ -32,7 +32,7 @@ class TokenHistorySerializer(serializers.ModelSerializer):
 
 
 class UserStatSerializer(serializers.ModelSerializer):
-    user = serializers.UserSlimSerializer()
+    user = UserSlimSerializer()
     price = serializers.SerializerMethodField()
 
     class Meta:
