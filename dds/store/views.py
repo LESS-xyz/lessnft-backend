@@ -1,4 +1,4 @@
-from dds.settings_local import SEARCH_TYPES
+#from dds.settings_local import SEARCH_TYPES
 from dds.accounts.models import AdvUser, MasterUser
 from dds.activity.models import BidsHistory, ListingHistory, UserAction
 from dds.consts import DECIMALS, APPROVE_GAS_LIMIT
@@ -163,6 +163,10 @@ class CreateView(APIView):
                 'selling': openapi.Schema(type=openapi.TYPE_STRING),
                 'start_auction': openapi.Schema(type=openapi.FORMAT_DATETIME),
                 'end_auction': openapi.Schema(type=openapi.FORMAT_DATETIME),
+                
+                'media': openapi.Schema(type=openapi.TYPE_STRING),
+                'cover': openapi.Schema(type=openapi.TYPE_STRING),
+                'format': openapi.Schema(type=openapi.TYPE_STRING),
             }),
         responses={200: create_response},
     )
@@ -482,8 +486,8 @@ class GetHotView(APIView):
         sort = request.query_params.get('sort', 'recent')
         tag = request.query_params.get('tag')
 
-        order = config.SORT_STATUSES.sort
-
+	#order = config.SORT_STATUSES.sort
+        order = getattr(config.SORT_STATUSES, sort)
         if tag:
             tokens = Token.objects.committed().filter(tags__name__contains=tag).order_by(order)
         else:

@@ -74,8 +74,9 @@ class AdvUser(AbstractUser):
 def user_registrated_dispatcher(sender, instance, created, **kwargs):
     if created:
         default_avatars = DefaultAvatar.objects.all().values_list('image', flat=True)
-        instance.avatar_ipfs = random.choice(default_avatars)
-        instance.save()
+        if default_avatars:
+            instance.avatar_ipfs = random.choice(default_avatars)
+            instance.save()
 
 
 post_save.connect(user_registrated_dispatcher, sender=AdvUser)

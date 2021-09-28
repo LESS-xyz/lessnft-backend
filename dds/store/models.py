@@ -130,7 +130,6 @@ class Collection(models.Model):
         tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
         return tx_hash.hex()
         '''
-        
         return initial_tx
 
     @classmethod
@@ -159,8 +158,9 @@ class Collection(models.Model):
                 address=web3.toChecksumAddress(config.ERC721_FABRIC_ADDRESS),
                 abi=ERC721_FABRIC,
             )
-            '''
+
             # JUST FOR TESTS
+            '''
             tx = myContract.functions.makeERC721(
                 name,
                 symbol,
@@ -185,8 +185,9 @@ class Collection(models.Model):
             address=web3.toChecksumAddress(config.ERC1155_FABRIC_ADDRESS),
             abi=ERC1155_FABRIC,
         )
-        '''
+
         # JUST FOR TESTS
+        '''
         tx = myContract.functions.makeERC1155(
             baseURI,
             config.SIGNER_ADDRESS,

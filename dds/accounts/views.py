@@ -387,7 +387,8 @@ class GetRandomCoverView(APIView):
         responses={200: CoverSerializer, 400: 'error'}
     )
     def get(self, request):
-        covers = AdvUser.objects.exclude(cover=None).exclude(cover='').exclude(is_verificated=False)
+        #covers = AdvUser.objects.exclude(cover=None).exclude(cover='').exclude(is_verificated=False)
+        covers = AdvUser.objects.exclude(cover_ipfs=None).exclude(cover_ipfs='').exclude(is_verificated=False)
         try:
             random_cover = random.choice(covers)
         except:

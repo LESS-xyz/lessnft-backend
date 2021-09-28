@@ -46,10 +46,10 @@ class MetamaskLoginSerializer(SocialLoginSerializer):
         address = attrs["address"]
         signature = attrs["signed_msg"]
         session = self.context["request"].session
-        message = session.get("metamask_message")
+        #message = session.get("metamask_message")
+        #if message is None:
 
-        if message is None:
-            message = attrs["msg"]
+        message = attrs["msg"]
 
         print(
             "metamask login, address",
@@ -85,7 +85,8 @@ class CoverSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AdvUser
-        read_only_fields = ("avatar", "cover",)
+        #read_only_fields = ("avatar", "cover",)
+        read_only_fields = ("avatar", "cover_ipfs",)
         fields = ("id", "owner",) + read_only_fields
 
     def get_id(self, obj):

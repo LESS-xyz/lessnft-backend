@@ -3,7 +3,8 @@ import sys
 import time
 import requests
 import traceback
-from dds.settings import ERC20_ADDRESS
+#from dds.settings import ERC20_ADDRESS
+from dds.settings import config
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dds.settings')
 import django

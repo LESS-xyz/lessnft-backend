@@ -29,8 +29,8 @@ SECRET_KEY = 'm3%r==z=1j(9e43(7rb(3jzzcz-7(91c#3!$u29w-4gd)gd&9w'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['lessnft.rocknblock.io', '144.76.201.50', '127.0.0.1',]
-
+#ALLOWED_HOSTS = ['lessnft.rocknblock.io', '144.76.201.50', '127.0.0.1',]
+ALLOWED_HOSTS = config.ALLOWED_HOSTS
 
 # Application definition
 
@@ -157,12 +157,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 RATES_CHECKER_TIMEOUT = 300
-'''
-try:
-    from dds.settings_local import *
-except ImportError:
-    print('SETTINGS: cannot import local settings', flush=True)
-'''
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
