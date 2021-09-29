@@ -185,6 +185,7 @@ class TokenSerializer(serializers.ModelSerializer):
     collection = CollectionSlimSerializer()
     currency = CurrencySerializer()
     minimal_bid = serializers.SerializerMethodField()
+    like_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Token
@@ -192,6 +193,7 @@ class TokenSerializer(serializers.ModelSerializer):
             "is_selling",
             "is_auc_selling",
             "is_timed_auc_selling",
+            "like_count",
         )
         fields = read_only_fields + (
             "id",
@@ -225,6 +227,9 @@ class TokenSerializer(serializers.ModelSerializer):
         
     def get_royalty(self, obj):
         return obj.creator_royalty
+
+    def get_like_count(self, obj):
+        return obj.useraction_set.count()
 
     def get_highest_bid(self, obj):
         bids = obj.bid_set.filter(state=Status.COMMITTED).order_by(
@@ -362,7 +367,6 @@ class TokenFullSerializer(TokenSerializer):
     history = serializers.SerializerMethodField()
     tags = serializers.SerializerMethodField()
     sellers = serializers.SerializerMethodField()
-    like_count = serializers.SerializerMethodField()
     service_fee = serializers.SerializerMethodField()
     owner_auction = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
@@ -372,7 +376,6 @@ class TokenFullSerializer(TokenSerializer):
             "tags",
             "history",
             "sellers",
-            "like_count",
             "is_liked",
             "service_fee",
             "internal_id",
@@ -397,11 +400,8 @@ class TokenFullSerializer(TokenSerializer):
         )
         return OwnershipSerializer(sellers, many=True).data
 
-    def get_like_count(self, obj):
-        return obj.useraction_set.count()
-
     def get_service_fee(self, obj):
-        return service_fee
+        return obj.currency.service_fee
 
     def get_owner_auction(self, obj):
         return obj.get_owner_auction()
@@ -444,3 +444,4 @@ class CollectionMetadataSerializer(serializers.ModelSerializer):
     def get_fee_recipient(self, obj):
         fee_recipient = obj.creator.username
         return fee_recipient
+

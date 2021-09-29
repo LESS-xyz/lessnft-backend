@@ -98,11 +98,12 @@ class GetView(APIView):
         if request_data.get('display_name')=='':
             request_data.pop('display_name')
         
-
         serializer = PatchSerializer(user, data=request_data, partial=True)
 
         if serializer.is_valid():
             result = serializer.save()
+        if serializer.errors:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
         #unique constraint handling:
         if isinstance(result, dict):

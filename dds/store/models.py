@@ -215,7 +215,7 @@ class Collection(models.Model):
 
 
 def collection_created_dispatcher(sender, instance, created, **kwargs):
-    if created:
+    if created and not instance.avatar_ipfs:
         default_avatars = DefaultAvatar.objects.all().values_list('image', flat=True)
         if default_avatars:
             instance.avatar_ipfs = random.choice(default_avatars)
@@ -242,7 +242,7 @@ class TokenManager(models.Manager):
 
     def network(self, network):
         """ Return token filtered by collection network symbol """
-        if network:
+        if network and network != 'undefined':
             return self.get_queryset().filter(collection__network__name__icontains=network)
         return self.get_queryset()
 
@@ -544,7 +544,7 @@ class Token(models.Model):
             ],
             [
                 (int(self.creator_royalty / 100 * float(price))), 
-                (int(master_account.commission / 100 * float(price))),
+                (int(self.currency.service_fee / 100 * float(price))),
             ],
             Web3.toChecksumAddress(buyer.username)
         ]
@@ -573,7 +573,7 @@ class Token(models.Model):
                 'feeAddresses': [Web3.toChecksumAddress(self.creator.username), Web3.toChecksumAddress(master_account.address)],
                 'feeAmounts': [
                     (int(self.creator_royalty / 100 * float(price))), 
-                    (int(master_account.commission / 100 * float(price)))
+                    (int(self.currency.service_fee / 100 * float(price)))
                 ]
             },
             'signature': signature

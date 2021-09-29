@@ -4,6 +4,7 @@ from dds.consts import MAX_AMOUNT_LEN
 
 from web3 import Web3, HTTPProvider
 from contracts import WETH_ABI
+from dds.accounts.models import MasterUser
 
 
 class UsdRate(models.Model):
@@ -24,8 +25,15 @@ class UsdRate(models.Model):
         return self.symbol
 
     @property
-    def get_decimals(self) -> None:
+    def get_decimals(self):
         return 10 ** self.decimal
+
+    @property
+    def service_fee(self):
+        fee = MasterUser.objects.first().commission
+        if self.symbol == "kphi":
+            return fee / 2
+        return fee
 
     def set_decimals(self) -> None:
         address = Web3.toChecksumAddress(self.address)

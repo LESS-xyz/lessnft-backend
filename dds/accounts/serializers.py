@@ -25,7 +25,7 @@ class PatchSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         print('started patch')
         for attr, value in validated_data.items():
-            if attr !='bio':
+            if attr !='bio' and value:
                 my_filter = {attr: value}
                 if attr == 'display_name' and value == '':
                     pass

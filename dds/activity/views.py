@@ -96,7 +96,9 @@ class ActivityView(APIView):
             history = TokenHistory.objects.filter(
                 token__collection__network__name__icontains=network,   
             ).exclude(
-                Q(method="Burn") | Q(method="Transfer")
+                method="Burn"
+            #).exclude(
+            #    Q(method="Burn") | Q(method="Transfer")
             ).order_by("-date")[:end]
             activities.extend(history)
             bit = BidsHistory.objects.filter(
@@ -464,7 +466,8 @@ class FollowingActivityView(APIView):
                     | Q(old_owner__id__in=following_ids),
                     token__collection__network__name__icontains=network,
                 )
-                .exclude(Q(method="Burn") | Q(method="Transfer"))
+                #.exclude(Q(method="Burn") | Q(method="Transfer"))
+                .exclude(method="Burn")
                 .order_by("-date")[:end]
             )
             activities.extend(history)

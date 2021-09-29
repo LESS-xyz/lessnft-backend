@@ -44,21 +44,26 @@ def scan_deploy(latest_block, smart_contract, network_name):
     if latest_block - block > 5000:
         latest_block = block + 4990
 
+    print(network_name)
     network = Network.objects.get(name__icontains=network_name)
-
+    logging.info(f'{smart_contract.address}, {network.fabric721_address}')
+    print(network.__dict__)
+    print(f'{smart_contract.address}, {network.fabric721_address}')
     if smart_contract.address.lower() == network.fabric721_address.lower():
         event_filter = smart_contract.events.ERC721Made.createFilter(
             fromBlock=block,
             toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
         )
         logging.info('collection is 721_FABRIC')
-    else:
+    elif smart_contract.address.lower() == network.fabric1155_address.lower():
         event_filter = smart_contract.events.ERC1155Made.createFilter(
             fromBlock=block,
             toBlock=latest_block - HOLDERS_CHECK_COMMITMENT_LENGTH,
         )
         logging.info('Collection is 1155_FABRIC')
-
+    else:
+        logging.error(f' DB IS JOKING AGAIN, IT THINKS NETWORK IS {network.__dict__}')
+        return
     # to try get events and update collection fields
     try:
         events = event_filter.get_all_entries()

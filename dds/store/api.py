@@ -166,13 +166,12 @@ def get_dds_email_connection():
     )
 
 def check_captcha(response):
-    print(response)
     data = {
         'secret': CAPTCHA_SECRET,
         'response': response
     }
+    print(data)
     response = requests.post(CAPTCHA_URL, data=data)
-    print(response)
     answer = json.loads(response.text)
     print(answer)
     return answer['success']

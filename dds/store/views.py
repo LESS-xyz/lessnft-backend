@@ -257,10 +257,12 @@ class SaveCollectionView(APIView):
     def post(self, request):
         collection = Collection()
         media = request.FILES.get('avatar')
+        print(media)
         if media:
             ipfs = send_to_ipfs(media)
         else:
             ipfs = None
+        print(ipfs)
         collection.save_in_db(request, ipfs)
         response_data = CollectionSlimSerializer(collection).data
         return Response(response_data, status=status.HTTP_200_OK)
@@ -658,16 +660,17 @@ class MakeBid(APIView):
         token = Token.objects.get(id=token_id)
         user = request.user
 
-        web3, token_contract = token.currency.network.get_token_contract(token.currency.address)
-
-        #returns OK if valid, or error message
-        result = validate_bid(user, token_id, amount, token_contract, quantity)
-
         if token.currency.address == "0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE":
             return Response(
                 {'error': 'You cannot bet on native currencies'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+        web3, token_contract = token.currency.network.get_token_contract(token.currency.address)
+
+        #returns OK if valid, or error message
+        result = validate_bid(user, token_id, amount, token_contract, quantity)
 
         if result != 'OK':
             return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
@@ -915,6 +918,9 @@ class SetCoverView(APIView):
 
 @api_view(http_method_names=['GET'])
 def get_fee(request):
+    currency = request.query_params.get('currency')
+    if currency == "kphi":
+        return Response(service_fee/2, status=status.HTTP_200_OK)
     return Response(service_fee, status=status.HTTP_200_OK)
 
 
