@@ -16,11 +16,7 @@ def get_decimals(currency):
 
 def calculate_amount(original_amount, from_currency, to_currency='USD'):
     '''
-    print('Calculating amount, original: {orig}, from {from_curr} to {to_curr}'.format(
-        orig=original_amount,
-        from_curr=from_currency,
-        to_curr=to_currency),
-        flush=True)
+    original amount with decimals
     '''
     usd_rates = get_usd_prices()
     if to_currency == 'USD':

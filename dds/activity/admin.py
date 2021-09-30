@@ -7,7 +7,6 @@ class UserActionAdmin(admin.ModelAdmin):
     readonly_fields = ('id',)
     list_display = ('user', 'method', 'date')
     list_filter = ('method',)
-    search_fields = ['user']
     ordering = ('-date',)
 
 
@@ -15,7 +14,6 @@ class TokenHistoryAdmin(admin.ModelAdmin):
     model = TokenHistory
     list_display = ('token', 'method', 'date', 'price')
     list_filter = ('method',)
-    search_fields = ['user']
     ordering = ('-date',)
 
 class BidsHistoryAdmin(admin.ModelAdmin):

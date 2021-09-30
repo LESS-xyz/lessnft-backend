@@ -395,8 +395,8 @@ class GetView(APIView):
         is_valid, response = token.is_valid(user)
         if not is_valid:
             return response
-
         price = request_data.get('price', None)
+        print(f'price is {price}')
         minimal_bid = request_data.get('minimal_bid', None)
         start_auction = request_data.get('start_auction')
         end_auction = request_data.get('end_auction')

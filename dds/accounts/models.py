@@ -48,6 +48,7 @@ class AdvUser(AbstractUser):
     facebook = models.CharField(max_length=80, default=None, null=True, blank=True)
     site = models.CharField(max_length = 200, default=None, null=True, blank=True)
     is_verificated = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     objects = AdvUserManager()
 

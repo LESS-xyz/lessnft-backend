@@ -37,6 +37,6 @@ if __name__ == "__main__":
                 print("\n".join(traceback.format_exception(*sys.exc_info())), flush=True)
                 time.sleep(RATES_CHECKER_TIMEOUT)
                 continue
-            rates = UsdRate.objects.filter(symbol=symbol)
+            rates = UsdRate.objects.filter(coin_node=coin_node)
             rates.update(rate=rate)
         time.sleep(RATES_CHECKER_TIMEOUT)

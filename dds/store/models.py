@@ -243,6 +243,7 @@ class TokenManager(models.Manager):
     def network(self, network):
         """ Return token filtered by collection network symbol """
         if network and network != 'undefined':
+            ts = self.get_queryset().filter(collection__network__name__icontains=network)
             return self.get_queryset().filter(collection__network__name__icontains=network)
         return self.get_queryset()
 
@@ -415,7 +416,6 @@ class Token(models.Model):
 
         price = request.data.get('price')
         if price:
-            print(f'price is {price}')
             price = Decimal(price)
         else:
             price = None
@@ -427,7 +427,8 @@ class Token(models.Model):
         currency = request.data.get("currency")
 
         if currency:
-            currency = UsdRate.objects.filter(symbol__iexact=currency).first()
+            currency = UsdRate.objects.filter(symbol__iexact=currency)\
+                       .filter(network=self.collection.network).first()
         self.currency = currency
 
         if self.standart == 'ERC721':
@@ -441,14 +442,12 @@ class Token(models.Model):
             self.save()
             self.owners.add(request.user)
             self.save()
-            print(self.__dict__)
             ownership = Ownership.objects.get(owner=self.creator, token=self)
             ownership.quantity = request.data.get('total_supply')
             ownership.selling = selling
             ownership.currency_price = price
             ownership.currency = currency
             ownership.currency_minimal_bid = minimal_bid
-            print(ownership.__dict__)
             ownership.full_clean()
             ownership.save()
         self.full_clean()
@@ -548,7 +547,6 @@ class Token(models.Model):
             ],
             Web3.toChecksumAddress(buyer.username)
         ]
-        print(f"values_list: {values_list}")
         signature = sign_message(
             types_list,
             values_list

@@ -18,6 +18,7 @@ from dds.rates.models import UsdRate
 from dds.rates.serializers import CurrencySerializer
 from django.db.models import Min
 import dds.settings_local
+from dds.networks.serializers import NetworkSerializer
 
 try:
     service_fee = MasterUser.objects.get().commission
@@ -186,6 +187,7 @@ class TokenSerializer(serializers.ModelSerializer):
     currency = CurrencySerializer()
     minimal_bid = serializers.SerializerMethodField()
     like_count = serializers.SerializerMethodField()
+    network = serializers.SerializerMethodField()
 
     class Meta:
         model = Token
@@ -223,10 +225,15 @@ class TokenSerializer(serializers.ModelSerializer):
             "bids",
             "highest_bid",
             "highest_bid_USD",
+            "network",
         )
         
     def get_royalty(self, obj):
         return obj.creator_royalty
+        
+    def get_network(self, obj):
+        network = obj.currency.network
+        return NetworkSerializer(network).data
 
     def get_like_count(self, obj):
         return obj.useraction_set.count()
@@ -243,7 +250,9 @@ class TokenSerializer(serializers.ModelSerializer):
 
     def get_highest_bid_USD(self, obj):
         if self.get_highest_bid(obj) and obj.currency:
-            return calculate_amount(self.get_highest_bid(obj).get('amount'), obj.currency.symbol)[0]
+            amount = float(self.get_highest_bid(obj).get('amount'))
+            decimals = obj.currency.get_decimals
+            return calculate_amount(amount*decimals, obj.currency.symbol)[0]
 
     def get_bids(self, obj):
         return BidSerializer(obj.bid_set.filter(state=Status.COMMITTED), many=True).data

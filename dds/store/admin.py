@@ -37,7 +37,7 @@ class BidAdmin(admin.ModelAdmin):
 
 class TokenAdmin(admin.ModelAdmin):
     model = Token
-    readonly_fields = ('id', 'image_preview')
+    readonly_fields = ('id', 'image_preview', 'updated_at')
     formfield_overrides = {
         models.ManyToManyField: {'widget': CheckboxSelectMultiple},
     }
@@ -54,7 +54,7 @@ class TokenAdmin(admin.ModelAdmin):
     list_display = ('name', 'collection', 'standart', 'is_favorite', 'get_network')
     list_editable = ('is_favorite', )
     list_filter = ('is_favorite', TokenStandartFilter)
-    search_fields = ['name', 'collections']
+    search_fields = ['name', ]
 
     def get_network(self, obj):
         return obj.collection.network.name
@@ -69,7 +69,7 @@ class CollectionAdmin(admin.ModelAdmin):
     readonly_fields = ('id',)
     list_display = ('name', 'address', 'standart', 'creator', 'get_network')
     list_filter = ('standart',)
-    search_fields = ['creator', 'name']
+    search_fields = ['name', ]
 
     def get_network(self, obj):
         return obj.network.name

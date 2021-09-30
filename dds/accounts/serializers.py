@@ -96,7 +96,7 @@ class BaseAdvUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AdvUser
-        read_only_fields = ("avatar",)
+        read_only_fields = ("avatar", "created_at")
         fields = read_only_fields + ("id", "name",)
 
     def get_id(self, obj):
@@ -190,6 +190,7 @@ class UserSlimSerializer(serializers.ModelSerializer):
             "address",
             "display_name",
             "custom_url",
+            "created_at",
             "bio",
             "twitter",
             "instagram",

@@ -1,5 +1,6 @@
 import time
 import logging
+from decimal import Decimal
 from web3 import Web3
 from utils import get_last_block, save_last_block
 from django.core.exceptions import ObjectDoesNotExist
@@ -438,6 +439,10 @@ def buy_scanner(latest_block, smart_contract, network_name, standart):
 
         logging.info(f'{token} update!')
 
+        decimal_price = event["args"]["buyAmount"]
+        decimals = token[0].currency.get_decimals
+        price = Decimal(decimal_price / decimals) 
+
         token_history = TokenHistory.objects.filter(tx_hash=tx_hash)
         logging.info(f"token history: {token_history}")
         if token_history.exists():
@@ -521,7 +526,7 @@ def aproove_bet_scaner(latest_block, smart_contract, network_name):
             logging.info('no bet! \n ___________')
             continue
 
-        wad = event['args']['wad']
+        wad = int(event['args']['wad'])
         logging.info(f'wad: {wad}')
 
         for item in bet:
