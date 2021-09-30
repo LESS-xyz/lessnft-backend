@@ -935,8 +935,10 @@ def get_favorites(request):
 @api_view(http_method_names=['GET'])
 def get_hot_bids(request):
     network = request.query_params.get('network', DEFAULT_NETWORK)
-    bids = Bid.objects.filter(state=Status.COMMITTED).order_by('-id')[:6]
-    token_list= [bid.token for bid in bids if network.lower() in bid.token.collection.network.name.lower()]
+    bids = Bid.objects.filter(state=Status.COMMITTED).filter(
+        token__collection__network__name__icontains=network
+        ).distinct('token')[:6]
+    token_list = [bid.token for bid in bids]
     response_data = TokenFullSerializer(token_list, context={"user": request.user}, many=True).data
     return Response(response_data, status=status.HTTP_200_OK)
 

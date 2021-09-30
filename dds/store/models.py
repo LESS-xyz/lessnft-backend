@@ -453,6 +453,10 @@ class Token(models.Model):
         self.full_clean()
         self.save()
 
+    def get_highest_bid(self):
+        bids = self.bid_set.all().values_list('amount', flat=True)
+        return max(bids) if bids else None
+
     def get_main_contract(self):
         if self.standart == 'ERC721':
             return self.collection.network.get_erc721main_contract(self.collection.address)

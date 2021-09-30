@@ -12,9 +12,9 @@ from dds.settings import MEDIA_URL, MEDIA_ROOT, STATIC_ROOT, STATIC_URL
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="dds",
+        title="kephi",
         default_version='v1',
-        description="API for digital dollar store",
+        description="API for kephi gallery",
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),

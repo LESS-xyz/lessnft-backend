@@ -87,16 +87,16 @@ class GetView(APIView):
     def patch(self, request):
         request_data = request.data.copy()
         user = request.user
-        if request_data.get('custom_url')=='':
-            request_data.pop('custom_url')
-        if request_data.get('twitter')=='':
-            request_data.pop('twitter')
-        if request_data.get('instagram')=='':
-            request_data.pop('instagram')
-        if request_data.get('site')=='':
-            request_data.pop('site')
-        if request_data.get('display_name')=='':
-            request_data.pop('display_name')
+        #if request_data.get('custom_url')=='':
+        #    request_data.pop('custom_url')
+        #if request_data.get('twitter')=='':
+        #    request_data.pop('twitter')
+        #if request_data.get('instagram')=='':
+        #    request_data.pop('instagram')
+        #if request_data.get('site')=='':
+        #    request_data.pop('site')
+        #if request_data.get('display_name')=='':
+        #    request_data.pop('display_name')
         
         serializer = PatchSerializer(user, data=request_data, partial=True)
 

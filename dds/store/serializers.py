@@ -246,7 +246,13 @@ class TokenSerializer(serializers.ModelSerializer):
             return BidSerializer(bids.first()).data
 
     def get_minimal_bid(self, obj):
-        return obj.currency_minimal_bid
+        if obj.standart == "ERC721":
+            return obj.currency_minimal_bid
+        minimal_bids = obj.ownership_set.filter(
+            selling=True, 
+            currency_minimal_bid__isnull=False,
+        ).values_list('currency_minimal_bid', flat=True)
+        return min(minimal_bids) if minimal_bids else None
 
     def get_highest_bid_USD(self, obj):
         if self.get_highest_bid(obj) and obj.currency:
