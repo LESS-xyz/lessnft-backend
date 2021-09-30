@@ -264,8 +264,10 @@ class TokenSerializer(serializers.ModelSerializer):
         return BidSerializer(obj.bid_set.filter(state=Status.COMMITTED), many=True).data
 
     def get_USD_price(self, obj):
-        if self.get_price(obj):
-            return calculate_amount(self.get_price(obj), obj.currency.symbol)[0]
+        price = self.get_price(obj)
+        if price:
+            decimals = obj.currency.get_decimals
+            return calculate_amount(price*decimals, obj.currency.symbol)[0]
 
     def get_price(self, obj):
         if obj.standart == "ERC721":
