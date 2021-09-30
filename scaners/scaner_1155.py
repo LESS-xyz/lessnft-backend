@@ -5,7 +5,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dds.settings')
 import django
 django.setup()
 
-from multiprocessing import Process
+# from multiprocessing import Process
+import threading
 from scaners import scaner
 from dds.store.models import Collection
 from dds.networks.models import Network
@@ -17,16 +18,16 @@ if __name__ == '__main__':
     network_collections = {}
     for network in networks:
         web3, contract = network.get_erc1155fabric_contract()
-        Process(target=scaner, args=(web3, contract, network.name, None, 'fabric')).start()
+        threading.Thread(target=scaner, args=(web3, contract, network.name, None, 'fabric')).start()
 
         collections = Collection.objects.filter(standart='ERC1155', network=network, address__isnull=False)
         for i in collections:
             web3, contract = i.get_contract()
-            Process(target=scaner, args=(web3, contract,)).start()
+            threading.Thread(target=scaner, args=(web3, contract,)).start()
         network_collections[network.name] = collections
 
     while True:
-        # get new collections and add them to subprocesses
+        # get new collections and add them to subthreading.Threades
         time.sleep(60)
         for network in networks:
             updated_collections = Collection.objects.filter(standart='ERC1155', network=network, address__isnull=False)
@@ -35,5 +36,5 @@ if __name__ == '__main__':
             if new_collections:
                 for i in new_collections:
                     web3, contract = i.get_contract()
-                    Process(target=scaner, args=(web3, contract,)).start()
+                    threading.Thread(target=scaner, args=(web3, contract,)).start()
                 network_collections[network.name] = updated_collections
