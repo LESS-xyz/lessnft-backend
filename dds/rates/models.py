@@ -36,7 +36,7 @@ class UsdRate(models.Model):
     @property
     def service_fee(self):
         fee = MasterUser.objects.first().commission
-        return fee / self.fee_discount
+        return fee / 100 * self.fee_discount
 
     def set_decimals(self) -> None:
         address = Web3.toChecksumAddress(self.address)
