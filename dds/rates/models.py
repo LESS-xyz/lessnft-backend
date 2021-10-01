@@ -5,6 +5,7 @@ from dds.consts import MAX_AMOUNT_LEN
 from web3 import Web3, HTTPProvider
 from contracts import WETH_ABI
 from dds.accounts.models import MasterUser
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 class UsdRate(models.Model):
@@ -20,6 +21,10 @@ class UsdRate(models.Model):
     address = models.CharField(max_length=128, blank=True, null=True, default=None)
     decimal = models.PositiveSmallIntegerField(null=True, blank=True, default=None)
     network = models.ForeignKey('networks.Network', on_delete=models.CASCADE, blank=True, null=True, default=None)
+    fee_discount = models.IntegerField(
+        default=100,
+        validators=[MaxValueValidator(100), MinValueValidator(1)],
+    )
 
     def __str__(self):
         return self.symbol
@@ -31,9 +36,7 @@ class UsdRate(models.Model):
     @property
     def service_fee(self):
         fee = MasterUser.objects.first().commission
-        if self.symbol == "kphi":
-            return fee / 2
-        return fee
+        return fee / self.fee_discount
 
     def set_decimals(self) -> None:
         address = Web3.toChecksumAddress(self.address)

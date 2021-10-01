@@ -229,7 +229,7 @@ class CreateCollectionView(APIView):
         
         network = Network.objects.filter(name__icontains=network)
         if not network:
-            return Response('invalid network name', status=status.HTTP_400_BAD_REQUEST)ъ
+            return Response('invalid network name', status=status.HTTP_400_BAD_REQUEST)
 
         initial_tx = Collection.create_contract(name, symbol, standart, owner, network.first())
 
