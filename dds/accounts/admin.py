@@ -42,7 +42,7 @@ class AdvUserAdmin(admin.ModelAdmin):
     inlines = (VerificationInline,)
     readonly_fields = ('id',)
     list_display = ('username', 'display_name', 'is_verificated')
-    exclude = ('is_staff', 'groups', 'first_name', 'last_name', 'is_superuser', 'user_permissions', 'email')
+    exclude = ('is_superuser', 'first_name', 'last_name', 'user_permissions', 'email')
 
 class MasterUserAdmin(admin.ModelAdmin):
     model = MasterUser

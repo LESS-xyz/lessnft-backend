@@ -3,6 +3,13 @@ from django.db import models
 from django.forms import CheckboxSelectMultiple
 from dds.store.models import Token, Collection, Tags, Ownership, Bid, TransactionTracker
 from django.utils.safestring import mark_safe
+from django_celery_beat.models import (
+    IntervalSchedule,
+    CrontabSchedule,
+    SolarSchedule,
+    ClockedSchedule,
+    PeriodicTask,
+)
 
 
 class TokenStandartFilter(admin.SimpleListFilter):
@@ -94,3 +101,10 @@ admin.site.register(Token, TokenAdmin)
 admin.site.register(Bid, BidAdmin)
 admin.site.register(Collection, CollectionAdmin)
 admin.site.register(TransactionTracker, TxTrackerAdmin)
+
+admin.site.unregister(SolarSchedule)
+admin.site.unregister(ClockedSchedule)
+admin.site.unregister(PeriodicTask)
+admin.site.unregister(IntervalSchedule)
+admin.site.unregister(CrontabSchedule)
+

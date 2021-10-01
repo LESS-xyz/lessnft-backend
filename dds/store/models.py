@@ -130,9 +130,13 @@ class Collection(models.Model):
             'gasPrice': web3.eth.gasPrice,
         }
         if self.standart == 'ERC721':
+            _, fabric_contract = self.network.get_erc721fabric_contract()
+            tx_params['value'] = int(fabric_contract.functions.getFee().call())
             _, contract = self.network.get_erc721main_contract(self.address)
             initial_tx = contract.functions.mint( ipfs, signature).buildTransaction(tx_params)
         else:
+            _, fabric_contract = self.network.get_erc1155fabric_contract()
+            tx_params['value'] = int(fabric_contract.functions.getFee().call()) * int(amount)
             _, contract = self.network.get_erc1155main_contract(self.address)
             initial_tx = contract.functions.mint( int(amount), ipfs, signature).buildTransaction(tx_params)
         #Just for tests

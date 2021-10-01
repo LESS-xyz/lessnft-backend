@@ -816,7 +816,7 @@ class AuctionEndView(APIView):
 
         token = bet.token
         buyer = bet.user
-        price = bet.amount
+        price = bet.amount * bet.token.currency.get_decimals
 
         seller = request.user
         if token.standart == 'ERC721':

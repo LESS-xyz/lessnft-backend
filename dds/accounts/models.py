@@ -94,13 +94,13 @@ class VerificationForm(models.Model):
     email = models.EmailField(max_length=80, default=None, null=True, blank=True)
 
     def save_form(self, request):
-        self.link = request.data.get('url')
+        self.link = request.data.get('custom_url')
         self.eth_address = request.data.get('address')
         self.role = request.data.get('role')
         self.bio = request.data.get('bio')
         self.twitter = request.data.get('twitter')
         self.instagram = request.data.get('instagram')
-        self.site = request.data.get('website')
+        self.site = request.data.get('site')
         self.email = request.data.get('email')
         self.media = request.data.get('media')
         self.save()
