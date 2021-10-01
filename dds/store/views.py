@@ -229,8 +229,20 @@ class CreateCollectionView(APIView):
         
         network = Network.objects.filter(name__icontains=network)
         if not network:
-            return Response('invalid network name', status=status.HTTP_400_BAD_REQUEST)
+            return Response('invalid network name', status=status.HTTP_400_BAD_REQUEST)ъ
+
         initial_tx = Collection.create_contract(name, symbol, standart, owner, network.first())
+
+        collection = Collection()
+        media = request.FILES.get('avatar')
+        print(media)
+        if media:
+            ipfs = send_to_ipfs(media)
+        else:
+            ipfs = None
+        print(ipfs)
+        collection.save_in_db(request, ipfs)
+
         return Response(initial_tx, status=status.HTTP_200_OK)
 
 

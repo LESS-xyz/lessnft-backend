@@ -82,14 +82,14 @@ def scan_deploy(latest_block, smart_contract, network_name):
         time.sleep(HOLDERS_CHECK_TIMEOUT)
         return 
     for event in events:
-        deploy_hash = event['transactionHash'].hex()
+        name = event['name'].hex()
         deploy_block = event['blockNumber']
         address = Web3.toChecksumAddress(event['args']['newToken'])
         
         logging.info('get info about deploy collection')
         logging.info(f'deploy_hash: {deploy_hash}')
         
-        collection = Collection.objects.filter(deploy_hash=deploy_hash)
+        collection = Collection.objects.filter(name__iexact=name)
         if not collection.exists():
             logging.warning('collection 404! \n')
             continue

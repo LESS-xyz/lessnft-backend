@@ -4,7 +4,7 @@ from dds.store.views import *
 urlpatterns = [
     path('create_token/', CreateView.as_view()),
     path('create_collection/', CreateCollectionView.as_view()),
-    path('save_collection/', SaveCollectionView.as_view()),
+    #path('save_collection/', SaveCollectionView.as_view()),
     path('track_transaction/', TransactionTrackerView.as_view()),
     path('hot/<int:page>/', GetHotView.as_view()),
     path('hot_collections/', GetHotCollectionsView.as_view()),
