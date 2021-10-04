@@ -1,0 +1,41 @@
+EMAIL_HOST: ''
+DDS_MAIL: '' #DDS settings
+DDS_HOST_USER: ''
+DDS_HOST_PASSWORD: ''
+EMAIL_PORT: 587
+EMAIL_USE_TLS: true
+ALLOWED_HOSTS: 
+  - ''
+  - ''
+  - ''
+
+IPFS_CLIENT: '' #IPFS client address
+
+NETWORK_SETTINGS:
+      ETH: 
+        endpoint: '' #Network endpoint i.e. Infura
+
+
+SORT_STATUSES:
+    recent: '-updated_at'
+    cheapest: 'price'
+    highest: '-price'
+
+SEARCH_TYPES:
+    items: token
+    users: user
+    collections: collection
+
+SIGNER_ADDRESS: ''
+CAPTCHA_SECRET: ''
+CAPTCHA_URL: ''
+PRIV_KEY: '' #Signer private key
+
+COLLECTION_721: LESS-721
+COLLECTION_1155: LESS-1155
+
+TX_TRACKER_TIMEOUT: 300
+
+HOLDERS_CHECK_CHAIN_LENGTH: 20
+HOLDERS_CHECK_COMMITMENT_LENGTH: 4
+HOLDERS_CHECK_TIMEOUT: 60
