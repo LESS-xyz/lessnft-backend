@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from django.conf import settings
+from dds.settings import config
 
 
 with Path("contracts", "erc721_fabric.json").open() as f:

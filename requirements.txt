@@ -19,3 +19,4 @@ django-celery-beat==2.2.1
 redis==3.5.3
 httpcore
 httpx
+marshmallow_dataclass

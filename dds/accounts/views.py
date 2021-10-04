@@ -352,8 +352,8 @@ class VerificationView(APIView):
         send_mail(
             'New verification request',
             text,
-            DDS_HOST_USER,
-            [DDS_MAIL],
+            config.DDS_HOST_USER,
+            [config.DDS_MAIL],
             connection=connection,
         )
         print('message sent')
@@ -389,7 +389,8 @@ class GetRandomCoverView(APIView):
         responses={200: CoverSerializer, 400: 'error'}
     )
     def get(self, request):
-        covers = AdvUser.objects.exclude(cover=None).exclude(cover='').exclude(is_verificated=False)
+        #covers = AdvUser.objects.exclude(cover=None).exclude(cover='').exclude(is_verificated=False)
+        covers = AdvUser.objects.exclude(cover_ipfs=None).exclude(cover_ipfs='').exclude(is_verificated=False)
         try:
             random_cover = random.choice(covers)
         except:

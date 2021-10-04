@@ -3,6 +3,7 @@ from django.db import models
 from dds.consts import MAX_AMOUNT_LEN
 
 from web3 import Web3, HTTPProvider
+
 from contracts import WETH_ABI
 from dds.accounts.models import MasterUser
 from django.core.validators import MaxValueValidator, MinValueValidator

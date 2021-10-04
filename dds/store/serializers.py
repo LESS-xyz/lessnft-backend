@@ -17,8 +17,9 @@ from dds.activity.models import UserAction
 from dds.rates.models import UsdRate
 from dds.rates.serializers import CurrencySerializer
 from django.db.models import Min
-import dds.settings_local
+
 from dds.networks.serializers import NetworkSerializer
+from dds.settings import config
 
 try:
     service_fee = MasterUser.objects.get().commission
@@ -145,7 +146,7 @@ class CollectionSearchSerializer(serializers.ModelSerializer):
 
 
     def get_tokens(self, obj):
-        tokens = obj.token_set.order_by(SORT_STATUSES["recent"])[:6]
+        tokens = obj.token_set.order_by(config.SORT_STATUSES.recent)[:6]
         return [token.media for token in tokens]
 
 
@@ -331,7 +332,7 @@ class HotCollectionSerializer(CollectionSlimSerializer):
 
     def get_tokens(self, obj):
         tokens = Token.token_objects.committed().filter(collection=obj).order_by(
-            SORT_STATUSES["recent"]
+            config.SORT_STATUSES.recent
         )[:6]
         return [token.media for token in tokens]
 
@@ -453,7 +454,7 @@ class CollectionMetadataSerializer(serializers.ModelSerializer):
         return image
 
     def get_seller_fee_basis_points(self, obj):
-        if obj.name == dds.settings_local.COLLECTION_721 or obj.name == dds.settings_local.COLLECTION_1155:
+        if obj.name == config.COLLECTION_721 or obj.name == config.COLLECTION_1155:
             return 0
         else:
             return 1000

@@ -15,22 +15,18 @@ from dds.utilities import sign_message, get_media_from_ipfs
 from dds.accounts.models import AdvUser, MasterUser, DefaultAvatar
 from dds.networks.models import Network
 from dds.rates.models import UsdRate
-from dds.consts import DECIMALS
-from dds.settings import (
-    TOKEN_MINT_GAS_LIMIT,
-    TOKEN_TRANSFER_GAS_LIMIT,
-    TOKEN_BUY_GAS_LIMIT,
-    COLLECTION_721,
-    COLLECTION_1155,
+from dds.consts import ( 
+    DECIMALS, 
+    TOKEN_MINT_GAS_LIMIT,  
+    TOKEN_TRANSFER_GAS_LIMIT, 
+    TOKEN_BUY_GAS_LIMIT, 
+    COLLECTION_CREATION_GAS_LIMIT
 )
+from dds.settings import config
 from rest_framework import status
 from rest_framework.response import Response
 from dds.consts import DECIMALS
 from .services.ipfs import get_ipfs, get_ipfs_by_hash
-from dds.settings import (
-    SIGNER_ADDRESS,
-    COLLECTION_CREATION_GAS_LIMIT,
-)
 
 
 class Status(models.TextChoices):
@@ -50,23 +46,19 @@ class CollectionManager(models.Manager):
     
     def user_collections(self, user, network=None):
         """ Return committed collections for user (with default collections) """
-        if not network:
-            return self.filter(status=Status.COMMITTED).filter(
-                Q(name__in=[COLLECTION_721, COLLECTION_1155]) | Q(creator=user)
-            )
-        return self.filter(network__name__icontains=network).filter(status=Status.COMMITTED).filter(
-            Q(name__in=[COLLECTION_721, COLLECTION_1155]) | Q(creator=user)
+        return self.filter(status=Status.COMMITTED).filter(
+            Q(name__in=[config.COLLECTION_721, config.COLLECTION_1155]) | Q(creator=user)
         )
 
     def hot_collections(self, network=None):
-        """ Return hot collections (without default collections) """
+        """ Return committed collections for user (with default collections) """
         if not network:
-            return self.exclude(name__in=(COLLECTION_721, COLLECTION_1155,)).filter(
+            return self.exclude(name__in=(config.COLLECTION_721, config.COLLECTION_1155,)).filter(
                 Exists(Token.token_objects.committed().filter(collection__id=OuterRef('id')))
             )
-        return self.exclude(name__in=(COLLECTION_721, COLLECTION_1155,)).filter(
+        return self.exclude(name__in=(config.COLLECTION_721, config.COLLECTION_1155,)).filter(
             network__name__icontains=network).filter(
-            Exists(Token.token_objects.committed().filter(collection__id=OuterRef('id'))),
+            Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
         )
 
     def network(self, network):
@@ -77,7 +69,7 @@ class CollectionManager(models.Manager):
 class Collection(models.Model):
     name = models.CharField(max_length=50)
     avatar_ipfs = models.CharField(max_length=200, null=True, default=None)
-    cover_ipfs = models.CharField(max_length=200, null=True, default=None)
+    cover_ipfs = models.CharField(max_length=200, null=True, default=None, blank=True)
     address = models.CharField(max_length=60, unique=True, null=True, blank=True)
     symbol = models.CharField(max_length=30)
     description = models.TextField(null=True, blank=True)
@@ -85,7 +77,6 @@ class Collection(models.Model):
     short_url = models.CharField(max_length=30, default=None, null=True, blank=True, unique=True)
     creator = models.ForeignKey('accounts.AdvUser', on_delete=models.PROTECT)
     status = models.CharField(max_length=20, choices=Status.choices)
-    deploy_hash = models.CharField(max_length=100, null=True)
     deploy_block = models.IntegerField(null=True, default=None)
     network = models.ForeignKey('networks.Network', on_delete=models.CASCADE)
 
@@ -117,7 +108,6 @@ class Collection(models.Model):
         self.standart = request.data.get('standart')
         self.description = request.data.get('description')
         self.short_url = request.data.get('short_url')
-        self.deploy_hash = request.data.get('tx_hash')
         self.creator = request.user
         self.save()
 
@@ -162,7 +152,7 @@ class Collection(models.Model):
     @classmethod
     def create_contract(cls, name, symbol, standart, owner, network):
         baseURI = ''
-        signature = sign_message(['address'], [SIGNER_ADDRESS])
+        signature = sign_message(['address'], [config.SIGNER_ADDRESS])
         web3 = network.get_web3_connection()
         tx_params = {
             'chainId': web3.eth.chainId,
@@ -172,13 +162,13 @@ class Collection(models.Model):
         }
         if standart == 'ERC721':
             _, contract = network.get_erc721fabric_contract()
-            '''
             # JUST FOR TESTS
+            '''
             tx = myContract.functions.makeERC721(
                 name,
                 symbol,
                 baseURI,
-                SIGNER_ADDRESS,
+                config.SIGNER_ADDRESS,
                 signature
             ).buildTransaction(tx_params)
             signed_tx = web3.eth.account.sign_transaction(tx,'92cf3cee409da87ce5eb2137f2befce69d4ebaab14f898a8211677d77f91e6b0')
@@ -189,16 +179,16 @@ class Collection(models.Model):
                 name, 
                 symbol, 
                 baseURI, 
-                SIGNER_ADDRESS, 
+                config.SIGNER_ADDRESS, 
                 signature
             ).buildTransaction(tx_params)
 
         _, contract = network.get_erc1155fabric_contract()
-        '''
         # JUST FOR TESTS
+        '''
         tx = myContract.functions.makeERC1155(
             baseURI,
-            SIGNER_ADDRESS,
+            config.SIGNER_ADDRESS,
             signature
         ).buildTransaction(tx_params)
         signed_tx = web3.eth.account.sign_transaction(tx,'92cf3cee409da87ce5eb2137f2befce69d4ebaab14f898a8211677d77f91e6b0')
@@ -208,7 +198,7 @@ class Collection(models.Model):
         return contract.functions.makeERC1155(
             name,
             baseURI, 
-            SIGNER_ADDRESS, 
+            config.SIGNER_ADDRESS,
             signature,
         ).buildTransaction(tx_params)
 
