@@ -97,9 +97,9 @@ WSGI_APPLICATION = 'dds.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'kephi'),
-        'USER': os.getenv('POSTGRES_USER', 'kephi'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'kephi'),
+        'NAME': os.getenv('POSTGRES_DB', 'nft'),
+        'USER': os.getenv('POSTGRES_USER', 'nft'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'nft'),
         'HOST': os.getenv('POSTGRES_HOST', 'db'),
         'PORT': '5432',
     }

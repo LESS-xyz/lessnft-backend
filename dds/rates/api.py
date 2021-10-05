@@ -1,6 +1,4 @@
 from dds.rates.models import UsdRate
-from dds.consts import DECIMALS
-from dds.rates.models import UsdRate
 
 
 def get_usd_prices():

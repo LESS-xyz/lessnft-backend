@@ -1,6 +1,5 @@
 from rest_framework import serializers
 
-from dds.consts import DECIMALS
 from dds.activity.models import TokenHistory, UserStat
 from dds.accounts.serializers import UserSlimSerializer
 

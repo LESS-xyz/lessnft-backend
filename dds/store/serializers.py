@@ -1,7 +1,5 @@
 from rest_framework import serializers
 
-from dds.settings import SORT_STATUSES
-from dds.consts import DECIMALS
 from dds.rates.api import calculate_amount
 from dds.store.models import (
     Status,
@@ -325,7 +323,6 @@ class HotCollectionSerializer(CollectionSlimSerializer):
             "short_url",
             "creator",
             "status",
-            "deploy_hash",
             "deploy_block",
             "tokens",
         )
@@ -349,7 +346,6 @@ class UserCollectionSerializer(CollectionSlimSerializer):
             "short_url",
             "creator",
             "status",
-            "deploy_hash",
             "deploy_block",
             "tokens",
         )

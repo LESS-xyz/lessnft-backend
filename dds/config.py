@@ -83,20 +83,6 @@ class Config:
 
     IPFS_CLIENT: str
 
-    ERC721_FABRIC_ADDRESS: str
-    ERC1155_FABRIC_ADDRESS: str
-    EXCHANGE_ADDRESS: str
-    WETH_ADDRESS: str
-
-    DEFAULT_AVATARS: list
-
-    @dataclass
-    class NetworkSettings:
-        @dataclass
-        class ETH:
-            endpoint: str
-        ETH: ETH
-    
     @dataclass
     class SortStatus:
         recent: str
@@ -109,8 +95,6 @@ class Config:
         users: str
         collections: str
 
-    NETWORK_SETTINGS: NetworkSettings
-
     SORT_STATUSES: SortStatus
 
     SEARCH_TYPES: SearchType
@@ -120,8 +104,7 @@ class Config:
     CAPTCHA_URL: str
     PRIV_KEY: str
 
-    ERC20_ADDRESS: str
-
+    DEFAULT_NETWORK : str
     COLLECTION_721: str
     COLLECTION_1155: str
 

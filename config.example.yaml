@@ -11,10 +11,6 @@ ALLOWED_HOSTS:
 
 IPFS_CLIENT: '' #IPFS client address
 
-NETWORK_SETTINGS:
-      ETH: 
-        endpoint: '' #Network endpoint i.e. Infura
-
 
 SORT_STATUSES:
     recent: '-updated_at'

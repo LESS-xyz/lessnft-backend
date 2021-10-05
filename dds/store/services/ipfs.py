@@ -1,7 +1,6 @@
 import json
 import ipfshttpclient
 from web3 import Web3, HTTPProvider
-from dds.settings import IPFS_CLIENT
 from dds.settings import config
 from contracts import ERC721_MAIN, ERC1155_MAIN
 

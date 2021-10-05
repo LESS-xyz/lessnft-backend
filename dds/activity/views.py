@@ -8,16 +8,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 
-from dds.settings import DEFAULT_NETWORK
 from dds.utilities import get_page_slice
-from dds.consts import DECIMALS
 from .models import BidsHistory, ListingHistory, TokenHistory, UserAction
 from .utils import quick_sort
 from .api import get_activity_response
 from dds.accounts.serializers import UserSerializer
 from dds.activity.serializers import UserStatSerializer
 from dds.activity.services.top_users import get_top_users
-
+from dds.settings import config
 
 class ActivityView(APIView):
     """
@@ -32,7 +30,7 @@ class ActivityView(APIView):
         ],
     )
     def get(self, request):
-        network = request.query_params.get('network', DEFAULT_NETWORK)
+        network = request.query_params.get('network', config.DEFAULT_NETWORK)
         types = request.query_params.get("type")
         page = int(request.query_params.get("page"))
 
@@ -125,7 +123,7 @@ class NotificationActivityView(APIView):
     )
     def get(self, request):
         address = request.user.username
-        network = request.query_params.get('network', DEFAULT_NETWORK)
+        network = request.query_params.get('network', config.DEFAULT_NETWORK)
         activities = list()
         end = 5
 
@@ -253,7 +251,7 @@ class UserActivityView(APIView):
         ],
     )
     def get(self, request, address):
-        network = request.query_params.get('network', DEFAULT_NETWORK)
+        network = request.query_params.get('network', config.DEFAULT_NETWORK)
         types = request.query_params.get("type")
         page = int(request.query_params.get("page"))
 
@@ -384,7 +382,7 @@ class FollowingActivityView(APIView):
         ],
     )
     def get(self, request, address):
-        network = request.query_params.get('network', DEFAULT_NETWORK)
+        network = request.query_params.get('network', config.DEFAULT_NETWORK)
         types = request.query_params.get("type")
         page = int(request.query_params.get("page"))
 

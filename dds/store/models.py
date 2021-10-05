@@ -16,7 +16,6 @@ from dds.accounts.models import AdvUser, MasterUser, DefaultAvatar
 from dds.networks.models import Network
 from dds.rates.models import UsdRate
 from dds.consts import ( 
-    DECIMALS, 
     TOKEN_MINT_GAS_LIMIT,  
     TOKEN_TRANSFER_GAS_LIMIT, 
     TOKEN_BUY_GAS_LIMIT, 
@@ -25,7 +24,6 @@ from dds.consts import (
 from dds.settings import config
 from rest_framework import status
 from rest_framework.response import Response
-from dds.consts import DECIMALS
 from .services.ipfs import get_ipfs, get_ipfs_by_hash
 
 
