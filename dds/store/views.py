@@ -1,3 +1,5 @@
+import random
+
 from dds.accounts.models import AdvUser, MasterUser
 from dds.activity.models import BidsHistory, ListingHistory, UserAction
 from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid, token_search, collection_search)
@@ -21,7 +23,7 @@ from dds.store.serializers import (
 from dds.utilities import sign_message, get_page_slice
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
-from django.db.models import Exists, OuterRef, Q, Sum
+from django.db.models import Exists, OuterRef, Q, Count, Sum
 from decimal import Decimal
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -251,40 +253,6 @@ class CreateCollectionView(APIView):
         return Response(initial_tx, status=status.HTTP_200_OK)
 
 
-class SaveCollectionView(APIView):
-    '''
-    View for save collection in database. Should be called after successfull minting.
-    '''
-    permission_classes = [IsAuthenticated]
-    @swagger_auto_schema(
-        operation_description="collection_save",
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'tx_hash': openapi.Schema(type=openapi.TYPE_STRING),
-                'name': openapi.Schema(type=openapi.TYPE_STRING),
-                'standart': openapi.Schema(type=openapi.TYPE_STRING),
-                'avatar': openapi.Schema(type=openapi.TYPE_STRING),
-                'symbol': openapi.Schema(type=openapi.TYPE_STRING),
-                'description': openapi.Schema(type=openapi.TYPE_STRING),
-                'short_url': openapi.Schema(type=openapi.TYPE_STRING),
-            }),
-        responses={200: CollectionSlimSerializer},
-    )
-    def post(self, request):
-        collection = Collection()
-        media = request.FILES.get('avatar')
-        print(media)
-        if media:
-            ipfs = send_to_ipfs(media)
-        else:
-            ipfs = None
-        print(ipfs)
-        collection.save_in_db(request, ipfs)
-        response_data = CollectionSlimSerializer(collection).data
-        return Response(response_data, status=status.HTTP_200_OK)
-
-
 class GetOwnedView(APIView):
     '''
     View for getting all items owned by address
@@ -381,8 +349,6 @@ class GetView(APIView):
             token = Token.token_objects.committed().get(id=id)
         except ObjectDoesNotExist:
             return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
-        if token.status == Status.BURNED:
-            return Response({'error': 'burned'}, status=status.HTTP_404_NOT_FOUND)
         response_data = TokenFullSerializer(token, context={"user": request.user}).data
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -511,7 +477,7 @@ class GetHotView(APIView):
         else:
             tokens = tokens.order_by(order)
         if sort in ('cheapest', 'highest'):
-            tokens = tokens.exclude(price=None).exclude(selling=False).exclude(status=Status.BURNED)
+            tokens = tokens.exclude(price=None).exclude(selling=False)
         length = tokens.count()
 
         start, end = get_page_slice(page, len(tokens))
@@ -1083,3 +1049,42 @@ def get_max_price(request):
     if token_prices:
         max_price = max(token_prices)
     return Response({'max_price': max_price}, status=status.HTTP_200_OK)
+
+
+class GetMostBiddedView(APIView):
+    '''
+    View for get info for token with most bid count.
+    '''
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    @swagger_auto_schema(
+        operation_description="get hot auction",
+        responses={200: TokenFullSerializer, 401: not_found_response},
+    )
+
+    def get(self, request):
+        token = Token.token_objects.committed().annotate(bid_count=Count('bid')).order_by('-bid_count').first()
+        if not token:
+            return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
+        response_data = TokenFullSerializer(token, context={"user": request.user}).data
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class GetRelatedView(APIView):
+    '''
+    View for get info for token related to id.
+    '''
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    @swagger_auto_schema(
+        operation_description="get related",
+        responses={200: TokenSerializer, 401: not_found_response},
+    )
+    def get(self, request, id):
+        try:
+            token = Token.token_objects.committed().get(id=id)
+        except ObjectDoesNotExist:
+            return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
+        all_related = Token.token_objects.committed().filter(collection=token.collection)
+        random_related = random.choices(all_related, k=4)
+        response_data = TokenSerializer(random_related, many=True, context={"user": request.user}).data
+        return Response(response_data, status=status.HTTP_200_OK)
