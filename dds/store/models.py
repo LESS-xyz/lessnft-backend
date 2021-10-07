@@ -493,13 +493,14 @@ class Token(models.Model):
         ).buildTransaction(tx_params)
 
     def buy_token(self, token_amount, buyer, seller=None, price=None, auc=False):
-        print(f'seller: {seller}')  
         master_account = MasterUser.objects.get()
 
         id_order = '0x%s' % secrets.token_hex(32)
+        token_count = token_amount
 
         if self.standart == "ERC721":
             seller_address = self.owner.username
+            token_count = 1
         else:
             seller_address = seller.username
 
@@ -511,17 +512,17 @@ class Token(models.Model):
         address = self.currency.address
         value = 0
         if address == '0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE':
-            value = int(price)
+            value = int(price) * int(token_count)
         types_list = [
-            'bytes32', 
-            'address', 
-            'address', 
-            'uint256', 
+            'bytes32',
+            'address',
+            'address',
             'uint256',
-            'address', 
-            'uint256', 
-            'address[]', 
-            'uint256[]', 
+            'uint256',
+            'address',
+            'uint256',
+            'address[]',
+            'uint256[]',
             'address',
         ]
 
@@ -532,13 +533,13 @@ class Token(models.Model):
             self.internal_id,
             token_amount,
             Web3.toChecksumAddress(address),
-            int(price),
+            int(price) * int(token_count),
             [
-                Web3.toChecksumAddress(self.creator.username), 
+                Web3.toChecksumAddress(self.creator.username),
                 Web3.toChecksumAddress(master_account.address),
             ],
             [
-                (int(self.creator_royalty / 100 * float(price))), 
+                (int(self.creator_royalty / 100 * float(price))),
                 (int(self.currency.service_fee / 100 * float(price))),
             ],
             Web3.toChecksumAddress(buyer.username)
@@ -548,49 +549,41 @@ class Token(models.Model):
             values_list
         )
 
-        method = 'makeExchange{standart}'.format(standart=self.standart)
-
-        data = {
-            'idOrder': id_order,
-            'SellerBuyer': [Web3.toChecksumAddress(seller_address), Web3.toChecksumAddress(buyer.username)],
-            'tokenToBuy': {
-                'tokenAddress': Web3.toChecksumAddress(self.collection.address),
-                'id': self.internal_id,
-                'amount': token_amount
-            },
-            'tokenToSell': {
-                'tokenAddress': Web3.toChecksumAddress(address),
-                'id': 0,
-                'amount': str(int(price))
-            },
-            'fee': {
-                'feeAddresses': [Web3.toChecksumAddress(self.creator.username), Web3.toChecksumAddress(master_account.address)],
-                'feeAmounts': [
-                    (int(self.creator_royalty / 100 * float(price))), 
-                    (int(self.currency.service_fee / 100 * float(price)))
-                ]
-            },
-            'signature': signature
-        }
-        print(f'data: {data}')
         web3 = self.collection.network.get_web3_connection()
 
         buyer_nonce = buyer.username
         if auc:
             buyer_nonce = seller_address
 
-        return {
+        tx_params = {
+            'chainId': web3.eth.chainId,
+            'gas': TOKEN_BUY_GAS_LIMIT,
             'nonce': web3.eth.getTransactionCount(
                 web3.toChecksumAddress(buyer_nonce), 'pending'
             ),
             'gasPrice': web3.eth.gasPrice,
-            'chainId': web3.eth.chainId,
-            'gas': TOKEN_BUY_GAS_LIMIT,
-            'to': self.collection.network.exchange_address,
-            'method': method,
-            'value': value,
-            'data': data
         }
+
+        return contract.functions.makeExchangeERC721(
+            idOrder = id_order,
+            SellerBuyer = [Web3.toChecksumAddress(seller_address), Web3.toChecksumAddress(buyer.username)],
+            tokenToBuy = {
+                "tokenAddress": Web3.toChecksumAddress(self.collection.address),
+                'id': int(self.internal_id),
+                'amount': int(token_amount),
+            },
+            tokenToSell = {
+                'tokenAddress': Web3.toChecksumAddress(address),
+                'id': 0,
+                'amount': int(price) * int(token_count),
+            },
+            feeAddresses = [Web3.toChecksumAddress(self.creator.username), Web3.toChecksumAddress(master_account.address)],
+            feeAmounts = [
+                (int(self.creator_royalty / 100 * float(price))),
+                (int(self.currency.service_fee / 100 * float(price)))
+            ],
+            signature = signature,
+        ).buildTransaction(tx_params)
 
     def get_owner_auction(self):
         owners_auction = self.ownership_set.filter(currency_price=None, selling=True)
