@@ -291,7 +291,8 @@ class TokenSerializer(serializers.ModelSerializer):
             owners_amount = obj.ownership_set.filter(selling=True).aggregate(total_amount=Sum('quantity'))
             track_owners = obj.transactiontracker_set.filter(ownership__selling=True).aggregate(total_amount=Sum('amount'))
             track_owners = track_owners['total_amount'] or 0
-            available = owners_amount['total_amount'] - track_owners
+            owners_amount = owners_amount['total_amount'] or 0
+            available = owners_amount - track_owners
         return available
 
     def get_owners(self, obj):
