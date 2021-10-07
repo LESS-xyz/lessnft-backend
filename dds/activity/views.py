@@ -493,11 +493,12 @@ class GetBestDealView(APIView):
             openapi.Parameter("sort_period", openapi.IN_QUERY, type=openapi.TYPE_STRING),
         ],
     )
-    def get(self, request, days):
+    def get(self, request):
         type_ = request.query_params.get("type")                # seller, buyer
         sort_period = request.query_params.get("sort_period")   # day, week, month
+        network = request.query_params.get("network", config.DEFAULT_NETWORK)
 
-        top_users = get_top_users(type_, sort_period)
+        top_users = get_top_users(type_, sort_period, network)
         response_data = UserStatSerializer(top_users, many=True, context={
             "status": type_, 
             "time_range": sort_period,

@@ -105,6 +105,7 @@ class BidsHistory(models.Model):
 
 
 class UserStat(models.Model):
+    network = models.ForeignKey('networks.Network', on_delete=models.CASCADE)
     user = models.OneToOneField('accounts.AdvUser', on_delete=models.CASCADE)
     seller = models.JSONField()
     buyer = models.JSONField()
