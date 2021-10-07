@@ -1,7 +1,5 @@
 from dds.accounts.models import AdvUser, MasterUser
 from dds.activity.models import BidsHistory, ListingHistory, UserAction
-from dds.consts import DECIMALS
-from dds.settings import *
 from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid, token_search, collection_search)
 from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs
 
@@ -35,6 +33,8 @@ from rest_framework.views import APIView
 from web3 import HTTPProvider, Web3
 
 from dds.accounts.api import user_search
+
+from dds.settings import config
 from dds.rates.api import get_decimals, calculate_amount
 from dds.rates.models import UsdRate
 
@@ -128,7 +128,8 @@ class SearchView(APIView):
         params = request.query_params
         sort = params.get('type', 'items')
 
-        token_count, search_result = globals()[SEARCH_TYPES[sort] + '_search'](words, page, user=request.user, **params)
+        sort_type = getattr(config.SEARCH_TYPES, sort)
+        token_count, search_result = globals()[sort_type + '_search'](words, page, user=request.user, **params)
         response_data = {"total_tokens": token_count, "items": search_result}
 
         return Response(response_data, status=status.HTTP_200_OK)
@@ -157,6 +158,10 @@ class CreateView(APIView):
                 'selling': openapi.Schema(type=openapi.TYPE_STRING),
                 'start_auction': openapi.Schema(type=openapi.FORMAT_DATETIME),
                 'end_auction': openapi.Schema(type=openapi.FORMAT_DATETIME),
+                
+                'media': openapi.Schema(type=openapi.TYPE_STRING),
+                'cover': openapi.Schema(type=openapi.TYPE_STRING),
+                'format': openapi.Schema(type=openapi.TYPE_STRING),
             }),
         responses={200: create_response},
     )
@@ -499,9 +504,7 @@ class GetHotView(APIView):
         sort = request.query_params.get('sort', 'recent')
         tag = request.query_params.get('tag')
         network = request.query_params.get('network', DEFAULT_NETWORK)
-
-        order = SORT_STATUSES[sort]
-
+        order = getattr(config.SORT_STATUSES, sort)
         tokens = Token.token_objects.network(network)
         if tag:
             tokens = tokens.filter(tags__name__contains=tag).order_by(order)
@@ -717,7 +720,7 @@ class MakeBid(APIView):
                 'gasPrice': web3.eth.gasPrice,
             }
             initial_tx = token_contract.functions.approve(
-                web3.toChecksumAddress(token.collection.network.exchange_address), 
+                web3.toChecksumAddress(token.collection.network.exchange_address),
                 user_balance,
             ).buildTransaction(tx_params)
             return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
@@ -886,8 +889,8 @@ class ReportView(APIView):
             send_mail(
                 'Report from digital dollar store',
                 text,
-                DDS_HOST_USER,
-                [DDS_MAIL],
+                config.DDS_HOST_USER,
+                [config.DDS_MAIL],
                 connection=connection,
             )
             print('message sent')
@@ -988,8 +991,8 @@ class SupportView(APIView):
             send_mail(
                 'Support form from digital dollar store',
                 text,
-                DDS_HOST_USER,
-                [DDS_MAIL],
+                config.DDS_HOST_USER,
+                [config.DDS_MAIL],
                 connection=connection,
             )
             print('message sent')
@@ -1052,7 +1055,7 @@ class GetCollectionByAdressView(APIView):
 
     def get(self, request, address):
         try:
-            collection = Collection.objects.get(address=address)
+            collection = Collection.objects.get(address__iexact=address)
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1080,4 +1083,3 @@ def get_max_price(request):
     if token_prices:
         max_price = max(token_prices)
     return Response({'max_price': max_price}, status=status.HTTP_200_OK)
-

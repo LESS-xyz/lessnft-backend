@@ -1,8 +1,6 @@
 from rest_framework import serializers
 from decimal import Decimal
 
-from dds.settings import SORT_STATUSES
-from dds.consts import DECIMALS
 from dds.rates.api import calculate_amount
 from dds.store.models import (
     Status,
@@ -19,8 +17,8 @@ from dds.activity.models import UserAction
 from dds.rates.models import UsdRate
 from dds.rates.serializers import CurrencySerializer
 from django.db.models import Min, Sum
-import dds.settings_local
 from dds.networks.serializers import NetworkSerializer
+from dds.settings import config
 
 try:
     service_fee = MasterUser.objects.get().commission
@@ -149,7 +147,7 @@ class CollectionSearchSerializer(serializers.ModelSerializer):
 
 
     def get_tokens(self, obj):
-        tokens = obj.token_set.order_by(SORT_STATUSES["recent"])[:6]
+        tokens = obj.token_set.order_by(config.SORT_STATUSES.recent)[:6]
         return [token.media for token in tokens]
 
 
@@ -331,14 +329,13 @@ class HotCollectionSerializer(CollectionSlimSerializer):
             "short_url",
             "creator",
             "status",
-            "deploy_hash",
             "deploy_block",
             "tokens",
         )
 
     def get_tokens(self, obj):
         tokens = Token.token_objects.committed().filter(collection=obj).order_by(
-            SORT_STATUSES["recent"]
+            config.SORT_STATUSES.recent
         )[:6]
         return [token.media for token in tokens]
 
@@ -355,7 +352,6 @@ class UserCollectionSerializer(CollectionSlimSerializer):
             "short_url",
             "creator",
             "status",
-            "deploy_hash",
             "deploy_block",
             "tokens",
         )
@@ -490,7 +486,7 @@ class CollectionMetadataSerializer(serializers.ModelSerializer):
         return image
 
     def get_seller_fee_basis_points(self, obj):
-        if obj.name == dds.settings_local.COLLECTION_721 or obj.name == dds.settings_local.COLLECTION_1155:
+        if obj.name == config.COLLECTION_721 or obj.name == config.COLLECTION_1155:
             return 0
         else:
             return 1000

@@ -14,6 +14,8 @@ from celery.schedules import crontab
 
 import os
 
+#from .config import *
+from .config import config
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -26,6 +28,8 @@ SECRET_KEY = 'm3%r==z=1j(9e43(7rb(3jzzcz-7(91c#3!$u29w-4gd)gd&9w'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+
+ALLOWED_HOSTS = config.ALLOWED_HOSTS
 
 # Application definition
 
@@ -93,9 +97,9 @@ WSGI_APPLICATION = 'dds.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'kephi'),
-        'USER': os.getenv('POSTGRES_USER', 'kephi'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'kephi'),
+        'NAME': os.getenv('POSTGRES_DB', 'nft'),
+        'USER': os.getenv('POSTGRES_USER', 'nft'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'nft'),
         'HOST': os.getenv('POSTGRES_HOST', 'db'),
         'PORT': '5432',
     }
@@ -153,12 +157,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 RATES_CHECKER_TIMEOUT = 300
-
-try:
-    from dds.settings_local import *
-except ImportError:
-    print('SETTINGS: cannot import local settings', flush=True)
-
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [

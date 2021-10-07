@@ -2,13 +2,12 @@ from eth_account import Account
 from web3 import Web3
 from typing import Tuple
 
-from dds.settings import PRIV_KEY
-
+from dds.settings import config
 
 def sign_message(type, message):
     message_hash = Web3.soliditySha3(type, message)
     print(f'message_hash: {message_hash}')
-    signed = Account.signHash(message_hash, PRIV_KEY)
+    signed = Account.signHash(message_hash, config.PRIV_KEY)
     print(f"signed: {signed}")
     print(f" signature: {signed['signature'].hex()}")
     return signed['signature'].hex()

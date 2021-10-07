@@ -4,6 +4,9 @@ import time
 import requests
 import traceback
 
+from dds.settings import config
+
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dds.settings")
 import django
 
@@ -12,9 +15,8 @@ django.setup()
 from dds.rates.models import UsdRate
 from dds.settings import RATES_CHECKER_TIMEOUT
 
-
+#TODO move to config?
 API_URL = "https://api.coingecko.com/api/v3/coins/{coin_code}"
-
 
 QUERY_FSYM = "usd"
 

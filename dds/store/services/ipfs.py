@@ -1,11 +1,12 @@
 import json
 import ipfshttpclient
 from web3 import Web3, HTTPProvider
-from dds.settings import IPFS_CLIENT
-from django.apps import apps
+from dds.settings import config
+from contracts import ERC721_MAIN, ERC1155_MAIN
+
 
 def create_ipfs(request):
-    client = ipfshttpclient.connect(IPFS_CLIENT)
+    client = ipfshttpclient.connect(config.IPFS_CLIENT)
     name = request.data.get("name")
     description = request.data.get("description")
     media = request.FILES.get("media")
@@ -29,7 +30,7 @@ def create_ipfs(request):
     return res
 
 def send_to_ipfs(media):
-    client = ipfshttpclient.connect(IPFS_CLIENT)
+    client = ipfshttpclient.connect(config.IPFS_CLIENT)
     file_res = client.add(media)
     return file_res["Hash"]
 
@@ -39,9 +40,10 @@ def get_ipfs(token_id, contract) -> dict:
     """
     return contract.functions.tokenURI(token_id).call()
 
+
 def get_ipfs_by_hash(ipfs_hash) -> dict:
     """
     return ipfs by hash
     """
-    client = ipfshttpclient.connect(IPFS_CLIENT)
+    client = ipfshttpclient.connect(config.IPFS_CLIENT)
     return client.get_json(ipfs_hash)

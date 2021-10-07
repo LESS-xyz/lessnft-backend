@@ -80,7 +80,8 @@ class CoverSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AdvUser
-        read_only_fields = ("avatar", "cover",)
+        #read_only_fields = ("avatar", "cover",)
+        read_only_fields = ("avatar", "cover_ipfs",)
         fields = ("id", "owner",) + read_only_fields
 
     def get_id(self, obj):
