@@ -256,6 +256,7 @@ class Token(models.Model):
     name = models.CharField(max_length=200, unique=True)
     tx_hash = models.CharField(max_length=200, null=True, blank=True)
     ipfs = models.CharField(max_length=200, null=True, default=None)
+    image = models.CharField(max_length=200, null=True, blank = True, default=None)
     format = models.CharField(max_length=10, null=True, default='image')
     total_supply = models.PositiveIntegerField(validators=[validate_nonzero])
     currency_price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
@@ -283,10 +284,10 @@ class Token(models.Model):
 
     @property
     def media(self):
-        ipfs = get_ipfs_by_hash(self.ipfs).get("image")
-        if ipfs:
-            return ipfs
-        return None
+        if not self.image:
+            self.image = get_ipfs_by_hash(self.ipfs).get("image")
+            self.save(update_fields=['image'])
+        return self.image
 
     @property
     def animation(self):
@@ -509,9 +510,11 @@ class Token(models.Model):
         master_account = MasterUser.objects.get()
 
         id_order = '0x%s' % secrets.token_hex(32)
+        token_count = token_amount
 
         if self.standart == "ERC721":
             seller_address = self.owner.username
+            token_count = 1
         else:
             seller_address = seller.username
 
@@ -523,7 +526,7 @@ class Token(models.Model):
         address = self.currency.address
         value = 0
         if address == '0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE':
-            value = int(price)
+            value = int(price) * int(token_count)
         types_list = [
             'bytes32', 
             'address', 
@@ -544,7 +547,7 @@ class Token(models.Model):
             self.internal_id,
             token_amount,
             Web3.toChecksumAddress(address),
-            int(price),
+            int(price) * int(token_count),
             [
                 Web3.toChecksumAddress(self.creator.username), 
                 Web3.toChecksumAddress(master_account.address),
@@ -573,7 +576,7 @@ class Token(models.Model):
             'tokenToSell': {
                 'tokenAddress': Web3.toChecksumAddress(address),
                 'id': 0,
-                'amount': str(int(price))
+                'amount': str(int(price) * int(token_count))
             },
             'fee': {
                 'feeAddresses': [Web3.toChecksumAddress(self.creator.username), Web3.toChecksumAddress(master_account.address)],
@@ -600,7 +603,7 @@ class Token(models.Model):
             'gas': TOKEN_BUY_GAS_LIMIT,
             'to': self.collection.network.exchange_address,
             'method': method,
-            'value': value,
+            'value': str(value),
             'data': data
         }
 
@@ -698,6 +701,9 @@ class Bid(models.Model):
     currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, blank=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     state = models.CharField(max_length=50, choices=Status.choices, default=Status.PENDING)
+
+    def __str__(self):
+        return f"{self.token} - {self.user}"
 
 
 class TransactionTracker(models.Model):

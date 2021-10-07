@@ -23,7 +23,7 @@ from dds.store.serializers import (
 from dds.utilities import sign_message, get_page_slice
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, OuterRef, Q, Sum
 from decimal import Decimal
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -1010,22 +1010,30 @@ class TransactionTrackerView(APIView):
             properties={
                 'tx_hash': openapi.Schema(type=openapi.TYPE_STRING),
                 'token': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'ownership': openapi.Schema(type=openapi.TYPE_NUMBER),
+                'ownership': openapi.Schema(type=openapi.TYPE_STRING),
+                'amount': openapi.Schema(type=openapi.TYPE_NUMBER),
             }),
     )
     def post(self, request):
         token_id = request.data.get("token")
         tx_hash = request.data.get("tx_hash")
+        amount = request.data.get("amount")
+
         token = Token.objects.filter(id=token_id).first()
+
         if not token:
             return Response({"error": "token not found"}, status=status.HTTP_400_BAD_REQUEST)
+
         if token.standart == "ERC1155":
             owner_url = request.data.get("ownership")
             user = AdvUser.objects.get_by_custom_url(owner_url)
             ownership = Ownership.objects.filter(token_id=token_id, owner=user).first()
-            ownership.selling = False
-            ownership.save()
-            TransactionTracker.objects.create(ownership=ownership, tx_hash=tx_hash)
+            owner_amount = TransactionTracker.objects.aggregate(total_amount=Sum('amount'))
+            owner_amount = owner_amount['total_amount'] or 0
+            if owner_amount and ownership.quantity <= owner_amount + int(amount):
+                ownership.selling = False
+                ownership.save()
+            TransactionTracker.objects.create(token=token, ownership=ownership, tx_hash=tx_hash, amount=amount)
             return Response({"success": "trancsaction is tracked"}, status=status.HTTP_200_OK)
         token.selling = False
         token.save()
@@ -1058,7 +1066,7 @@ def get_token_max_price(token):
     if token.standart=="ERC721":
         return token.currency_price if token.currency_price else token.currency_minimal_bid
     owners = token.ownership_set.all()
-    prices = [owner.currency_price if owner.currency_price else owner.currency_minimal_bid for owner in owners]
+    prices = [owner.currency_price if owner.currency_price else owner.currency_minimal_bid for owner in owners if owner.selling]
     return max(prices)
 
 

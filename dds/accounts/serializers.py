@@ -96,7 +96,7 @@ class BaseAdvUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AdvUser
-        read_only_fields = ("avatar", "created_at")
+        read_only_fields = ("avatar", "created_at", 'twitter', 'instagram', 'facebook', 'site')
         fields = read_only_fields + ("id", "name",)
 
     def get_id(self, obj):

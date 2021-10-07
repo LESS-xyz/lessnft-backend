@@ -32,6 +32,7 @@ class ActivityView(APIView):
         ],
     )
     def get(self, request):
+        print(f'request started at {datetime.datetime.now()}')
         network = request.query_params.get('network', DEFAULT_NETWORK)
         types = request.query_params.get("type")
         page = int(request.query_params.get("page"))
@@ -110,7 +111,9 @@ class ActivityView(APIView):
             ).order_by("-date")[:end]
             activities.extend(listing)
 
+        print(f'sort started at {datetime.datetime.now()}')
         quick_sort(activities)
+        print(f'sort ended at {datetime.datetime.now()}')
         response_data = get_activity_response(activities)[start:end]
         return Response(response_data, status=status.HTTP_200_OK)
 

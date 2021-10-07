@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from decimal import Decimal
 
 from dds.settings import SORT_STATUSES
 from dds.consts import DECIMALS
@@ -9,6 +10,7 @@ from dds.store.models import (
     Collection,
     Ownership,
     Bid,
+    TransactionTracker,
 )
 from dds.accounts.serializers import CreatorSerializer, UserSerializer, UserOwnerSerializer
 from dds.activity.serializers import TokenHistorySerializer 
@@ -16,7 +18,7 @@ from dds.accounts.models import MasterUser
 from dds.activity.models import UserAction
 from dds.rates.models import UsdRate
 from dds.rates.serializers import CurrencySerializer
-from django.db.models import Min
+from django.db.models import Min, Sum
 import dds.settings_local
 from dds.networks.serializers import NetworkSerializer
 
@@ -80,10 +82,12 @@ class OwnershipSerializer(serializers.ModelSerializer):
         return obj.owner.get_name()
 
     def get_quantity(self, obj):
-        tracker = obj.transactiontracker_set.first()
-        if obj.quantity and tracker and tracker.amount:
-            return obj.quantity + obj.transactiontracker_set.first().amount
-        return obj.quantity 
+        tracker_amount = TransactionTracker.objects.filter(ownership=obj).aggregate(owner_amount=Sum('amount'))
+        if obj.quantity and tracker_amount:
+            tracker_amount = tracker_amount.get('owner_amount', 0)
+            tracker_amount = tracker_amount or 0
+            return obj.quantity - tracker_amount
+        return obj.quantity
 
 
 class BetSerializer(serializers.ModelSerializer):
@@ -265,9 +269,11 @@ class TokenSerializer(serializers.ModelSerializer):
 
     def get_USD_price(self, obj):
         price = self.get_price(obj)
+        decimals = obj.currency.get_decimals
         if price:
-            decimals = obj.currency.get_decimals
             return calculate_amount(price*decimals, obj.currency.symbol)[0]
+        if not self.get_highest_bid_USD(obj) and self.get_minimal_bid(obj):
+            return calculate_amount(self.get_minimal_bid(obj) * decimals, obj.currency.symbol)[0]
 
     def get_price(self, obj):
         if obj.standart == "ERC721":
@@ -282,10 +288,10 @@ class TokenSerializer(serializers.ModelSerializer):
         if obj.standart == "ERC721":
             available = 1 if obj.selling else 0
         else:
-            owners = obj.ownership_set.filter(selling=True)
-            available = 0
-            for owner in owners:
-                available += owner.quantity
+            owners_amount = obj.ownership_set.filter(selling=True).aggregate(total_amount=Sum('quantity'))
+            track_owners = obj.transactiontracker_set.filter(ownership__selling=True).aggregate(total_amount=Sum('amount'))
+            track_owners = track_owners['total_amount'] or 0
+            available = owners_amount['total_amount'] - track_owners
         return available
 
     def get_owners(self, obj):
@@ -385,6 +391,8 @@ class TokenFullSerializer(TokenSerializer):
     tags = serializers.SerializerMethodField()
     sellers = serializers.SerializerMethodField()
     service_fee = serializers.SerializerMethodField()
+    currency_service_fee = serializers.SerializerMethodField()
+    USD_service_fee = serializers.SerializerMethodField()
     owner_auction = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
 
@@ -395,6 +403,8 @@ class TokenFullSerializer(TokenSerializer):
             "sellers",
             "is_liked",
             "service_fee",
+            "currency_service_fee",
+            "USD_service_fee",
             "internal_id",
             "owner_auction",
         )
@@ -419,6 +429,32 @@ class TokenFullSerializer(TokenSerializer):
 
     def get_service_fee(self, obj):
         return obj.currency.service_fee
+
+    def get_currency_service_fee(self, obj):
+        price = self.get_price(obj)
+        if price:
+            return price / 100 * Decimal(obj.currency.service_fee)
+        bids = obj.bid_set.filter(state=Status.COMMITTED).order_by(
+            "-amount"
+        )
+        if bids:
+            return bids.first().amount / 100 * Decimal(obj.currency.service_fee)
+        if self.get_minimal_bid(obj):
+            return self.get_minimal_bid(obj) / 100 * Decimal(obj.currency.service_fee)
+
+    def get_USD_service_fee(self, obj):
+        price = self.get_price(obj)
+        if price:
+            decimals = obj.currency.get_decimals
+            value = price / 100 * Decimal(obj.currency.service_fee) * decimals
+            return calculate_amount(value, obj.currency.symbol)[0]
+        amount = self.get_minimal_bid(obj)
+        if self.get_highest_bid(obj) and obj.currency:
+            amount = Decimal(self.get_highest_bid(obj).get('amount'))
+        if amount:
+            decimals = obj.currency.get_decimals
+            value = amount / 100 * decimals
+            return calculate_amount(value, obj.currency.symbol)[0]
 
     def get_owner_auction(self, obj):
         return obj.get_owner_auction()

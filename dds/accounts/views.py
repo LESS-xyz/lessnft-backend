@@ -87,8 +87,8 @@ class GetView(APIView):
     def patch(self, request):
         request_data = request.data.copy()
         user = request.user
-        #if request_data.get('custom_url')=='':
-        #    request_data.pop('custom_url')
+        if request_data.get('custom_url')=='':
+            request_data.pop('custom_url')
         #if request_data.get('twitter')=='':
         #    request_data.pop('twitter')
         #if request_data.get('instagram')=='':
