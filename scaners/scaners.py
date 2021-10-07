@@ -305,11 +305,10 @@ def mint_transfer(latest_block, smart_contract):
 
 
 def buy_scanner(latest_block, smart_contract, network_name, standart):
-
     logging.basicConfig(
-    level = logging.INFO,
-    filename = f'logs/buy_{standart}.log',
-    format = '%(asctime)s %(levelname)s:%(message)s',
+        level = logging.INFO,
+        filename = f'logs/buy_{standart}.log',
+        format = '%(asctime)s %(levelname)s:%(message)s',
     )
     logging.info('buy scanner!')
     block_count = config.HOLDERS_CHECK_CHAIN_LENGTH + config.HOLDERS_CHECK_COMMITMENT_LENGTH
@@ -323,7 +322,6 @@ def buy_scanner(latest_block, smart_contract, network_name, standart):
     # filter cannot support more than 5000 blocks at one query
     if latest_block - block > 5000:
         latest_block = block + 4990
-
 
     logging.info('lets go!')
     logging.info(f'it is {standart}!')
@@ -343,6 +341,7 @@ def buy_scanner(latest_block, smart_contract, network_name, standart):
     except Exception as e:
         logging.error(f'can not get entries for {network_name} with blocks {block} to {latest_block-HOLDERS_CHECK_COMMITMENT_LENGTH}')
         logging.error(repr(e))
+        return
 
     if not events:
         logging.info('no records found matching the filter condition')
@@ -383,11 +382,6 @@ def buy_scanner(latest_block, smart_contract, network_name, standart):
                 token=token[0]
             )
             logging.info(f'owner is {owner}')
-            price = Ownership.objects.filter(
-                owner=old_owner,
-                token=token[0]
-            ).first().currency_price
-            logging.info(f'price is {price}')
 
             token_history_exist = TokenHistory.objects.filter(tx_hash=tx_hash, method='Transfer').exists()
             logging.info(f'token history {token_history_exist}')

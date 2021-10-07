@@ -244,6 +244,7 @@ class Token(models.Model):
     name = models.CharField(max_length=200, unique=True)
     tx_hash = models.CharField(max_length=200, null=True, blank=True)
     ipfs = models.CharField(max_length=200, null=True, default=None)
+    image = models.CharField(max_length=200, null=True, blank = True, default=None)
     format = models.CharField(max_length=10, null=True, default='image')
     total_supply = models.PositiveIntegerField(validators=[validate_nonzero])
     currency_price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
@@ -271,10 +272,10 @@ class Token(models.Model):
 
     @property
     def media(self):
-        ipfs = get_ipfs_by_hash(self.ipfs).get("image")
-        if ipfs:
-            return ipfs
-        return None
+        if not self.image:
+            self.image = get_ipfs_by_hash(self.ipfs).get("image")
+            self.save(update_fields=['image'])
+        return self.image
 
     @property
     def animation(self):
@@ -548,7 +549,7 @@ class Token(models.Model):
             types_list,
             values_list
         )
-
+        
         web3 = self.collection.network.get_web3_connection()
 
         buyer_nonce = buyer.username
@@ -679,6 +680,9 @@ class Bid(models.Model):
     currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, blank=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     state = models.CharField(max_length=50, choices=Status.choices, default=Status.PENDING)
+
+    def __str__(self):
+        return f"{self.token} - {self.user}"
 
 
 class TransactionTracker(models.Model):
