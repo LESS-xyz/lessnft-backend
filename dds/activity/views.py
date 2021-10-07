@@ -1,3 +1,5 @@
+from django.utils import timezone
+from datetime import timedelta
 import datetime
 
 from django.db.models import Q
@@ -13,7 +15,11 @@ from .models import BidsHistory, ListingHistory, TokenHistory, UserAction
 from .utils import quick_sort
 from .api import get_activity_response
 from dds.accounts.serializers import UserSerializer
-from dds.activity.serializers import UserStatSerializer
+from dds.activity.serializers import (
+    UserStatSerializer,
+    BidsHistorySerializer,
+    ListingHistorySerializer
+)
 from dds.activity.services.top_users import get_top_users
 from dds.settings import config
 
@@ -504,4 +510,33 @@ class GetBestDealView(APIView):
             "time_range": sort_period,
         }).data 
 
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class GetPriceHistory(APIView):
+    '''
+    View for get price history of token id.
+    '''
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    @swagger_auto_schema(
+        operation_description="get price history",
+        responses={200: PriceSerializer, 401: not_found_response},
+    )
+    def get(self, request, id):
+        period = request.query_params.get('period')
+        PERIODS = {
+            'day': timezone.now() - timedelta(days=1),
+            'week': timezone.now() - timedelta(days=7),
+            'month': timezone.now() - timedelta(days=30),
+            'year': timezone.now() - timedelta(days=365)
+        }
+        try:
+            token = Token.token_objects.committed().get(id=id)
+        except ObjectDoesNotExist:
+            return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
+        history = ListingHistory.objects.filter(token=token).filter(date__gte=PERIODS[period])
+        bids = BidsHistory.objects.filter(token=token).filter(date__gte=PERIODS[period])
+        response_data = {}
+        response_data['price_history'] = ListingHistorySerializer(history, many=True).data
+        response_data['bids_history'] = BidsHistorySerializer(bids, many=True).data
         return Response(response_data, status=status.HTTP_200_OK)
