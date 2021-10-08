@@ -1,5 +1,6 @@
 from random import choice
 from string import ascii_letters
+from django.db.models import Count
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -19,15 +20,28 @@ def generate_metamask_message(request):
     return Response(generated_message)
 
 
-def user_search(words, page):
+def user_search(words, current_user, **kwargs):
     words = words.split(' ')
+    verificated = kwargs.get('verificated')
+    order_by = kwargs.get('order_by')
+    if order_by:
+        reverse = "-" if order_by[0] == "-" else ""
 
     users = AdvUser.objects.all()
+
+    if verificated is not None:
+        users = users.filter(is_verificated=verificated[0].lower()=="true")
 
     for word in words:
         users = users.filter(display_name__icontains=word)
 
-    print(users.__dict__)
+    if order_by == "created":
+        users = users.order_by(f"{reverse}id")
+    elif order_by == "followers":
+        users = users.annotate(follow_count = Count('following')).order_by(f"{reverse}follow_count")
+    elif order_by == "tokens_created":
+        users = users.annotate(Count('token_creator')).order_by(f"{reverse}token_creator")
+
     start, end = get_page_slice(page, len(users))
     return UserSearchSerializer(users[start:end], many=True).data
 
