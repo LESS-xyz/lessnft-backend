@@ -94,7 +94,6 @@ buy_token_response = openapi.Response(
             'tokenToSell': openapi.Schema(type=openapi.TYPE_OBJECT),
             'tokenAddress': openapi.Schema(type=openapi.TYPE_STRING),
             'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-            'amount': openapi.Schema(type=openapi.TYPE_NUMBER),
             'feeAddresses': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING)),
             'feeAmount': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_NUMBER)),
             'signature': openapi.Schema(type=openapi.TYPE_STRING),
@@ -121,9 +120,34 @@ class SearchView(APIView):
         ],
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
+            manual_parameters=[
+                openapi.Parameter(
+                    "sort", 
+                    openapi.IN_QUERY, 
+                    type=openapi.TYPE_STRING, 
+                    description="Search by: items, users, collections",
+                ),
+                openapi.Parameter("tags", openapi.IN_QUERY, type=openapi.TYPE_ARRAY),
+                openapi.Parameter("is_verified", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN),
+                openapi.Parameter("max_price", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
+                openapi.Parameter(
+                    "order_by", 
+                    openapi.IN_QUERY, 
+                    type=openapi.TYPE_STRING,
+                    description="For tokens: date, price, likes. \n For users: created, followers, tokens_created",
+                ),
+                openapi.Parameter("on_sale", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN),
+                openapi.Parameter("currency", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+                openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
+                openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+                openapi.Parameter("creator", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+                openapi.Parameter("owner", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            ],
             properties={
                 'text': openapi.Schema(type=openapi.TYPE_STRING),
-                'page': openapi.Schema(type=openapi.TYPE_NUMBER)}),
+                'page': openapi.Schema(type=openapi.TYPE_NUMBER)
+            }
+        ),
         responses={200: TokenSerializer(many=True)},
     )
     def post(self, request):
@@ -163,9 +187,10 @@ class CreateView(APIView):
                 'selling': openapi.Schema(type=openapi.TYPE_STRING),
                 'start_auction': openapi.Schema(type=openapi.FORMAT_DATETIME),
                 'end_auction': openapi.Schema(type=openapi.FORMAT_DATETIME),
+                'digital_key': openapi.Schema(type=openapi.TYPE_STRING),
                 
-                'media': openapi.Schema(type=openapi.TYPE_STRING),
-                'cover': openapi.Schema(type=openapi.TYPE_STRING),
+                'media': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_BINARY),
+                'cover': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_BINARY),
                 'format': openapi.Schema(type=openapi.TYPE_STRING),
             }),
         responses={200: create_response},
@@ -209,18 +234,21 @@ class CreateCollectionView(APIView):
     permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description="collection_creation",
+        manual_parameters=[
+            openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        ],
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
                 'name': openapi.Schema(type=openapi.TYPE_STRING),
                 'standart': openapi.Schema(type=openapi.TYPE_STRING),
-                'avatar': openapi.Schema(type=openapi.TYPE_STRING),
+                'avatar': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_BINARY),
                 'symbol': openapi.Schema(type=openapi.TYPE_STRING),
                 'description': openapi.Schema(type=openapi.TYPE_STRING),
                 'short_url': openapi.Schema(type=openapi.TYPE_STRING),
             },
-            required=['name', 'creator', 'avatar', 'symbol', 'standart']),
-        responses={200: CollectionSlimSerializer},
+            required=['name', 'creator', 'avatar', 'symbol', 'standart'],
+        ),
     )
     def post(self, request):
         name = request.data.get('name')
@@ -313,6 +341,9 @@ class GetLikedView(APIView):
     @swagger_auto_schema(
         operation_description="get tokens liked by address",
         responses={200: TokenSerializer(many=True), 401: not_found_response},
+        manual_parameters=[
+            openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        ],
     )
 
     def get(self, request, address, page):
@@ -347,7 +378,6 @@ class GetView(APIView):
         operation_description="get token info",
         responses={200: TokenFullSerializer, 401: not_found_response},
     )
-
     def get(self, request, id):
         try:
             token = Token.token_objects.committed().get(id=id)
@@ -362,6 +392,7 @@ class GetView(APIView):
             type=openapi.TYPE_OBJECT,
             properties={
                 'selling': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                'minimal_bid': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'price': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'currency': openapi.Schema(type=openapi.TYPE_STRING),
                 'start_auction': openapi.Schema(type=openapi.FORMAT_DATETIME),
@@ -443,7 +474,7 @@ class TokenBurnView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'amount': openapi.Schema(type=openapi.TYPE_STRING),
+                'amount': openapi.Schema(type=openapi.TYPE_NUMBER),
             }),
         responses={200: transfer_tx},
     )
@@ -466,9 +497,10 @@ class GetHotView(APIView):
         operation_description="get hot tokens",
         responses={200: TokenFullSerializer(many=True)},
         manual_parameters=[
-        openapi.Parameter('sort', openapi.IN_QUERY, type=openapi.TYPE_STRING),
-        openapi.Parameter('tag', openapi.IN_QUERY, type=openapi.TYPE_STRING),
-        ]
+            openapi.Parameter('sort', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter('tag', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter('network', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        ],
     )
     def get(self, request, page):
         sort = request.query_params.get('sort', 'recent')
@@ -498,6 +530,9 @@ class GetHotCollectionsView(APIView):
 
     @swagger_auto_schema(
         operation_description="get hot collections",
+        manual_parameters=[
+            openapi.Parameter('network', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        ],
         responses={200: HotCollectionSerializer(many=True)},
     )
     def get(self, request):
@@ -513,6 +548,9 @@ class GetCollectionView(APIView):
     '''
     @swagger_auto_schema(
         operation_description="get collection info",
+        manual_parameters=[
+            openapi.Parameter('network', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        ],
         responses={200: CollectionSerializer, 400: 'collection not found'},
     )
 
@@ -879,7 +917,7 @@ class SetCoverView(APIView):
             type=openapi.TYPE_OBJECT,
             properties={
                 'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'cover': openapi.Schema(type=openapi.TYPE_OBJECT)
+                'cover': openapi.Schema(type=openapi.TYPE_OBJECT, format=openapi.FORMAT_BINARY)
             }
         ),
         responses={200: 'OK', 400: 'error'}
