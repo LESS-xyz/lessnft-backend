@@ -6,6 +6,7 @@ from contracts import ERC721_MAIN, ERC1155_MAIN
 
 
 def create_ipfs(request):
+    print('request', request.__dict__)
     client = ipfshttpclient.connect(config.IPFS_CLIENT)
     name = request.data.get("name")
     description = request.data.get("description")

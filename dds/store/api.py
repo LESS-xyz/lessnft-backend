@@ -43,7 +43,7 @@ def token_sort_updated_at(token, reverse=False):
     return token.updated_at
 
 
-def token_search(words, page, **kwargs):
+def token_search(words, **kwargs):
     words = words.split(' ')
     tags = kwargs.get("tags")
     is_verified = kwargs.get("is_verified")
@@ -51,6 +51,7 @@ def token_search(words, page, **kwargs):
     order_by = kwargs.get("order_by")
     on_sale = kwargs.get("on_sale")
     currency = kwargs.get("currency")
+    page = kwargs.get("page", [1])
     network = kwargs.get("network")
     user = kwargs.get("user")
     creator = kwargs.get("creator")
@@ -124,7 +125,7 @@ def token_search(words, page, **kwargs):
     elif order_by == "likes":
         tokens = sorted(tokens, key=token_sort_likes, reverse=reverse)
 
-    page = int(page)
+    page = int(page[0])
     start, end = get_page_slice(page, len(tokens), items_per_page=8)
     return len(tokens), TokenSerializer(tokens[start:end], context={"user": user}, many=True).data
 

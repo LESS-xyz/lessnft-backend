@@ -116,6 +116,9 @@ class SearchView(APIView):
     '''
     @swagger_auto_schema(
         operation_description="post search pattern",
+        manual_parameters=[
+            openapi.Parameter('network', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        ],
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
@@ -131,7 +134,7 @@ class SearchView(APIView):
         sort = params.get('type', 'items')
 
         sort_type = getattr(config.SEARCH_TYPES, sort)
-        token_count, search_result = globals()[sort_type + '_search'](words, page, user=request.user, **params)
+        token_count, search_result = globals()[sort_type + '_search'](words, user=request.user, **params)
         response_data = {"total_tokens": token_count, "items": search_result}
 
         return Response(response_data, status=status.HTTP_200_OK)
@@ -224,7 +227,7 @@ class CreateCollectionView(APIView):
         symbol = request.data.get('symbol')
         short_url = request.data.get('short_url')
         standart = request.data.get('standart')
-        network = request.query_params.get('network', DEFAULT_NETWORK)
+        network = request.query_params.get('network', config.DEFAULT_NETWORK)
         owner = request.user
 
         is_unique, response = Collection.collection_is_unique(name, symbol, short_url, network)
@@ -241,6 +244,7 @@ class CreateCollectionView(APIView):
         initial_tx = Collection.create_contract(name, symbol, standart, owner, network.first())
 
         collection = Collection()
+
         media = request.FILES.get('avatar')
         print(media)
         if media:
@@ -263,7 +267,7 @@ class GetOwnedView(APIView):
     )
 
     def get(self, request, address, page):
-        network = request.query_params.get('network', DEFAULT_NETWORK)
+        network = request.query_params.get('network', config.DEFAULT_NETWORK)
         try:
             user = AdvUser.objects.get(username=address)
         except ObjectDoesNotExist:
@@ -288,7 +292,7 @@ class GetCreatedView(APIView):
     )
 
     def get(self, request, address, page):
-        network = request.query_params.get('network', DEFAULT_NETWORK)
+        network = request.query_params.get('network', config.DEFAULT_NETWORK)
         try:
             user = AdvUser.objects.get(username=address)
         except ObjectDoesNotExist:
@@ -312,7 +316,7 @@ class GetLikedView(APIView):
     )
 
     def get(self, request, address, page):
-        network = request.query_params.get('network', DEFAULT_NETWORK)
+        network = request.query_params.get('network', config.DEFAULT_NETWORK)
         try:
             user = AdvUser.objects.get(username=address)
         except ObjectDoesNotExist:
@@ -469,7 +473,7 @@ class GetHotView(APIView):
     def get(self, request, page):
         sort = request.query_params.get('sort', 'recent')
         tag = request.query_params.get('tag')
-        network = request.query_params.get('network', DEFAULT_NETWORK)
+        network = request.query_params.get('network', config.DEFAULT_NETWORK)
         order = getattr(config.SORT_STATUSES, sort)
         tokens = Token.token_objects.network(network)
         if tag:
@@ -497,7 +501,7 @@ class GetHotCollectionsView(APIView):
         responses={200: HotCollectionSerializer(many=True)},
     )
     def get(self, request):
-        network = request.query_params.get('network', DEFAULT_NETWORK)
+        network = request.query_params.get('network', config.DEFAULT_NETWORK)
         collections = Collection.objects.hot_collections(network).order_by('-id')[:5]
         response_data = HotCollectionSerializer(collections, many=True).data
         return Response(response_data, status=status.HTTP_200_OK)
@@ -513,7 +517,7 @@ class GetCollectionView(APIView):
     )
 
     def get(self, request, param, page):
-        network = request.query_params.get('network', DEFAULT_NETWORK)
+        network = request.query_params.get('network', config.DEFAULT_NETWORK)
         try:
             collection = Collection.objects.get_by_short_url(param)
         except ObjectDoesNotExist:
@@ -907,7 +911,7 @@ def get_fee(request):
 
 @api_view(http_method_names=['GET'])
 def get_favorites(request):
-    network = request.query_params.get('network', DEFAULT_NETWORK)
+    network = request.query_params.get('network', config.DEFAULT_NETWORK)
     token_list = Token.token_objects.network(network).filter(is_favorite=True).order_by("-updated_at")
     response_data = TokenSerializer(token_list, many=True, context={"user": request.user}).data
     return Response(response_data, status=status.HTTP_200_OK)
@@ -915,7 +919,7 @@ def get_favorites(request):
 
 @api_view(http_method_names=['GET'])
 def get_hot_bids(request):
-    network = request.query_params.get('network', DEFAULT_NETWORK)
+    network = request.query_params.get('network', config.DEFAULT_NETWORK)
     bids = Bid.objects.filter(state=Status.COMMITTED).filter(
         token__collection__network__name__icontains=network
         ).distinct('token')[:6]
@@ -1041,7 +1045,7 @@ def get_token_max_price(token):
 
 @api_view(http_method_names=['GET'])
 def get_max_price(request):
-    network = request.query_params.get('network', DEFAULT_NETWORK)
+    network = request.query_params.get('network', config.DEFAULT_NETWORK)
     currency = request.query_params.get('currency')
     tokens = Token.token_objects.network(network).filter(currency__symbol=currency)
     token_prices = [get_token_max_price(t) for t in tokens]

@@ -56,7 +56,7 @@ class CollectionManager(models.Manager):
             )
         return self.exclude(name__in=(config.COLLECTION_721, config.COLLECTION_1155,)).filter(
             network__name__icontains=network).filter(
-            Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
+            Exists(Token.token_objects.committed().filter(collection__id=OuterRef('id')))
         )
 
     def network(self, network):

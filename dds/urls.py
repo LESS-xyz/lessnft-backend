@@ -12,9 +12,9 @@ from dds.settings import MEDIA_URL, MEDIA_ROOT, STATIC_ROOT, STATIC_URL
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="kephi",
+        title="nft_marketplace",
         default_version='v1',
-        description="API for kephi gallery",
+        description="API for nft_marketplace gallery",
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),

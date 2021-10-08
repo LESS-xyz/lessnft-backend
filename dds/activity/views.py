@@ -8,7 +8,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
 from dds.utilities import get_page_slice
 from .models import BidsHistory, ListingHistory, TokenHistory, UserAction
@@ -520,7 +520,6 @@ class GetPriceHistory(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
     @swagger_auto_schema(
         operation_description="get price history",
-        responses={200: PriceSerializer, 401: not_found_response},
     )
     def get(self, request, id):
         period = request.query_params.get('period')
@@ -540,3 +539,4 @@ class GetPriceHistory(APIView):
         response_data['price_history'] = ListingHistorySerializer(history, many=True).data
         response_data['bids_history'] = BidsHistorySerializer(bids, many=True).data
         return Response(response_data, status=status.HTTP_200_OK)
+

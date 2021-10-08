@@ -25,7 +25,10 @@ rates_response = openapi.Response(
 class RateRequest(APIView):
     @swagger_auto_schema(
         operation_description="rate request",
-        responses={200: rates_response}
+        responses={200: rates_response},
+        manual_parameters=[
+            openapi.Parameter('network', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        ]
     )
     def get(self, request):
         network = request.query_params.get('network', config.DEFAULT_NETWORK)

@@ -253,7 +253,7 @@ class GetUserCollections(APIView):
         resposnes={200: UserCollectionSerializer, 401: not_found_response}
     )
     def get(self, request, param):
-        network = request.query_params.get('network', DEFAULT_NETWORK)
+        network = request.query_params.get('network', config.DEFAULT_NETWORK)
         try:
             if param[:2] == '0x':
                 user = AdvUser.objects.get(username=param)
