@@ -31,6 +31,7 @@ class ActivityView(APIView):
     @swagger_auto_schema(
         operation_description="get activity",
         manual_parameters=[
+            openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("type", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
         ],
@@ -126,6 +127,9 @@ class NotificationActivityView(APIView):
 
     @swagger_auto_schema(
         operation_description="get user notifications, return last 5",
+        manual_parameters=[
+            openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        ],
     )
     def get(self, request):
         address = request.user.username
@@ -181,7 +185,7 @@ class NotificationActivityView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-        operation_description="Mark activity as viewed",
+        operation_description="Mark activity as viewed. Method 'all' - marked all activity as viewed.",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
@@ -252,6 +256,7 @@ class UserActivityView(APIView):
     @swagger_auto_schema(
         operation_description="get user activity",
         manual_parameters=[
+            openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("type", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
         ],
@@ -383,6 +388,7 @@ class FollowingActivityView(APIView):
     @swagger_auto_schema(
         operation_description="get user activity",
         manual_parameters=[
+            openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("type", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
         ],
@@ -495,8 +501,19 @@ class GetBestDealView(APIView):
     @swagger_auto_schema(
         operation_description="get top users",
         manual_parameters=[
-            openapi.Parameter("type", openapi.IN_QUERY, type=openapi.TYPE_STRING),
-            openapi.Parameter("sort_period", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter(
+                "type", 
+                openapi.IN_QUERY, 
+                type=openapi.TYPE_STRING, 
+                description="seller, buyer, follows",
+            ),
+            openapi.Parameter(
+                "sort_period", 
+                openapi.IN_QUERY, 
+                type=openapi.TYPE_STRING, 
+                description="day, week, month",
+            ),
         ],
     )
     def get(self, request):
@@ -520,6 +537,14 @@ class GetPriceHistory(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
     @swagger_auto_schema(
         operation_description="get price history",
+        manual_parameters=[
+            openapi.Parameter(
+                "period", 
+                openapi.IN_QUERY, 
+                type=openapi.TYPE_STRING, 
+                description="day, week, month, year",
+            ),
+        ],
     )
     def get(self, request, id):
         period = request.query_params.get('period')
