@@ -94,10 +94,11 @@ class CoverSerializer(serializers.ModelSerializer):
 class BaseAdvUserSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
+    created_tokens = serializers.SerializerMethodField()
 
     class Meta:
         model = AdvUser
-        read_only_fields = ("avatar", "created_at", 'twitter', 'instagram', 'facebook', 'site')
+        read_only_fields = ("avatar", "created_at", 'twitter', 'instagram', 'facebook', 'site', 'created_tokens')
         fields = read_only_fields + ("id", "name",)
 
     def get_id(self, obj):
@@ -105,6 +106,9 @@ class BaseAdvUserSerializer(serializers.ModelSerializer):
 
     def get_name(self, obj):
         return obj.get_name()
+
+    def get_created_tokens(self, obj):
+        return obj.token_creator.count()
 
  
 class UserOwnerSerializer(BaseAdvUserSerializer):
