@@ -9,23 +9,10 @@ from dds.rates.models import UsdRate
 from dds.settings import config
 
 
-rates_response = openapi.Response(
-    description='WETH, ETC, USDC, LESS rates',
-    schema=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            'WETH': openapi.Schema(type=openapi.TYPE_STRING),
-            'ETC': openapi.Schema(type=openapi.TYPE_STRING),
-            'USDC': openapi.Schema(type=openapi.TYPE_STRING),
-            'LESS': openapi.Schema(type=openapi.TYPE_STRING),
-        },
-    )
-)
-
 class RateRequest(APIView):
     @swagger_auto_schema(
         operation_description="rate request",
-        responses={200: rates_response},
+        responses={200: UsdRateSerializer},
         manual_parameters=[
             openapi.Parameter('network', openapi.IN_QUERY, type=openapi.TYPE_STRING),
         ]
