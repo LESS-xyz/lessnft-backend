@@ -320,7 +320,7 @@ class TokenSerializer(serializers.ModelSerializer):
 class HotCollectionSerializer(CollectionSlimSerializer):
     tokens = serializers.SerializerMethodField()
     creator = CreatorSerializer()
-
+    likes_count = serializers.SerializerMethodField()
     class Meta(CollectionSlimSerializer.Meta):
         fields = CollectionSlimSerializer.Meta.fields + (
             "symbol",
@@ -331,6 +331,7 @@ class HotCollectionSerializer(CollectionSlimSerializer):
             "status",
             "deploy_block",
             "tokens",
+            "likes_count",
         )
 
     def get_tokens(self, obj):
@@ -339,6 +340,8 @@ class HotCollectionSerializer(CollectionSlimSerializer):
         )[:6]
         return [token.media for token in tokens]
 
+    def get_likes_count(self, obj):
+        return obj.token_set.all().aggregate(likes_count=Count('useraction'))
 
 class UserCollectionSerializer(CollectionSlimSerializer):
     tokens = serializers.SerializerMethodField()
