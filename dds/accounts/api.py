@@ -28,6 +28,7 @@ def user_search(words, current_user, **kwargs):
         reverse = "-" if order_by[0] == "-" else ""
 
     users = AdvUser.objects.all()
+    users_count = users.count()
 
     if verificated is not None:
         users = users.filter(is_verificated=verificated[0].lower()=="true")
@@ -43,7 +44,7 @@ def user_search(words, current_user, **kwargs):
         users = users.annotate(Count('token_creator')).order_by(f"{reverse}token_creator")
 
     start, end = get_page_slice(page, len(users))
-    return UserSearchSerializer(users[start:end], many=True).data
+    return users_count, UserSearchSerializer(users[start:end], many=True).data
 
 
 def follow_and_follower(user):
