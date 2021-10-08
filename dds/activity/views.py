@@ -500,7 +500,7 @@ class GetBestDealView(APIView):
         ],
     )
     def get(self, request):
-        type_ = request.query_params.get("type")                # seller, buyer
+        type_ = request.query_params.get("type")                # seller, buyer, follows
         sort_period = request.query_params.get("sort_period")   # day, week, month
         network = request.query_params.get("network", config.DEFAULT_NETWORK)
 

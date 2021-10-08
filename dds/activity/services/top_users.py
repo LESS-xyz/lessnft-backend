@@ -3,7 +3,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Sum, F
 from dds.accounts.models import AdvUser
-from dds.activity.models import TokenHistory, UserStat
+from dds.activity.models import TokenHistory, UserStat, UserAction
 from dds.rates.api import calculate_amount
 
 
@@ -46,6 +46,24 @@ def update_users_stat(network):
                     stat[period] = history[0].get('price')
             setattr(user_stat, types[type_], json.dumps(stat, default=float))
 
+            user_stat.save()
+ 
+    for period, time_delta in PERIODS.items():
+        users = AdvUser.objects.filter(following__date__gte=time_delta).annotate(follow_count = Count('following'))
+        for user in users:
+            user_stat = UserStat.objects.filter(user=user)
+            if not user_stat.exists():
+                user_stat = UserStat.objects.bulk_create([
+                    UserStat(network=network, user=user) for network in networks
+                ])
+            stat = getattr(user_stat[0], 'follows')
+            if isinstance(stat, str):
+                stat = json.loads(stat)
+            else:
+                stat = dict()
+            stat[period] = user.follow_count
+
+            setattr(user_stat, types[type_], json.dumps(stat, default=float))
             user_stat.save()
 
 
