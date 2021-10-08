@@ -53,10 +53,20 @@ def token_search(words, page, **kwargs):
     currency = kwargs.get("currency")
     network = kwargs.get("network")
     user = kwargs.get("user")
+    creator = kwargs.get("creator")
+    owner = kwargs.get("owner")
     if currency is not None:
         currency = currency[0]
     tokens = Token.token_objects.network(network[0]).select_related("currency", "owner")
     # Below are the tokens in the form of a QUERYSET
+    if owner:
+        tokens = tokens.filter(
+            Q(owner=owner) | Q(owners=owner),
+        ).order_by('-id')
+
+    if creator:
+        tokens = tokens.filter(creator=creator).order_by('-id')
+
     for word in words:
         tokens = tokens.filter(name__icontains=word)
 

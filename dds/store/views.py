@@ -125,8 +125,8 @@ class SearchView(APIView):
     )
     def post(self, request):
         request_data = request.data
-        words = request_data.get('text')
-        page = request_data.get('page')
+        words = request_data.get('text', '')
+        page = request_data.get('page', 1)
         params = request.query_params
         sort = params.get('type', 'items')
 
