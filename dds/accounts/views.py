@@ -79,6 +79,8 @@ class GetView(APIView):
                 'bio': openapi.Schema(type=openapi.TYPE_STRING),
                 'custom_url': openapi.Schema(type=openapi.TYPE_STRING),
                 'twitter': openapi.Schema(type=openapi.TYPE_STRING),
+                'instagram': openapi.Schema(type=openapi.TYPE_STRING),
+                'facebook': openapi.Schema(type=openapi.TYPE_STRING),
                 'site': openapi.Schema(type=openapi.TYPE_STRING)
             },
         ),
@@ -89,14 +91,6 @@ class GetView(APIView):
         user = request.user
         if request_data.get('custom_url')=='':
             request_data.pop('custom_url')
-        #if request_data.get('twitter')=='':
-        #    request_data.pop('twitter')
-        #if request_data.get('instagram')=='':
-        #    request_data.pop('instagram')
-        #if request_data.get('site')=='':
-        #    request_data.pop('site')
-        #if request_data.get('display_name')=='':
-        #    request_data.pop('display_name')
         
         serializer = PatchSerializer(user, data=request_data, partial=True)
 
@@ -250,6 +244,9 @@ class GetUserCollections(APIView):
 
     @swagger_auto_schema(
         operation_description="get collections by user",
+        manual_parameters=[
+            openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        ],
         resposnes={200: UserCollectionSerializer, 401: not_found_response}
     )
     def get(self, request, param):
@@ -365,6 +362,13 @@ class SetUserCoverView(APIView):
     permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description='set cover',
+        manual_parameters=[openapi.Parameter(
+            name="cover",
+            in_=openapi.IN_FORM,
+            type=openapi.TYPE_FILE,
+            required=True,
+            description="profile cover file"
+        )],
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
