@@ -87,7 +87,7 @@ class Network(models.Model):
         output_types: tuple, #tuple of output param types if necessary (for stupid tron)
         }
         """
-        return getattr(self, f'execute_{self.network_type}_{method_type}_function')(kwargs)
+        return getattr(self, f'execute_{self.network_type}_{method_type}_function')(**kwargs)
 
     def execute_ethereum_read_method(self, **kwargs) -> 'result':
         contract_type = kwargs.get('contract_type')
