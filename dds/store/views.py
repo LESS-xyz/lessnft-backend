@@ -2,28 +2,26 @@ import random
 
 from dds.accounts.models import AdvUser, MasterUser
 from dds.activity.models import BidsHistory, ListingHistory, UserAction
-from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid, token_search, collection_search)
-from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs
+from dds.store.api import check_captcha, get_dds_email_connection, validate_bid
+from dds.store.services.ipfs import create_ipfs, send_to_ipfs
 
 from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token, TransactionTracker
 from dds.networks.models import Network
-from dds.store.api import token_sort_price
 from dds.store.serializers import (
     TokenPatchSerializer, 
     TokenSerializer,
     TokenFullSerializer,
-    CollectionSlimSerializer,
     CollectionSerializer,
     HotCollectionSerializer,
     BetSerializer,
     BidSerializer,
-
     CollectionMetadataSerializer,
 )
 from dds.utilities import sign_message, get_page_slice
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
-from django.db.models import Exists, OuterRef, Q, Count, Sum
+from dds.consts import APPROVE_GAS_LIMIT
+from django.db.models import Q, Count, Sum
 from decimal import Decimal
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -32,13 +30,11 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from web3 import HTTPProvider, Web3
-
-from dds.accounts.api import user_search
+from web3 import Web3
 
 from dds.settings import config
-from dds.rates.api import get_decimals, calculate_amount
-from dds.rates.models import UsdRate
+from dds.rates.api import calculate_amount
+from dds.services.search import Search
 
 
 transfer_tx = openapi.Response(
@@ -156,7 +152,12 @@ class SearchView(APIView):
         sort = params.get('type', 'items')
 
         sort_type = getattr(config.SEARCH_TYPES, sort)
-        token_count, search_result = globals()[sort_type + '_search'](words, user=request.user, **params)
+        token_count, search_result = getattr(Search, f"{sort_type}_search")(
+            words=words, 
+            user=request.user, 
+            page=page, 
+            **params,
+        )
         response_data = {"total_tokens": token_count, "items": search_result}
 
         return Response(response_data, status=status.HTTP_200_OK)
@@ -559,8 +560,22 @@ class GetCollectionView(APIView):
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        tokens = Token.token_objects.network(network).filter(collection=collection)
+        attribute_dict = request.query_params
+        '''
+        Creating a dict of token attributes from query parameters in url, i.e.:
+        {hair: [black, red, blone]
+        eyes: [red, blue, brown]
+        height: [tall, short]}
+        '''
+        tokens = Token.token_objects.committed().filter(collection=collection)
+        if attribute_dict:
+            #iterating through both atributes and values in a dict to dynamically 
+            #filter tokens with required attribute values in their details
+            for attribute_ , value in attribute_dict.items():
+                attribute_filter = {f"details__{attribute_}__in": value}
+                tokens = tokens.filter(**attribute_filter)
 
+        # Serializing the list of filtered tokens
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
         response_data = CollectionSerializer(collection, context={"tokens": token_list}).data
