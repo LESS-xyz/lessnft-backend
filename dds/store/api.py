@@ -126,7 +126,7 @@ def token_search(words, **kwargs):
         tokens = sorted(tokens, key=token_sort_likes, reverse=reverse)
 
     page = int(page[0])
-    start, end = get_page_slice(page, len(tokens), items_per_page=8)
+    start, end = get_page_slice(page, len(tokens), items_per_page=4)
     return len(tokens), TokenSerializer(tokens[start:end], context={"user": user}, many=True).data
 
 

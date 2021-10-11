@@ -44,20 +44,18 @@ from dds.rates.models import UsdRate
 transfer_tx = openapi.Response(
     description='Response with prepared transfer tx',
     schema=openapi.Schema(
-        type=openapi.TYPE_ARRAY,
-        items=openapi.Items(type=openapi.TYPE_OBJECT,
+        type=openapi.TYPE_OBJECT,
         properties={
-            'tx': openapi.Schema(type=openapi.TYPE_STRING)
+            'tx': openapi.Schema(type=openapi.TYPE_STRING),
         }
-    ))
+    )
 )
 
 
 create_response = openapi.Response(
     description='Response with created token',
     schema=openapi.Schema(
-        type=openapi.TYPE_ARRAY,
-        items=openapi.Items(type=openapi.TYPE_OBJECT,
+        type=openapi.TYPE_OBJECT,
         properties={
             'id': openapi.Schema(type=openapi.TYPE_NUMBER),
             'total_supply': openapi.Schema(type=openapi.TYPE_NUMBER),
@@ -70,7 +68,7 @@ create_response = openapi.Response(
             'standart': openapi.Schema(type=openapi.TYPE_STRING),
             'details': openapi.Schema(type=openapi.TYPE_OBJECT),
         }
-    ))
+    )
 )
 
 buy_token_response = openapi.Response(
@@ -127,7 +125,7 @@ class SearchView(APIView):
                     type=openapi.TYPE_STRING, 
                     description="Search by: items, users, collections",
                 ),
-                openapi.Parameter("tags", openapi.IN_QUERY, type=openapi.TYPE_ARRAY),
+                # openapi.Parameter("tags", openapi.IN_QUERY, type=openapi.TYPE_ARRAY),
                 openapi.Parameter("is_verified", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN),
                 openapi.Parameter("max_price", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
                 openapi.Parameter(
@@ -917,7 +915,7 @@ class SetCoverView(APIView):
             type=openapi.TYPE_OBJECT,
             properties={
                 'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'cover': openapi.Schema(type=openapi.TYPE_OBJECT, format=openapi.FORMAT_BINARY)
+                'cover': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_BINARY)
             }
         ),
         responses={200: 'OK', 400: 'error'}
