@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from collections import Counter
 from decimal import Decimal
 
 from dds.rates.api import calculate_amount
@@ -370,6 +371,7 @@ class UserCollectionSerializer(CollectionSlimSerializer):
 class CollectionSerializer(CollectionSlimSerializer):
     tokens = serializers.SerializerMethodField()
     creator = CreatorSerializer()
+    attributes = serializers.SerializerMethodField()
 
     class Meta(CollectionSlimSerializer.Meta):
         read_only_fields = CollectionSlimSerializer.Meta.read_only_fields + ("cover",)
@@ -378,11 +380,31 @@ class CollectionSerializer(CollectionSlimSerializer):
             "creator",
             "description",
             "tokens",
+            "attributes",
         )
 
     def get_tokens(self, obj):
         tokens = self.context.get("tokens") 
         return TokenSerializer(tokens, many=True).data
+
+    def get_attributes(self, obj):
+        token_details = Token.token_objects.filter(collection=obj).values_list('details', flat=True)
+
+        attribute_count = []
+        #Getting a list of all keys(token attributes) from the list of token details:
+        all_attributes = set().union(*(d.keys() for d in token_details))
+        #initialising a counter to iterate over value dicts in a list:
+        for attribute in all_attributes:
+            #Counting all occurrencies of each attribute value and writing it into a list of dicts like
+            #{'title': Attribute, properties: [{ 'name': value1, 'count': occurencies of value1}, 
+            # 'name': value2, 'count': occurencies of value2}], ...}]}]
+            value_amount = Counter(token[attribute] for token in token_details if attribute in token)
+            element = {"title": attribute, "properties": []}
+            for value, amount in value_amount.items():
+                element["properties"].append({"name": value, "count": amount})
+            attribute_count.append(element)
+
+        return attribute_count
 
 
 class TokenFullSerializer(TokenSerializer):

@@ -561,8 +561,22 @@ class GetCollectionView(APIView):
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        tokens = Token.token_objects.network(network).filter(collection=collection)
+        attribute_dict = request.query_params
+        '''
+        Creating a dict of token attributes from query parameters in url, i.e.:
+        {hair: [black, red, blone]
+        eyes: [red, blue, brown]
+        height: [tall, short]}
+        '''
+        tokens = Token.token_objects.committed().filter(collection=collection)
+        if attribute_dict:
+            #iterating through both atributes and values in a dict to dynamically 
+            #filter tokens with required attribute values in their details
+            for attribute_ , value in attribute_dict.items():
+                attribute_filter = {f"details__{attribute_}__in": value}
+                tokens = tokens.filter(**attribute_filter)
 
+        # Serializing the list of filtered tokens
         start, end = get_page_slice(page, len(tokens))
         token_list = tokens[start:end]
         response_data = CollectionSerializer(collection, context={"tokens": token_list}).data
