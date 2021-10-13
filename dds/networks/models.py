@@ -1,5 +1,9 @@
+import logging
+import requests
 from typing import TYPE_CHECKING
 
+from trx_utils import decode_hex
+from eth_abi import decode_abi, encode_abi
 from django.db import models
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
@@ -12,6 +16,8 @@ from contracts import (
     ERC1155_MAIN,
     ERC1155_FABRIC,
 )
+
+from dds.settings import config
 
 
 if TYPE_CHECKING:
@@ -105,7 +111,10 @@ class Network(models.Model):
             _, contract = getattr(self, f'get_{contract_type}_contract')()
         else:
             _, contract = getattr(self, f'get_{contract_type}_contract')(address)
-        return getattr(contract.functions, function_name)(*input_params).call()
+        # to not send None into function args
+        if input_params:
+            return getattr(contract.functions, function_name)(*input_params).call()
+        return getattr(contract.functions, function_name)().call()
 
     def execute_ethereum_write_method(self, **kwargs) -> 'initial_tx':
         contract_type = kwargs.get('contract_type')
@@ -129,10 +138,46 @@ class Network(models.Model):
 
         function_name = kwargs.get('function_name')
         input_params = kwargs.get('input_params')
-        return getattr(contract.functions, function_name)(*input_params).buildTransaction(tx_params)
+        # to not send None into function args
+        if input_params:
+            return getattr(contract.functions, function_name)(*input_params).buildTransaction(tx_params)
+        return getattr(contract.functions, function_name)().buildTransaction(tx_params)
 
     def execute_tron_read_method(self, **kwargs) -> 'result':
-        pass
+        input_params = kwargs.get('input_params')
+        input_types = kwargs.get('input_type')
+        function_name = kwargs.get('function_name')
+        output_types = kwargs.get('output_types')
+        address = kwargs.get('address')
+        contract_type = kwargs.get('contract_type')
+
+        input_data = encode_abi(input_types, input_params).hex()
+        address_match = {
+            'exchange': 'exchange_address',
+            'erc721fabric': 'fabric721_address',
+            'erc1155fabric': 'fabric1155_address',
+        }
+        if not address:
+            address = address_match.get('contract_type')
+            if not address:
+                logging.info(f'could not get contract address for {contract_type} in {self.name}')
+        payload = {
+            "visible": True,
+            "owner_address": config.SIGNER_ADDRESS,
+            "contract_address": address,
+            "function_selector": f'{function_name}{input_types}',
+            "parameter": input_data,
+        }
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+        url = self.node + "/wallet/triggerconstantcontract"
+        response = requests.post(url, data=payload, headers=headers)
+        constant_result = response.json()["constant_result"][0]
+        decoded_data = decode_hex(constant_result)
+        result = decode_abi(output_types, decoded_data)
+        return result
 
     def execute_tron_write_method(self, **kwargs) -> 'initial_tx':
         pass
