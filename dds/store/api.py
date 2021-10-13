@@ -142,7 +142,7 @@ def collection_search(words, page):
     return CollectionSearchSerializer(collections[start:end]).data
     
 
-def validate_bid(user, token_id, amount, token_contract, quantity):
+def validate_bid(user, token_id, amount, quantity):
     try:
         token = Token.token_objects.committed().get(id=token_id)
     except ObjectDoesNotExist:
@@ -153,7 +153,17 @@ def validate_bid(user, token_id, amount, token_contract, quantity):
         return 'Your bid is too low'
     if token.total_supply < quantity:
         return 'Token quantity is lower'
-    user_balance = token_contract.functions.balanceOf(Web3.toChecksumAddress(user.username)).call()
+
+    user_balance = token.currency.network.contract_call(
+            method_type='read', 
+            contract_type='token',
+            address=token.currency.address, 
+            function_name='balanceOf',
+            input_params=(user.username,),
+            input_type=('address',),
+            output_type='uint256',
+    )
+
     if user_balance < amount * quantity:
         return 'Your bidding balance is too small'
 

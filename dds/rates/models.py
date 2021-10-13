@@ -40,7 +40,13 @@ class UsdRate(models.Model):
         return fee / 100 * self.fee_discount
 
     def set_decimals(self) -> None:
-        address = Web3.toChecksumAddress(self.address)
-        web3, contract = self.network.get_token_contract(address)
-        self.decimal = contract.functions.decimals().call()
+        self.decimal = self.network.contract_call(
+            method_type='read',
+            contract_type='token',
+            address=self.address,
+            function_name='decimals',
+            input_params=(),
+            input_type=(),
+            output_type='uint256',
+            )
         self.save()

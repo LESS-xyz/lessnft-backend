@@ -703,9 +703,6 @@ class MakeBid(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-
-        web3, token_contract = token.currency.network.get_token_contract(token.currency.address)
-
         #returns OK if valid, or error message
         result = validate_bid(user, token_id, amount, token_contract, quantity)
 
@@ -723,18 +720,37 @@ class MakeBid(APIView):
         bid.full_clean()
         bid.save()
 
+
         #construct approve tx if not approved yet:
-        allowance = token_contract.functions.allowance(
-            web3.toChecksumAddress(user.username),
-            web3.toChecksumAddress(token.collection.network.exchange_address),
-        ).call()
-        user_balance = token_contract.functions.balanceOf(
-            Web3.toChecksumAddress(user.username)
-        ).call()
-        
+        allowance = bid.token.currency.network.contract_call(
+            method_type='read', 
+            contract_type='token',
+            address=token.currency.address, 
+            function_name='allowance',
+            input_params=(
+                user.username,
+                bid.token.currency.network.exchange_address
+            ),
+            input_type=('address', 'address'),
+            output_type='uint256',
+        )
+
+        user_balance = bid.token.currency.network.contract_call(
+            method_type='read', 
+            contract_type='token',
+            address=token.currency.address, 
+            function_name='balanceOf',
+            input_params=(user.username,),
+            input_type=('address',),
+            output_type='uint256',
+        )
+
+
+
         amount, _ = calculate_amount(amount, bid.token.currency.symbol)
 
         if allowance < amount * quantity:
+
             tx_params = {
                 'chainId': web3.eth.chainId,
                 'gas': APPROVE_GAS_LIMIT,
@@ -745,6 +761,7 @@ class MakeBid(APIView):
                 web3.toChecksumAddress(token.collection.network.exchange_address),
                 user_balance,
             ).buildTransaction(tx_params)
+
             return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
 
         bid.state = Status.COMMITTED
@@ -800,9 +817,7 @@ class VerificateBetView(APIView):
         amount = max_bet.amount
         quantity = max_bet.quantity
 
-        web3, token_contract = token.currency.network.get_token_contract(token.currency.address)
-
-        check_valid = validate_bid(user, token_id, amount, token_contract, quantity)
+        check_valid = validate_bid(user, token_id, amount, quantity)
 
         if check_valid == 'OK':
             print('all ok!')
@@ -815,7 +830,7 @@ class VerificateBetView(APIView):
                 user = bet.user
                 amount = bet.amount
                 quantity = bet.quantity
-                check_valid = validate_bid(user, token_id, amount, token_contract, quantity)
+                check_valid = validate_bid(user, token_id, amount, quantity)
                 if check_valid == 'OK':
                     print('again ok!')
                     return Response(
