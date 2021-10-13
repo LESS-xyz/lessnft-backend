@@ -74,6 +74,12 @@ class Network(models.Model):
     def get_token_contract(self, address: str = None) -> ("Web3", "Contract"):
         return self._get_contract_by_abi(WETH_ABI, address)
 
+    def wrap_in_checksum(self, address: str) -> str:
+        """ Wrap address to checksum because calling web3 for tron will return an error """
+        if self.network_type == Types.ethereum:
+            return Web3.toChecksumAddress(address)
+        return address
+
     def contract_call(self, method_type: str, **kwargs) -> "result":
         """
         redirects to ethereum/tron/whatever_shit_we_will_add_later read/write method
@@ -102,7 +108,28 @@ class Network(models.Model):
         return getattr(contract.functions, function_name)(*input_params).call()
 
     def execute_ethereum_write_method(self, **kwargs) -> 'initial_tx':
-        pass
+        contract_type = kwargs.get('contract_type')
+        address = kwargs.get('address')
+        web3, contract = getattr(self, f'get_{contract_type}_contract')(address)
+
+        gas_limit = kwargs.get('gas_limit')
+        nonce_username = kwargs.get('nonce_username')
+        tx_value = kwargs.get('tx_value')
+        assert gas_limit is not None
+        assert nonce_username is not None
+
+        tx_params = {
+            'chainId': web3.eth.chainId,
+            'gas': gas_limit,
+            'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(nonce_username), 'pending'),
+            'gasPrice': web3.eth.gasPrice,
+        }
+        if tx_value is not None:
+            tx_params['value'] = tx_value
+
+        function_name = kwargs.get('function_name')
+        input_params = kwargs.get('input_params')
+        return getattr(contract.functions, function_name)(*input_params).buildTransaction(tx_params)
 
     def execute_tron_read_method(self, **kwargs) -> 'result':
         pass
