@@ -1,7 +1,8 @@
-import logging
 import requests
 from typing import TYPE_CHECKING
 
+from tronapi import Tron
+from tronapi import HttpProvider
 from trx_utils import decode_hex
 from eth_abi import decode_abi, encode_abi
 from django.db import models
@@ -160,7 +161,8 @@ class Network(models.Model):
         if not address:
             address = getattr(self, address_match.get(contract_type))
             if not address:
-                logging.info(f'could not get contract address for {contract_type} in {self.name}')
+                print(f'could not get contract address for {contract_type} in {self.name}')
+                raise "backend didn't found contract address"
         payload = {
             "visible": True,
             "owner_address": config.SIGNER_ADDRESS,
@@ -172,7 +174,7 @@ class Network(models.Model):
             "Accept": "application/json",
             "Content-Type": "application/json"
         }
-        url = self.node + "/wallet/triggerconstantcontract"
+        url = self.endpoint + "/wallet/triggerconstantcontract"
         response = requests.post(url, data=payload, headers=headers)
         constant_result = response.json()["constant_result"][0]
         decoded_data = decode_hex(constant_result)
@@ -180,4 +182,41 @@ class Network(models.Model):
         return result
 
     def execute_tron_write_method(self, **kwargs) -> 'initial_tx':
-        pass
+        input_params = kwargs.get('input_params')
+        input_types = kwargs.get('input_type')
+        function_name = kwargs.get('function_name')
+        output_types = kwargs.get('output_types')
+        address = kwargs.get('address')
+        contract_type = kwargs.get('contract_type')
+        gas_limit = kwargs.get('gas_limit')
+
+        address_match = {
+            'exchange': 'exchange_address',
+            'erc721fabric': 'fabric721_address',
+            'erc1155fabric': 'fabric1155_address',
+        }
+        if not address:
+            address = getattr(self, address_match.get(contract_type))
+            if not address:
+                print(f'could not get contract address for {contract_type} in {self.name}')
+                raise "backend didn't found contract address"
+        provider = HttpProvider(self.endpoint)
+        tron = Tron(
+            full_node=provider,
+            solidity_node=provider,
+            event_server=provider,
+            private_key=config.PRIV_KEY,
+            default_address=config.SIGNER_ADDRESS
+        )
+
+        params = []
+        for i in range(len(input_params)):
+            params.append({"type": input_types[i], "value": input_params[i]})
+
+        return tron.transaction_builder.trigger_smart_contract(
+            contract_address=address,
+            function_selector=f'{function_name}{input_types}',
+            fee_limit=gas_limit,
+            call_value=0,
+            parameters=params
+        )['transaction']
