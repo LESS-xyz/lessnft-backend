@@ -158,7 +158,7 @@ class Network(models.Model):
             'erc1155fabric': 'fabric1155_address',
         }
         if not address:
-            address = address_match.get('contract_type')
+            address = getattr(self, address_match.get(contract_type))
             if not address:
                 logging.info(f'could not get contract address for {contract_type} in {self.name}')
         payload = {
