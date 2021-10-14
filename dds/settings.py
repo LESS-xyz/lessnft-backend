@@ -173,4 +173,5 @@ PERIODS = {
     'day': timezone.now() - timedelta(days=1),
     'week': timezone.now() - timedelta(days=7),
     'month': timezone.now() - timedelta(days=30),
+    'year': timezone.now() - timedelta(days=365)
 }

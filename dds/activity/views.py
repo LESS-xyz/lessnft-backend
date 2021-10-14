@@ -21,7 +21,7 @@ from dds.activity.serializers import (
     ListingHistorySerializer
 )
 from dds.activity.services.top_users import get_top_users
-from dds.settings import config
+from dds.settings import config, PERIODS
 
 class ActivityView(APIView):
     """
@@ -540,20 +540,15 @@ class GetPriceHistory(APIView):
         manual_parameters=[
             openapi.Parameter(
                 "period", 
-                openapi.IN_QUERY, 
-                type=openapi.TYPE_STRING, 
+                openapi.IN_QUERY,
+                type=openapi.TYPE_STRING,
                 description="day, week, month, year",
             ),
         ],
     )
     def get(self, request, id):
         period = request.query_params.get('period')
-        PERIODS = {
-            'day': timezone.now() - timedelta(days=1),
-            'week': timezone.now() - timedelta(days=7),
-            'month': timezone.now() - timedelta(days=30),
-            'year': timezone.now() - timedelta(days=365)
-        }
+
         try:
             token = Token.token_objects.committed().get(id=id)
         except ObjectDoesNotExist:
