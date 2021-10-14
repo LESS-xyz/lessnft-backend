@@ -5,15 +5,9 @@ from django.db.models import Sum, F, Count
 from dds.accounts.models import AdvUser
 from dds.activity.models import TokenHistory, UserStat, UserAction
 from dds.rates.api import calculate_amount
-
+from dds.settings import PERIODS
 
 # TODO: mb get from config
-PERIODS = {
-    'day': timezone.now() - timedelta(days=1),
-    'week': timezone.now() - timedelta(days=7),
-    'month': timezone.now() - timedelta(days=30),
-}
-
 
 def update_users_stat(network):
     types = {

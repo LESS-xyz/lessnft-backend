@@ -8,13 +8,14 @@ from django.urls import include
 from django.conf.urls.static import static
 
 from dds.settings import MEDIA_URL, MEDIA_ROOT, STATIC_ROOT, STATIC_URL
+from dds.settings import config
 
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="nft_marketplace",
+        title=config.TITLE,
         default_version='v1',
-        description="API for nft_marketplace gallery",
+        description=config.DESCRIPTION,        
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),

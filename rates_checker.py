@@ -15,14 +15,11 @@ django.setup()
 from dds.rates.models import UsdRate
 from dds.settings import RATES_CHECKER_TIMEOUT
 
-#TODO move to config?
-API_URL = "https://api.coingecko.com/api/v3/coins/{coin_code}"
-
 QUERY_FSYM = "usd"
 
 
 def get_rate(coin_code):
-    res = requests.get(API_URL.format(coin_code=coin_code))
+    res = requests.get(config.API_URL.format(coin_code=coin_code))
     if res.status_code != 200:
         raise Exception("cannot get exchange rate for {}".format(QUERY_FSYM))
     response = res.json()

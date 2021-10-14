@@ -114,6 +114,11 @@ class Config:
     HOLDERS_CHECK_COMMITMENT_LENGTH: int
     HOLDERS_CHECK_TIMEOUT: int
 
+    API_URL: str
+
+    TITLE: str
+    DESCRIPTION: str
+
 
 with open(os.path.dirname(__file__) + '/../config.yaml') as f:
     config_data = yaml.safe_load(f)
