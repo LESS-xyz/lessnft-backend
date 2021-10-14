@@ -59,7 +59,7 @@ class Network(models.Model):
     def _get_contract_by_abi(self, abi: "ABI", address: str = None) -> ("Web3", "Contract"):
         web3 = self.get_web3_connection()
         if address:
-            address = web3.toChecksumAddress(address)
+            address = self.wrap_in_checksum(address)
         contract = web3.eth.contract(address=address, abi=abi)
         return web3, contract
 
@@ -131,7 +131,7 @@ class Network(models.Model):
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': gas_limit,
-            'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(nonce_username), 'pending'),
+            'nonce': web3.eth.getTransactionCount(self.wrap_in_checksum(nonce_username), 'pending'),
             'gasPrice': web3.eth.gasPrice,
         }
         if tx_value is not None:

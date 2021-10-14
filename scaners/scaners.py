@@ -75,7 +75,7 @@ def scan_deploy(latest_block, smart_contract, network_name):
         print(event.__dict__)
         name = event['args']['name']
         deploy_block = event['blockNumber']
-        address = Web3.toChecksumAddress(event['args']['newToken'])
+        address = network.wrap_in_checksum(event['args']['newToken'])
         
         logging.info('get info about deploy collection')
         logging.info(f'name: {name}')

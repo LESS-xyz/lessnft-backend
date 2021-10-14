@@ -114,7 +114,7 @@ class Collection(models.Model):
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': TOKEN_MINT_GAS_LIMIT,
-            'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(creator.username), 'pending'),
+            'nonce': web3.eth.getTransactionCount(self.network.wrap_in_checksum(creator.username), 'pending'),
             'gasPrice': web3.eth.gasPrice,
         }
         if self.standart == 'ERC721':
@@ -174,7 +174,7 @@ class Collection(models.Model):
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': COLLECTION_CREATION_GAS_LIMIT,
-            'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(owner.username), 'pending'),
+            'nonce': web3.eth.getTransactionCount(network.wrap_in_checksum(owner.username), 'pending'),
             'gasPrice': web3.eth.gasPrice,
         }
         if standart == 'ERC721':
@@ -479,18 +479,18 @@ class Token(models.Model):
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': TOKEN_TRANSFER_GAS_LIMIT,
-            'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(old_owner.username), 'pending'),
+            'nonce': web3.eth.getTransactionCount(self.collection.network.wrap_in_checksum(old_owner.username), 'pending'),
             'gasPrice': web3.eth.gasPrice,
         }
         if self.standart == 'ERC721':
             return contract.functions.transferFrom(
-                web3.toChecksumAddress(self.owner.username),
-                web3.toChecksumAddress(new_owner), 
+                self.collection.network.wrap_in_checksum(self.owner.username),
+                self.collection.network.wrap_in_checksum(new_owner),
                 self.internal_id,
             ).buildTransaction(tx_params)
         return contract.functions.safeTransferFrom(
-            web3.toChecksumAddress(old_owner.username),
-            web3.toChecksumAddress(new_owner), 
+            self.collection.network.wrap_in_checksum(old_owner.username),
+            self.collection.network.wrap_in_checksum(new_owner),
             self.internal_id,
             int(amount),
             old_owner.username,
@@ -501,13 +501,13 @@ class Token(models.Model):
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': TOKEN_MINT_GAS_LIMIT,
-            'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(user.username), 'pending'),
+            'nonce': web3.eth.getTransactionCount(self.collection.network.wrap_in_checksum(user.username), 'pending'),
             'gasPrice': web3.eth.gasPrice,
         }
         if self.standart == "ERC721":
             return contract.functions.burn(self.internal_id).buildTransaction(tx_params)
         return contract.functions.burn(
-            web3.toChecksumAddress(user.username),
+            self.collection.network.wrap_in_checksum(user.username),
             self.internal_id, 
             int(amount),
         ).buildTransaction(tx_params)
@@ -548,21 +548,21 @@ class Token(models.Model):
 
         values_list = [
             id_order,
-            Web3.toChecksumAddress(seller_address),
-            Web3.toChecksumAddress(self.collection.address),
+            self.collection.network.wrap_in_checksum(seller_address),
+            self.collection.network.wrap_in_checksum(self.collection.address),
             self.internal_id,
             token_amount,
-            Web3.toChecksumAddress(address),
+            self.collection.network.wrap_in_checksum(address),
             int(price) * int(token_count),
             [
-                Web3.toChecksumAddress(self.creator.username),
-                Web3.toChecksumAddress(master_account.address),
+                self.collection.network.wrap_in_checksum(self.creator.username),
+                self.collection.network.wrap_in_checksum(master_account.address),
             ],
             [
                 (int(self.creator_royalty / 100 * float(price))),
                 (int(self.currency.service_fee / 100 * float(price))),
             ],
-            Web3.toChecksumAddress(buyer.username)
+            self.collection.network.wrap_in_checksum(buyer.username),
         ]
         signature = sign_message(
             types_list,
@@ -579,25 +579,26 @@ class Token(models.Model):
             'chainId': web3.eth.chainId,
             'gas': TOKEN_BUY_GAS_LIMIT,
             'nonce': web3.eth.getTransactionCount(
-                web3.toChecksumAddress(buyer_nonce), 'pending'
+                self.collection.network.wrap_in_checksum(buyer_nonce), 'pending'
             ),
             'gasPrice': web3.eth.gasPrice,
         }
 
         return contract.functions.makeExchangeERC721(
             idOrder = id_order,
-            SellerBuyer = [Web3.toChecksumAddress(seller_address), Web3.toChecksumAddress(buyer.username)],
+            SellerBuyer = [self.collection.network.wrap_in_checksum(seller_address), self.collection.network.wrap_in_checksum(buyer.username)],
             tokenToBuy = {
-                "tokenAddress": Web3.toChecksumAddress(self.collection.address),
+                "tokenAddress": self.collection.network.wrap_in_checksum(self.collection.address),
                 'id': int(self.internal_id),
                 'amount': int(token_amount),
             },
             tokenToSell = {
-                'tokenAddress': Web3.toChecksumAddress(address),
+                'tokenAddress': self.collection.network.wrap_in_checksum(address),
                 'id': 0,
                 'amount': int(price) * int(token_count),
             },
-            feeAddresses = [Web3.toChecksumAddress(self.creator.username), Web3.toChecksumAddress(master_account.address)],
+            feeAddresses = [self.collection.network.wrap_in_checksum(self.creator.username), 
+                            self.collection.network.wrap_in_checksum(master_account.address)],
             feeAmounts = [
                 (int(self.creator_royalty / 100 * float(price))),
                 (int(self.currency.service_fee / 100 * float(price)))

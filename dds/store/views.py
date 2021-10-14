@@ -609,7 +609,7 @@ class TransferOwned(APIView):
         if not is_valid:
             return response
 
-        current_owner = Web3.toChecksumAddress(request.user.username)
+        current_owner = transferring_token.collection.network.wrap_in_checksum(request.user.username)
         initial_tx = transferring_token.transfer(user, address, amount)
         return Response({"initial_tx": initial_tx}, status=status.HTTP_200_OK)
 
@@ -754,11 +754,11 @@ class MakeBid(APIView):
             tx_params = {
                 'chainId': web3.eth.chainId,
                 'gas': APPROVE_GAS_LIMIT,
-                'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(user.username), 'pending'),
+                'nonce': web3.eth.getTransactionCount(bid.token.collection.network.wrap_in_checksum(user.username), 'pending'),
                 'gasPrice': web3.eth.gasPrice,
             }
             initial_tx = token_contract.functions.approve(
-                web3.toChecksumAddress(token.collection.network.exchange_address),
+                bid.token.collection.network.wrap_in_checksum(token.collection.network.exchange_address),
                 user_balance,
             ).buildTransaction(tx_params)
 
