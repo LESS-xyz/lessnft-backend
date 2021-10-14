@@ -15,7 +15,7 @@ schema_view = get_schema_view(
     openapi.Info(
         title=config.TITLE,
         default_version='v1',
-        description=config.DESCRIPTION,        
+        description=config.DESCRIPTION,
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
