@@ -318,7 +318,7 @@ class UserActivityView(APIView):
             for param, method in bids_methods.items():
                 if param in types:
                     items = BidsHistory.objects.filter(
-                        token__collection__network__name__icontains=ntwork,
+                        token__collection__network__name__icontains=network,
                         user__username=address,
                         is_viewed=False,
                         method=method,
