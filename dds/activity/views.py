@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
-from dds.utilities import get_page_slice
+from dds.utilities import get_page_slice, get_periods
 from .models import BidsHistory, ListingHistory, TokenHistory, UserAction
 from .utils import quick_sort
 from .api import get_activity_response
@@ -318,7 +318,7 @@ class UserActivityView(APIView):
             for param, method in bids_methods.items():
                 if param in types:
                     items = BidsHistory.objects.filter(
-                        token__collection__network__name__icontains=ntwork,
+                        token__collection__network__name__icontains=network,
                         user__username=address,
                         is_viewed=False,
                         method=method,
@@ -540,26 +540,22 @@ class GetPriceHistory(APIView):
         manual_parameters=[
             openapi.Parameter(
                 "period", 
-                openapi.IN_QUERY, 
-                type=openapi.TYPE_STRING, 
+                openapi.IN_QUERY,
+                type=openapi.TYPE_STRING,
                 description="day, week, month, year",
             ),
         ],
     )
     def get(self, request, id):
         period = request.query_params.get('period')
-        PERIODS = {
-            'day': timezone.now() - timedelta(days=1),
-            'week': timezone.now() - timedelta(days=7),
-            'month': timezone.now() - timedelta(days=30),
-            'year': timezone.now() - timedelta(days=365)
-        }
+        periods = get_periods('day', 'week', 'month', 'year')
+
         try:
             token = Token.token_objects.committed().get(id=id)
         except ObjectDoesNotExist:
             return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
-        history = ListingHistory.objects.filter(token=token).filter(date__gte=PERIODS[period])
-        bids = BidsHistory.objects.filter(token=token).filter(date__gte=PERIODS[period])
+        history = ListingHistory.objects.filter(token=token).filter(date__gte=periods[period])
+        bids = BidsHistory.objects.filter(token=token).filter(date__gte=periods[period])
         response_data = {}
         response_data['price_history'] = ListingHistorySerializer(history, many=True).data
         response_data['bids_history'] = BidsHistorySerializer(bids, many=True).data

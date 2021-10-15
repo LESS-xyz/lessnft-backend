@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 from celery.schedules import crontab
+from django.utils import timezone
+from datetime import timedelta
 
 import os
 
@@ -166,3 +168,10 @@ REST_FRAMEWORK = {
 
 CELERY_BROKER_URL = "redis://redis:6379"
 CELERY_RESULT_BACKEND = "redis://redis:6379"
+
+PERIODS = {
+    'day': timezone.now() - timedelta(days=1),
+    'week': timezone.now() - timedelta(days=7),
+    'month': timezone.now() - timedelta(days=30),
+    'year': timezone.now() - timedelta(days=365)
+}

@@ -2,7 +2,7 @@ from eth_account import Account
 from web3 import Web3
 from typing import Tuple
 
-from dds.settings import config
+from dds.settings import config, PERIODS
 
 def sign_message(type, message):
     message_hash = Web3.soliditySha3(type, message)
@@ -25,3 +25,9 @@ def get_page_slice(page: int, items_length: int = None, items_per_page: int = 50
     if not items_length or items_length >= page * items_per_page:
         end = page * items_per_page 
     return start, end
+
+def get_periods(*args):
+    periods = {}
+    for key in args:
+        periods[key] = PERIODS[key]
+    return periods

@@ -22,22 +22,22 @@ def end_auction(token):
     tx = contract.functions.makeExchangeERC721(
         idOrder = data.get("idOrder"),
         SellerBuyer = [
-            Web3.toChecksumAddress(data.get("SellerBuyer")[0]),
-            Web3.toChecksumAddress(data.get("SellerBuyer")[1])
+            token.collection.network.wrap_in_checksum(data.get("SellerBuyer")[0]),
+            token.collection.network.wrap_in_checksum(data.get("SellerBuyer")[1]),
         ],
         tokenToBuy = {
-            "tokenAddress": Web3.toChecksumAddress(data.get("tokenToBuy").get("tokenAddress")),
+            "tokenAddress": token.collection.network.wrap_in_checksum(data.get("tokenToBuy").get("tokenAddress")),
             "id": int(data.get("tokenToBuy").get("id")),
             "amount": int(data.get("tokenToBuy").get("amount")),
         },
         tokenToSell = {
-            "tokenAddress": Web3.toChecksumAddress(data.get("tokenToSell").get("tokenAddress")),
+            "tokenAddress": token.collection.network.wrap_in_checksum(data.get("tokenToSell").get("tokenAddress")),
             "id": int(data.get("tokenToSell").get("id")),
             "amount": int(data.get("tokenToSell").get("amount")),
         },
         feeAddresses = [
-            Web3.toChecksumAddress(data.get("fee").get("feeAddresses")[0]),
-            Web3.toChecksumAddress(data.get("fee").get("feeAddresses")[1]),
+            token.collection.network.wrap_in_checksum(data.get("fee").get("feeAddresses")[0]),
+            token.collection.network.wrap_in_checksum(data.get("fee").get("feeAddresses")[1]),
         ],
         feeAmounts = [
             int(data.get("fee").get("feeAddresses"))[0],
