@@ -13,7 +13,7 @@ def update_users_stat(network):
         'new_owner': 'buyer',
         'old_owner': 'seller',
     }
-    period = get_periods('day', 'week', 'month')
+    periods = get_periods('day', 'week', 'month')
     for type_ in types.keys():
         user_filter = {f"{type_}__method": "Buy"}
         users = AdvUser.objects.filter(**user_filter).distinct()
@@ -26,7 +26,7 @@ def update_users_stat(network):
             else:
                 stat = dict()
 
-            for period, time_delta in period.items():
+            for period, time_delta in periods.items():
                 filter_data = {
                     "token__currency__network": network,
                     "date__gte": time_delta,
@@ -43,7 +43,7 @@ def update_users_stat(network):
 
             user_stat.save()
  
-    for period, time_delta in period.items():
+    for period, time_delta in periods.items():
         users = AdvUser.objects.filter(following__date__gte=time_delta).annotate(follow_count = Count('following'))
         for user in users:
             user_stat = UserStat.objects.filter(user=user)
