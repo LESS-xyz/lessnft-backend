@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
-from dds.utilities import get_page_slice
+from dds.utilities import get_page_slice, get_periods
 from .models import BidsHistory, ListingHistory, TokenHistory, UserAction
 from .utils import quick_sort
 from .api import get_activity_response
@@ -21,7 +21,7 @@ from dds.activity.serializers import (
     ListingHistorySerializer
 )
 from dds.activity.services.top_users import get_top_users
-from dds.settings import config, PERIODS
+from dds.settings import config
 
 class ActivityView(APIView):
     """
@@ -548,13 +548,14 @@ class GetPriceHistory(APIView):
     )
     def get(self, request, id):
         period = request.query_params.get('period')
+        periods = get_periods('day', 'week', 'month', 'year')
 
         try:
             token = Token.token_objects.committed().get(id=id)
         except ObjectDoesNotExist:
             return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
-        history = ListingHistory.objects.filter(token=token).filter(date__gte=PERIODS[period])
-        bids = BidsHistory.objects.filter(token=token).filter(date__gte=PERIODS[period])
+        history = ListingHistory.objects.filter(token=token).filter(date__gte=periods[period])
+        bids = BidsHistory.objects.filter(token=token).filter(date__gte=periods[period])
         response_data = {}
         response_data['price_history'] = ListingHistorySerializer(history, many=True).data
         response_data['bids_history'] = BidsHistorySerializer(bids, many=True).data

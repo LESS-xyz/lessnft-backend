@@ -27,7 +27,7 @@ def get_page_slice(page: int, items_length: int = None, items_per_page: int = 50
     return start, end
 
 def get_periods(*args):
-    PERIOD = {}
+    period = {}
     for key in args:
-        PERIOD[key] = PERIODS[key]
-    return PERIOD
+        period[key] = PERIODS[key]
+    return period
