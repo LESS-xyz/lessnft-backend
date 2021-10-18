@@ -2,8 +2,9 @@ import random
 
 from dds.accounts.models import AdvUser, MasterUser
 from dds.activity.models import BidsHistory, ListingHistory, UserAction
-from dds.store.api import check_captcha, get_dds_email_connection, validate_bid
-from dds.store.services.ipfs import create_ipfs, send_to_ipfs
+from dds.consts import APPROVE_GAS_LIMIT
+from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid, token_search, collection_search)
+from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs
 
 from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token, TransactionTracker
 from dds.networks.models import Network
@@ -608,7 +609,7 @@ class TransferOwned(APIView):
         if not is_valid:
             return response
 
-        current_owner = Web3.toChecksumAddress(request.user.username)
+        current_owner = transferring_token.collection.network.wrap_in_checksum(request.user.username)
         initial_tx = transferring_token.transfer(user, address, amount)
         return Response({"initial_tx": initial_tx}, status=status.HTTP_200_OK)
 
@@ -702,9 +703,6 @@ class MakeBid(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-
-        web3, token_contract = token.currency.network.get_token_contract(token.currency.address)
-
         #returns OK if valid, or error message
         result = validate_bid(user, token_id, amount, token_contract, quantity)
 
@@ -722,28 +720,66 @@ class MakeBid(APIView):
         bid.full_clean()
         bid.save()
 
+
         #construct approve tx if not approved yet:
-        allowance = token_contract.functions.allowance(
-            web3.toChecksumAddress(user.username),
-            web3.toChecksumAddress(token.collection.network.exchange_address),
-        ).call()
-        user_balance = token_contract.functions.balanceOf(
-            Web3.toChecksumAddress(user.username)
-        ).call()
-        
+        allowance = bid.token.currency.network.contract_call(
+            method_type='read', 
+            contract_type='token',
+            address=token.currency.address, 
+            function_name='allowance',
+            input_params=(
+                user.username,
+                bid.token.currency.network.exchange_address
+            ),
+            input_type=('address', 'address'),
+            output_type='uint256',
+        )
+
+        user_balance = bid.token.currency.network.contract_call(
+            method_type='read', 
+            contract_type='token',
+            address=token.currency.address, 
+            function_name='balanceOf',
+            input_params=(user.username,),
+            input_type=('address',),
+            output_type='uint256',
+        )
+
+
+
         amount, _ = calculate_amount(amount, bid.token.currency.symbol)
 
         if allowance < amount * quantity:
+            '''
             tx_params = {
                 'chainId': web3.eth.chainId,
                 'gas': APPROVE_GAS_LIMIT,
-                'nonce': web3.eth.getTransactionCount(web3.toChecksumAddress(user.username), 'pending'),
+                'nonce': web3.eth.getTransactionCount(bid.token.collection.network.wrap_in_checksum(user.username), 'pending'),
                 'gasPrice': web3.eth.gasPrice,
             }
             initial_tx = token_contract.functions.approve(
-                web3.toChecksumAddress(token.collection.network.exchange_address),
+                bid.token.collection.network.wrap_in_checksum(token.collection.network.exchange_address),
                 user_balance,
             ).buildTransaction(tx_params)
+            '''
+
+            initial_tx = bid.token.collection.network.contract_call(
+                method_type = 'write',
+                contract_type='token',
+                address=token.currency.address,
+
+                gas_limit = APPROVE_GAS_LIMIT,
+                nonce_username = user.username,
+                tx_value = None,
+
+                function_name= 'approve',
+                input_params=(
+                    bid.token.collection.network.wrap_in_checksum(token.collection.network.exchange_address),
+                    user_balance,
+                ),
+                input_type=('address', 'uint256')
+            )
+
             return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
 
         bid.state = Status.COMMITTED
@@ -799,9 +835,7 @@ class VerificateBetView(APIView):
         amount = max_bet.amount
         quantity = max_bet.quantity
 
-        web3, token_contract = token.currency.network.get_token_contract(token.currency.address)
-
-        check_valid = validate_bid(user, token_id, amount, token_contract, quantity)
+        check_valid = validate_bid(user, token_id, amount, quantity)
 
         if check_valid == 'OK':
             print('all ok!')
@@ -814,7 +848,7 @@ class VerificateBetView(APIView):
                 user = bet.user
                 amount = bet.amount
                 quantity = bet.quantity
-                check_valid = validate_bid(user, token_id, amount, token_contract, quantity)
+                check_valid = validate_bid(user, token_id, amount, quantity)
                 if check_valid == 'OK':
                     print('again ok!')
                     return Response(
