@@ -120,6 +120,7 @@ class Network(models.Model):
     def execute_ethereum_write_method(self, **kwargs) -> 'initial_tx':
         contract_type = kwargs.get('contract_type')
         address = kwargs.get('address')
+        send = kwargs.get('send', False)
         web3, contract = getattr(self, f'get_{contract_type}_contract')(address)
 
         gas_limit = kwargs.get('gas_limit')
@@ -141,8 +142,14 @@ class Network(models.Model):
         input_params = kwargs.get('input_params')
         # to not send None into function args
         if input_params:
-            return getattr(contract.functions, function_name)(*input_params).buildTransaction(tx_params)
-        return getattr(contract.functions, function_name)().buildTransaction(tx_params)
+            initial_tx = getattr(contract.functions, function_name)(*input_params).buildTransaction(tx_params)
+        else:
+            initial_tx = getattr(contract.functions, function_name)().buildTransaction(tx_params)
+        if send:
+            signed_tx = web3.eth.account.sign_transaction(initial_tx, config.PRIV_KEY)
+            tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
+            return tx_hash
+        return initial_tx
 
     def execute_tron_read_method(self, **kwargs) -> 'result':
         input_params = kwargs.get('input_params')
@@ -185,10 +192,10 @@ class Network(models.Model):
         input_params = kwargs.get('input_params')
         input_types = kwargs.get('input_type')
         function_name = kwargs.get('function_name')
-        output_types = kwargs.get('output_types')
         address = kwargs.get('address')
         contract_type = kwargs.get('contract_type')
         gas_limit = kwargs.get('gas_limit')
+        send = kwargs.get('send', False)
 
         address_match = {
             'exchange': 'exchange_address',
@@ -213,10 +220,16 @@ class Network(models.Model):
         for i in range(len(input_params)):
             params.append({"type": input_types[i], "value": input_params[i]})
 
-        return tron.transaction_builder.trigger_smart_contract(
+        initial_tx = tron.transaction_builder.trigger_smart_contract(
             contract_address=address,
             function_selector=f'{function_name}{input_types}',
             fee_limit=gas_limit,
             call_value=0,
             parameters=params
         )['transaction']
+
+        if send:
+            signed = tron.trx.sign(initial_tx['transaction'])
+            tx_hash = tron.trx.broadcast(signed)['txid']
+            return tx_hash
+        return initial_tx
