@@ -362,17 +362,13 @@ class SetUserCoverView(APIView):
     permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description='set cover',
-        manual_parameters=[openapi.Parameter(
-            name="cover",
-            in_=openapi.IN_FORM,
-            type=openapi.TYPE_FILE,
-            required=True,
-            description="profile cover file"
-        )],
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'cover': openapi.Schema(type=openapi.TYPE_OBJECT)
+                'cover': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format=openapi.FORMAT_BINARY
+            ),
             }
         ),
         responses={200: 'OK', 400: 'error'}

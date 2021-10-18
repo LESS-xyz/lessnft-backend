@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'rest_auth',
     'django_celery_beat',
+    'django_extensions',
 
     'dds.accounts',
     'dds.store',
@@ -168,6 +169,16 @@ REST_FRAMEWORK = {
 
 CELERY_BROKER_URL = "redis://redis:6379"
 CELERY_RESULT_BACKEND = "redis://redis:6379"
+
+SHELL_PLUS = 'ptpython'
+
+# https://django-extensions.readthedocs.io/en/latest/shell_plus.html#additional-imports
+# SHELL_PLUS_IMPORTS = [
+#    'from module.submodule1 import class1, function2',
+#    'from module.submodule2 import function3 as another1',
+#    'from module.submodule3 import *',
+#    'import module.submodule4',
+#]
 
 PERIODS = {
     'day': timezone.now() - timedelta(days=1),

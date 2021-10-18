@@ -1,16 +1,12 @@
 import json
 import requests
-from decimal import Decimal
 from web3 import Web3
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import get_connection
 from django.db.models import Q
 
 from dds.settings import config
-from dds.utilities import get_page_slice
-from dds.store.models import Token, Collection, Ownership, Status
-from dds.store.serializers import TokenSerializer, CollectionSearchSerializer
-from dds.rates.api import calculate_amount
+from dds.store.models import Token
 
 
 def token_selling_filter(is_selling) -> bool:

@@ -8,23 +8,21 @@ from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs
 
 from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token, TransactionTracker
 from dds.networks.models import Network
-from dds.store.api import token_sort_price
 from dds.store.serializers import (
     TokenPatchSerializer, 
     TokenSerializer,
     TokenFullSerializer,
-    CollectionSlimSerializer,
     CollectionSerializer,
     HotCollectionSerializer,
     BetSerializer,
     BidSerializer,
-
     CollectionMetadataSerializer,
 )
 from dds.utilities import sign_message, get_page_slice
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
-from django.db.models import Exists, OuterRef, Q, Count, Sum
+from dds.consts import APPROVE_GAS_LIMIT
+from django.db.models import Q, Count, Sum
 from decimal import Decimal
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -33,32 +31,28 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from web3 import HTTPProvider, Web3
-
-from dds.accounts.api import user_search
+from web3 import Web3
 
 from dds.settings import config
-from dds.rates.api import get_decimals, calculate_amount
-from dds.rates.models import UsdRate
+from dds.rates.api import calculate_amount
+from dds.services.search import Search
 
 
 transfer_tx = openapi.Response(
     description='Response with prepared transfer tx',
     schema=openapi.Schema(
-        type=openapi.TYPE_ARRAY,
-        items=openapi.Items(type=openapi.TYPE_OBJECT,
+        type=openapi.TYPE_OBJECT,
         properties={
-            'tx': openapi.Schema(type=openapi.TYPE_STRING)
+            'tx': openapi.Schema(type=openapi.TYPE_STRING),
         }
-    ))
+    )
 )
 
 
 create_response = openapi.Response(
     description='Response with created token',
     schema=openapi.Schema(
-        type=openapi.TYPE_ARRAY,
-        items=openapi.Items(type=openapi.TYPE_OBJECT,
+        type=openapi.TYPE_OBJECT,
         properties={
             'id': openapi.Schema(type=openapi.TYPE_NUMBER),
             'total_supply': openapi.Schema(type=openapi.TYPE_NUMBER),
@@ -71,7 +65,7 @@ create_response = openapi.Response(
             'standart': openapi.Schema(type=openapi.TYPE_STRING),
             'details': openapi.Schema(type=openapi.TYPE_OBJECT),
         }
-    ))
+    )
 )
 
 buy_token_response = openapi.Response(
@@ -128,7 +122,7 @@ class SearchView(APIView):
                     type=openapi.TYPE_STRING, 
                     description="Search by: items, users, collections",
                 ),
-                openapi.Parameter("tags", openapi.IN_QUERY, type=openapi.TYPE_ARRAY),
+                # openapi.Parameter("tags", openapi.IN_QUERY, type=openapi.TYPE_ARRAY),
                 openapi.Parameter("is_verified", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN),
                 openapi.Parameter("max_price", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
                 openapi.Parameter(
@@ -159,7 +153,12 @@ class SearchView(APIView):
         sort = params.get('type', 'items')
 
         sort_type = getattr(config.SEARCH_TYPES, sort)
-        token_count, search_result = globals()[sort_type + '_search'](words, user=request.user, **params)
+        token_count, search_result = getattr(Search, f"{sort_type}_search")(
+            words=words, 
+            user=request.user, 
+            page=page, 
+            **params,
+        )
         response_data = {"total_tokens": token_count, "items": search_result}
 
         return Response(response_data, status=status.HTTP_200_OK)
@@ -965,7 +964,7 @@ class SetCoverView(APIView):
             type=openapi.TYPE_OBJECT,
             properties={
                 'id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'cover': openapi.Schema(type=openapi.TYPE_OBJECT, format=openapi.FORMAT_BINARY)
+                'cover': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_BINARY)
             }
         ),
         responses={200: 'OK', 400: 'error'}
