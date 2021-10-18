@@ -2,6 +2,7 @@ import random
 
 from dds.accounts.models import AdvUser, MasterUser
 from dds.activity.models import BidsHistory, ListingHistory, UserAction
+from dds.consts import APPROVE_GAS_LIMIT
 from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid, token_search, collection_search)
 from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs
 
@@ -750,7 +751,7 @@ class MakeBid(APIView):
         amount, _ = calculate_amount(amount, bid.token.currency.symbol)
 
         if allowance < amount * quantity:
-
+            '''
             tx_params = {
                 'chainId': web3.eth.chainId,
                 'gas': APPROVE_GAS_LIMIT,
@@ -761,6 +762,24 @@ class MakeBid(APIView):
                 bid.token.collection.network.wrap_in_checksum(token.collection.network.exchange_address),
                 user_balance,
             ).buildTransaction(tx_params)
+            '''
+
+            initial_tx = bid.token.collection.network.contract_call(
+                method_type = 'write',
+                contract_type='token',
+                address=token.currency.address,
+
+                gas_limit = APPROVE_GAS_LIMIT,
+                nonce_username = user.username,
+                tx_value = None,
+
+                function_name= 'approve',
+                input_params=(
+                    bid.token.collection.network.wrap_in_checksum(token.collection.network.exchange_address),
+                    user_balance,
+                ),
+                input_type=('address', 'uint256')
+            )
 
             return Response({'initial_tx': initial_tx}, status=status.HTTP_200_OK)
 

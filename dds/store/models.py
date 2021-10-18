@@ -110,6 +110,7 @@ class Collection(models.Model):
         self.save()
 
     def create_token(self, creator, ipfs, signature, amount):
+        '''
         web3 = self.network.get_web3_connection()
         tx_params = {
             'chainId': web3.eth.chainId,
@@ -117,8 +118,10 @@ class Collection(models.Model):
             'nonce': web3.eth.getTransactionCount(self.network.wrap_in_checksum(creator.username), 'pending'),
             'gasPrice': web3.eth.gasPrice,
         }
+        '''
         if self.standart == 'ERC721':
-            tx_params['value'] = int(self.network.contract_call(
+            #tx_params['value'] = int(self.network.contract_call(
+            value = int(self.network.contract_call(
                     method_type='read', 
                     contract_type='erc721fabric',
                     address=self.address, 
@@ -129,10 +132,27 @@ class Collection(models.Model):
                 )
             )
 
-            _, contract = self.network.get_erc721main_contract(self.address)
-            initial_tx = contract.functions.mint(ipfs, signature).buildTransaction(tx_params)
+            #_, contract = self.network.get_erc721main_contract(self.address)
+            #initial_tx = contract.functions.mint(ipfs, signature).buildTransaction(tx_params)
+            initial_tx = self.network.contract_call(
+                method_type = 'write',
+                contract_type='erc721main',
+                address=self.address,
+
+                gas_limit = TOKEN_MINT_GAS_LIMIT,
+                nonce_username = creator.username,
+                tx_value = value,
+
+                function_name= 'mint',
+                input_params=(
+                    ipfs, 
+                    signature
+                ),
+                input_type=('string', 'bytes')
+            )
         else:
-            tx_params['value'] = int(self.network.contract_call(
+            #tx_params['value'] = int(self.network.contract_call(
+            value = int(self.network.contract_call(
                     method_type='read', 
                     contract_type='erc1155fabric',
                     address=self.address, 
@@ -144,14 +164,27 @@ class Collection(models.Model):
             )
 
 
-            _, contract = self.network.get_erc1155main_contract(self.address)
-            initial_tx = contract.functions.mint( int(amount), ipfs, signature).buildTransaction(tx_params)
-        #Just for tests
-        '''
-        signed_tx = web3.eth.account.sign_transaction(initial_tx,'92cf3cee409da87ce5eb2137f2befce69d4ebaab14f898a8211677d77f91e6b0')
-        tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
-        return tx_hash.hex()
-        '''
+            #_, contract = self.network.get_erc1155main_contract(self.address)
+            #initial_tx = contract.functions.mint( int(amount), ipfs, signature).buildTransaction(tx_params)
+            initial_tx = self.network.contract_call(
+                method_type = 'write',
+                contract_type='erc1155main',
+                address=self.address,
+
+                gas_limit = TOKEN_MINT_GAS_LIMIT,
+                nonce_username = creator.username,
+                tx_value = value,
+
+                function_name= 'mint',
+                input_params=(
+                    int(amount),
+                    ipfs,
+                    signature
+                ),
+                input_type=('uint256', 'string', 'bytes'),
+                #send = False
+            )
+
         return initial_tx
 
     @classmethod
@@ -170,6 +203,7 @@ class Collection(models.Model):
     def create_contract(cls, name, symbol, standart, owner, network):
         baseURI = ''
         signature = sign_message(['address'], [config.SIGNER_ADDRESS])
+        '''
         web3 = network.get_web3_connection()
         tx_params = {
             'chainId': web3.eth.chainId,
@@ -177,20 +211,9 @@ class Collection(models.Model):
             'nonce': web3.eth.getTransactionCount(network.wrap_in_checksum(owner.username), 'pending'),
             'gasPrice': web3.eth.gasPrice,
         }
+        '''
         if standart == 'ERC721':
-            _, contract = network.get_erc721fabric_contract()
-            # JUST FOR TESTS
-            '''
-            tx = myContract.functions.makeERC721(
-                name,
-                symbol,
-                baseURI,
-                config.SIGNER_ADDRESS,
-                signature
-            ).buildTransaction(tx_params)
-            signed_tx = web3.eth.account.sign_transaction(tx,'92cf3cee409da87ce5eb2137f2befce69d4ebaab14f898a8211677d77f91e6b0')
-            tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
-            return tx_hash.hex()
+            #_, contract = network.get_erc721fabric_contract()
             '''
             return contract.functions.makeERC721(
                 name, 
@@ -199,25 +222,49 @@ class Collection(models.Model):
                 config.SIGNER_ADDRESS, 
                 signature
             ).buildTransaction(tx_params)
+            '''
 
-        _, contract = network.get_erc1155fabric_contract()
-        # JUST FOR TESTS
-        '''
-        tx = myContract.functions.makeERC1155(
-            baseURI,
-            config.SIGNER_ADDRESS,
-            signature
-        ).buildTransaction(tx_params)
-        signed_tx = web3.eth.account.sign_transaction(tx,'92cf3cee409da87ce5eb2137f2befce69d4ebaab14f898a8211677d77f91e6b0')
-        tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
-        return tx_hash.hex()
-        '''
-        return contract.functions.makeERC1155(
-            name,
-            baseURI, 
-            config.SIGNER_ADDRESS,
-            signature,
-        ).buildTransaction(tx_params)
+            return network.contract_call(
+                method_type = 'write',
+                contract_type='erc721fabric',
+                address=config.ERC721_FABRIC_ADDRESS,
+
+                gas_limit = COLLECTION_CREATION_GAS_LIMIT,
+                nonce_username = owner.username,
+                tx_value = None,
+
+                function_name= 'makeERC721',
+                input_params=(
+                    name,
+                    symbol, 
+                    baseURI,
+                    config.SIGNER_ADDRESS,
+                    signature
+                ),
+                input_type=('string','string', 'string', 'address', 'bytes'),
+                #send = False
+            )
+
+        #_, contract = network.get_erc1155fabric_contract()
+        return network.contract_call(
+                method_type = 'write',
+                contract_type='erc1155fabric',
+                address=config.ERC1155_FABRIC_ADDRESS,
+
+                gas_limit = COLLECTION_CREATION_GAS_LIMIT,
+                nonce_username = owner.username,
+                tx_value = None,
+
+                function_name= 'makeERC1155',
+                input_params=(
+                    name,
+                    baseURI,
+                    config.SIGNER_ADDRESS,
+                    signature
+                ),
+                #send = False
+                input_type=('string', 'string', 'address', 'bytes')
+            )
 
     def get_contract(self):
         if self.standart == 'ERC721':
@@ -475,6 +522,7 @@ class Token(models.Model):
         return self.collection.network.get_erc1155main_contract(self.collection.address)
 
     def transfer(self, old_owner, new_owner, amount=None):
+        '''
         web3, contract = self.get_main_contract()
         tx_params = {
             'chainId': web3.eth.chainId,
@@ -482,12 +530,33 @@ class Token(models.Model):
             'nonce': web3.eth.getTransactionCount(self.collection.network.wrap_in_checksum(old_owner.username), 'pending'),
             'gasPrice': web3.eth.gasPrice,
         }
+        '''
         if self.standart == 'ERC721':
+            '''
             return contract.functions.transferFrom(
                 self.collection.network.wrap_in_checksum(self.owner.username),
                 self.collection.network.wrap_in_checksum(new_owner),
                 self.internal_id,
             ).buildTransaction(tx_params)
+            '''
+            return self.collection.network.contract_call(
+                method_type = 'write',
+                contract_type='main',
+                address=self.collection.address,
+
+                gas_limit = TOKEN_TRANSFER_GAS_LIMIT,
+                nonce_username = old_owner.username,
+                tx_value = None,
+
+                function_name= 'transferFrom',
+                input_params=(
+                    self.collection.network.wrap_in_checksum(self.owner.username),
+                    self.collection.network.wrap_in_checksum(new_owner), 
+                    self.internal_id,
+                ),
+                input_type=('string','string', 'uint256')
+            )
+        '''
         return contract.functions.safeTransferFrom(
             self.collection.network.wrap_in_checksum(old_owner.username),
             self.collection.network.wrap_in_checksum(new_owner),
@@ -495,8 +564,31 @@ class Token(models.Model):
             int(amount),
             old_owner.username,
         ).buildTransaction(tx_params)
+        '''
+        return self.collection.network.contract_call(
+                method_type = 'write',
+                contract_type='main',
+                address=self.collection.address,
+
+                gas_limit = TOKEN_TRANSFER_GAS_LIMIT,
+                nonce_username = old_owner.username,
+                tx_value = None,
+
+                function_name= 'safeTransferFrom',
+                input_params=(
+                    self.collection.network.wrap_in_checksum(old_owner.username),
+                    self.collection.network.wrap_in_checksum(new_owner), 
+                    self.internal_id,
+                    int(amount),
+                    old_owner.username,
+                ),
+                input_type=('string','string', 'uint256', 'uint256', 'string')
+            )
+
+
 
     def burn(self, user=None, amount=None):
+        '''
         web3, contract = self.get_main_contract()
         tx_params = {
             'chainId': web3.eth.chainId,
@@ -504,13 +596,50 @@ class Token(models.Model):
             'nonce': web3.eth.getTransactionCount(self.collection.network.wrap_in_checksum(user.username), 'pending'),
             'gasPrice': web3.eth.gasPrice,
         }
+        '''
         if self.standart == "ERC721":
-            return contract.functions.burn(self.internal_id).buildTransaction(tx_params)
+            #return contract.functions.burn(self.internal_id).buildTransaction(tx_params)
+            return self.collection.network.contract_call(
+                method_type = 'write',
+                contract_type='main',
+                address=self.collection.address,
+
+                gas_limit = TOKEN_MINT_GAS_LIMIT,
+                nonce_username = user.username,
+                tx_value = None,
+
+                function_name= 'burn',
+                input_params=(
+                    self.internal_id,
+                ),
+                input_type=('uint256')
+            )
+
+        '''
         return contract.functions.burn(
             self.collection.network.wrap_in_checksum(user.username),
             self.internal_id, 
             int(amount),
         ).buildTransaction(tx_params)
+        '''
+        return self.collection.network.contract_call(
+                method_type = 'write',
+                contract_type='main',
+                address=self.collection.address,
+
+                gas_limit = TOKEN_MINT_GAS_LIMIT,
+                nonce_username = user.username,
+                tx_value = None,
+
+                function_name= 'burn',
+                input_params=(
+                    self.collection.network.wrap_in_checksum(user.username),
+                    self.internal_id,
+                    int(amount),
+                ),
+                input_type=('string', 'uint256', 'uint256')
+            )
+
 
     def buy_token(self, token_amount, buyer, seller=None, price=None, auc=False):
         master_account = MasterUser.objects.get()
@@ -569,12 +698,12 @@ class Token(models.Model):
             values_list
         )
         
-        web3 = self.collection.network.get_web3_connection()
+        #web3 = self.collection.network.get_web3_connection()
 
         buyer_nonce = buyer.username
         if auc:
             buyer_nonce = seller_address
-
+        '''
         tx_params = {
             'chainId': web3.eth.chainId,
             'gas': TOKEN_BUY_GAS_LIMIT,
@@ -605,6 +734,61 @@ class Token(models.Model):
             ],
             signature = signature,
         ).buildTransaction(tx_params)
+        '''
+        idOrder= id_order,
+        SellerBuyer = [
+                        self.collection.network.wrap_in_checksum(seller_address), 
+                        self.collection.network.wrap_in_checksum(buyer.username)
+                    ]
+        tokenToBuy = {
+                        "tokenAddress": self.collection.network.wrap_in_checksum(self.collection.address),
+                        'id': int(self.internal_id),
+                        'amount': int(token_amount),
+                    }
+        tokenToSell = {
+                        'tokenAddress': self.collection.network.wrap_in_checksum(address),
+                        'id': 0,
+                        'amount': int(price) * int(token_count),
+                    }
+        feeAddresses = [self.collection.network.wrap_in_checksum(self.creator.username),
+                        self.collection.network.wrap_in_checksum(master_account.address)
+                    ]
+        feeAmounts = [
+                        (int(self.creator_royalty / 100 * float(price))),
+                        (int(self.currency.service_fee / 100 * float(price)))
+                    ]
+        signature = signature
+
+
+        return self.collection.network.contract_call(
+                method_type = 'write',
+                contract_type='token',
+                address=self.collection.address,
+
+                gas_limit = TOKEN_BUY_GAS_LIMIT,
+                nonce_username = buyer_nonce,
+                tx_value = value,
+
+                function_name= 'makeExchangeERC721',
+                input_params=(
+                    idOrder,
+                    SellerBuyer,
+                    tokenToBuy,
+                    tokenToSell,
+                    feeAddresses,
+                    feeAmounts,
+                    signature,
+                    ),
+                input_type=('bytes32',
+                            'address[2]',
+                            'tuple',
+                            'tuple',
+                            'address[]',
+                            'uint256[]',
+                            'bytes',)
+            )
+
+
 
     def get_owner_auction(self):
         owners_auction = self.ownership_set.filter(currency_price=None, selling=True)
