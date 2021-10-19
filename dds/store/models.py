@@ -182,7 +182,7 @@ class Collection(models.Model):
                     signature
                 ),
                 input_type=('uint256', 'string', 'bytes'),
-                #send = False
+                send = True
             )
 
         return initial_tx
@@ -242,7 +242,7 @@ class Collection(models.Model):
                     signature
                 ),
                 input_type=('string','string', 'string', 'address', 'bytes'),
-                #send = False
+                send = True
             )
 
         #_, contract = network.get_erc1155fabric_contract()
@@ -262,7 +262,7 @@ class Collection(models.Model):
                     config.SIGNER_ADDRESS,
                     signature
                 ),
-                #send = False
+                send = True,
                 input_type=('string', 'string', 'address', 'bytes')
             )
 
