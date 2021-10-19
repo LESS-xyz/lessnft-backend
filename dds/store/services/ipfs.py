@@ -4,7 +4,7 @@ from web3 import Web3, HTTPProvider
 from dds.settings import config
 from contracts import ERC721_MAIN, ERC1155_MAIN
 
-from dds.store.models import Collection
+from django.apps import apps
 
 
 def create_ipfs(request):
@@ -41,7 +41,8 @@ def get_ipfs(token_id, contract) -> dict:
     """
     return ipfs by token
     """
-    collection = Collection.objects.filter(address=contract.address).first()
+    collection_model = apps.get_model('store.Collection')
+    collection = collection_model.objects.filter(address=contract.address).first()
     return Collection.network.contract_call(
             method_type='read',
             contract_type=f'erc{collection.standart.lower()}main',

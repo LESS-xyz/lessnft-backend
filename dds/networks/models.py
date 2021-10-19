@@ -43,6 +43,7 @@ class Network(models.Model):
     fabric1155_address = models.CharField(max_length=128)
     exchange_address = models.CharField(max_length=128)
     network_type = models.CharField(
+        max_length=20,
         choices=Types.choices,
         default=Types.ethereum
     )
