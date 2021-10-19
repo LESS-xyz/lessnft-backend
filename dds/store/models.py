@@ -99,8 +99,8 @@ class Collection(models.Model):
         self.name = request.data.get('name')
         self.symbol = request.data.get('symbol')
         self.address = request.data.get('address')
-        network = request.query_params.get('network')
-        network = Network.objects.filter(name__icontains=network).first()
+        network_name = request.query_params.get('network')
+        network = Network.objects.filter(name__icontains=network_name).first()
         self.network = network
         self.avatar_ipfs = avatar
         self.standart = request.data.get('standart')
@@ -227,7 +227,7 @@ class Collection(models.Model):
             return network.contract_call(
                 method_type = 'write',
                 contract_type='erc721fabric',
-                address=config.ERC721_FABRIC_ADDRESS,
+		address=network.fabric721_address,
 
                 gas_limit = COLLECTION_CREATION_GAS_LIMIT,
                 nonce_username = owner.username,
@@ -249,7 +249,7 @@ class Collection(models.Model):
         return network.contract_call(
                 method_type = 'write',
                 contract_type='erc1155fabric',
-                address=config.ERC1155_FABRIC_ADDRESS,
+		address=network.fabric721_address,
 
                 gas_limit = COLLECTION_CREATION_GAS_LIMIT,
                 nonce_username = owner.username,

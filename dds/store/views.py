@@ -214,11 +214,11 @@ class CreateView(APIView):
 
         ipfs = create_ipfs(request)
         if standart == 'ERC721':
-            signature = sign_message(['address', 'string'], [token_collection.address, ipfs])
+            signature = sign_message(['address', 'string'], [token_collection.network.wrap_in_checksum(token_collection.address), ipfs])
             amount = 1
         else:
             amount = request_data.get('total_supply')
-            signature = sign_message(['address', 'string', 'uint256'], [token_collection.address, ipfs, int(amount)])
+            signature = sign_message(['address', 'string', 'uint256'], [token_collection.network.wrap_in_checksum(token_collection.address), ipfs, int(amount)])
 
         initial_tx = token_collection.create_token(creator, ipfs, signature, amount)
         token = Token()
@@ -281,7 +281,6 @@ class CreateCollectionView(APIView):
             ipfs = None
         print(ipfs)
         collection.save_in_db(request, ipfs)
-
         return Response(initial_tx, status=status.HTTP_200_OK)
 
 

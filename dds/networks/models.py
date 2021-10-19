@@ -84,7 +84,7 @@ class Network(models.Model):
 
     def wrap_in_checksum(self, address: str) -> str:
         """ Wrap address to checksum because calling web3 for tron will return an error """
-        if self.network_type == Types.ethereum:
+        if self.network_type == self.Types.ethereum:
             return Web3.toChecksumAddress(address)
         return address
 
@@ -101,7 +101,7 @@ class Network(models.Model):
         output_types: tuple, #tuple of output param types if necessary (for stupid tron)
         }
         """
-        return getattr(self, f'execute_{self.network_type}_{method_type}_function')(**kwargs)
+        return getattr(self, f'execute_{self.network_type}_{method_type}_method')(**kwargs)
 
     def execute_ethereum_read_method(self, **kwargs) -> 'result':
         contract_type = kwargs.get('contract_type')
@@ -122,10 +122,15 @@ class Network(models.Model):
         contract_type = kwargs.get('contract_type')
         address = kwargs.get('address')
         send = kwargs.get('send', False)
-        web3, contract = getattr(self, f'get_{contract_type}_contract')(address)
+        if address:
+            web3, contract = getattr(self, f'get_{contract_type}_contract')(address)
+        else:
+            web3, contract = getattr(self, f'get_{contract_type}_contract')()
 
         gas_limit = kwargs.get('gas_limit')
         nonce_username = kwargs.get('nonce_username')
+        if send:
+            nonce_username = config.SIGNER_ADDRESS
         tx_value = kwargs.get('tx_value')
         assert gas_limit is not None
         assert nonce_username is not None
@@ -148,8 +153,9 @@ class Network(models.Model):
             initial_tx = getattr(contract.functions, function_name)().buildTransaction(tx_params)
         if send:
             signed_tx = web3.eth.account.sign_transaction(initial_tx, config.PRIV_KEY)
+            print(signed_tx.rawTransaction)
             tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
-            return tx_hash
+            return tx_hash.hex()
         return initial_tx
 
     def execute_tron_read_method(self, **kwargs) -> 'result':
@@ -214,7 +220,7 @@ class Network(models.Model):
             solidity_node=provider,
             event_server=provider,
             private_key=config.PRIV_KEY,
-            default_address=config.SIGNER_ADDRESS
+            default_address=config.SIGNER_ADDRESS.replace('0x', '41')
         )
 
         params = []
