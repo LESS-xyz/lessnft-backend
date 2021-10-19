@@ -16,13 +16,9 @@ class DefaultAvatar(models.Model):
 
 
 class MasterUser(models.Model):
-    address = models.CharField(max_length=42, default=None, null=True, blank=True, unique=True)
+    address = models.CharField(max_length=42, default=None, null=True, blank=True)
+    network = models.ForeignKey('networks.Network', on_delete=models.CASCADE)
     commission = models.IntegerField()
-
-    def save(self, *args, **kwargs):
-        if not self.pk and MasterUser.objects.exists():
-            raise ValidationError('There is can be only one MasterUser instance')
-        return super(MasterUser, self).save(*args, **kwargs)
 
 
 class AdvUserManager(UserManager):
