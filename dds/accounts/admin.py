@@ -46,7 +46,7 @@ class AdvUserAdmin(admin.ModelAdmin):
 
 class MasterUserAdmin(admin.ModelAdmin):
     model = MasterUser
-    list_display = ('address', 'commission')
+    list_display = ('address', 'commission', 'network')
 
 
 admin.site.register(MasterUser, MasterUserAdmin)

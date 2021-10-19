@@ -1,6 +1,6 @@
 import random
 
-from dds.accounts.models import AdvUser, MasterUser
+from dds.accounts.models import AdvUser
 from dds.activity.models import BidsHistory, ListingHistory, UserAction
 from dds.consts import APPROVE_GAS_LIMIT
 from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid, token_search, collection_search)
@@ -97,11 +97,6 @@ buy_token_response = openapi.Response(
 )
 
 not_found_response = 'user not found'
-try:
-    master_user = MasterUser.objects.get()
-    service_fee = master_user.commission
-except:
-    print('master user not found, please add him for correct backend start')
 
 class SearchView(APIView):
     '''
@@ -988,10 +983,9 @@ class SetCoverView(APIView):
 
 @api_view(http_method_names=['GET'])
 def get_fee(request):
-    currency = request.query_params.get('currency')
-    if currency == "kphi":
-        return Response(service_fee/2, status=status.HTTP_200_OK)
-    return Response(service_fee, status=status.HTTP_200_OK)
+    currency_symbol = request.query_params.get('currency')
+    currency = Currency.objects.get(symbol=currency_symbol)
+    return Response(currency.service_fee, status=status.HTTP_200_OK)
 
 
 @api_view(http_method_names=['GET'])

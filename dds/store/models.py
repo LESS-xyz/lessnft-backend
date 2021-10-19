@@ -12,7 +12,7 @@ from django.db.models.signals import post_save
 from django.core.validators import MaxValueValidator, MinValueValidator
 from dds.consts import MAX_AMOUNT_LEN
 from dds.utilities import sign_message, get_media_from_ipfs
-from dds.accounts.models import AdvUser, MasterUser, DefaultAvatar
+from dds.accounts.models import AdvUser, DefaultAvatar
 from dds.networks.models import Network
 from dds.rates.models import UsdRate
 from dds.consts import ( 
@@ -642,7 +642,7 @@ class Token(models.Model):
 
 
     def buy_token(self, token_amount, buyer, seller=None, price=None, auc=False):
-        master_account = MasterUser.objects.get()
+        fee_address = self.currency.fee_address()
 
         id_order = '0x%s' % secrets.token_hex(32)
         token_count = token_amount
@@ -685,7 +685,7 @@ class Token(models.Model):
             int(price) * int(token_count),
             [
                 self.collection.network.wrap_in_checksum(self.creator.username),
-                self.collection.network.wrap_in_checksum(master_account.address),
+                self.collection.network.wrap_in_checksum(fee_address),
             ],
             [
                 (int(self.creator_royalty / 100 * float(price))),
@@ -751,7 +751,7 @@ class Token(models.Model):
                         'amount': int(price) * int(token_count),
                     }
         feeAddresses = [self.collection.network.wrap_in_checksum(self.creator.username),
-                        self.collection.network.wrap_in_checksum(master_account.address)
+                        self.collection.network.wrap_in_checksum(fee_address)
                     ]
         feeAmounts = [
                         (int(self.creator_royalty / 100 * float(price))),
