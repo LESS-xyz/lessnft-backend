@@ -36,8 +36,12 @@ class UsdRate(models.Model):
 
     @property
     def service_fee(self):
-        fee = MasterUser.objects.first().commission
+        fee = MasterUser.objects.filter(network=self.network).first().commission
         return fee / 100 * self.fee_discount
+
+    @property
+    def fee_address(self):
+        return MasterUser.objects.filter(network=self.network).first().address
 
     def set_decimals(self) -> None:
         self.decimal = self.network.contract_call(

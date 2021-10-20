@@ -13,18 +13,12 @@ from dds.store.models import (
 )
 from dds.accounts.serializers import CreatorSerializer, UserSerializer, UserOwnerSerializer
 from dds.activity.serializers import TokenHistorySerializer 
-from dds.accounts.models import MasterUser
 from dds.activity.models import UserAction
 from dds.rates.models import UsdRate
 from dds.rates.serializers import CurrencySerializer
 from django.db.models import Min, Sum, Count
 from dds.networks.serializers import NetworkSerializer
 from dds.settings import config
-
-try:
-    service_fee = MasterUser.objects.get().commission
-except:
-    print('master user not found, please add him for correct backend start')
 
 
 class TokenPatchSerializer(serializers.ModelSerializer):
