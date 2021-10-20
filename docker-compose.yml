@@ -21,9 +21,9 @@ services:
       - ./dds/:/code/dds/
       - ./media/:/code/media/
       - ./static/:/code/static/
+    command: python manage.py runserver 0.0.0.0:8000
     networks:
       dds2-net:
-    command: python manage.py runserver 0.0.0.0:8000
   rates_checker:
     build:
       context: .
@@ -31,9 +31,9 @@ services:
     depends_on:
       - db
     restart: unless-stopped
+    command: ["python", "rates_checker.py"]
     networks:
       dds2-net:
-    command: ["python", "rates_checker.py"]
   tx_tracker:
     build:
       context: .
@@ -41,9 +41,9 @@ services:
     depends_on:
       - db
     restart: unless-stopped
+    command: ["python", "tx_tracker.py"]
     networks:
       dds2-net:
-    command: ["python", "tx_tracker.py"]
   scanner_721:
     build:
       context: .
@@ -54,9 +54,9 @@ services:
     volumes:
       - ./dds/blocks:/code/blocks
       - ./logs:/code/logs/
+    command: ["python", "scaners/scaner_721.py"]
     networks:
       dds2-net:
-    command: ["python", "scaners/scaner_721.py"]
   scanner_1155:
     build:
       context: .
@@ -67,9 +67,9 @@ services:
     volumes:
       - ./dds/blocks:/code/blocks
       - ./logs:/code/logs/
+    command: ["python", "scaners/scaner_1155.py"]
     networks:
       dds2-net:
-    command: ["python", "scaners/scaner_1155.py"]
   scanner_money:
     build: 
       context: .
@@ -80,9 +80,9 @@ services:
     volumes: 
       - ./dds/blocks:/code/blocks
       - ./logs:/code/logs/
+    command: ["python", "scaners/money_scanner.py"]
     networks:
       dds2-net:
-    command: ["python", "scaners/money_scanner.py"]
   redis:
     image: redis:5.0
     restart: unless-stopped
