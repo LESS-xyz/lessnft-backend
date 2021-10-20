@@ -157,7 +157,7 @@ def validate_bid(user, token_id, amount, quantity):
             function_name='balanceOf',
             input_params=(user.username,),
             input_type=('address',),
-            output_type='uint256',
+            output_types=('uint256',),
     )
 
     if user_balance < amount * quantity:

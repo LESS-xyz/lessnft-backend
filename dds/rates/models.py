@@ -47,6 +47,6 @@ class UsdRate(models.Model):
             function_name='decimals',
             input_params=(),
             input_type=(),
-            output_type='uint256',
-            )
+            output_types=('uint8',),
+            )[0]
         self.save()

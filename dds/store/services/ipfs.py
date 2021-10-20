@@ -50,7 +50,7 @@ def get_ipfs(token_id, contract) -> dict:
             function_name='tokenURI',
             input_params=(token_id,),
             input_type=('uint256',),
-            output_type='string',
+            output_types=('string',),
     )
 
 

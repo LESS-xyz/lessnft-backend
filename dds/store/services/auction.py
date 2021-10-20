@@ -98,7 +98,7 @@ def end_auction(token):
                             'address[]',
                             'uint256[]',
                             'bytes',),
-                #send = False
+                send = False
            
     )
     

@@ -731,7 +731,7 @@ class MakeBid(APIView):
                 bid.token.currency.network.exchange_address
             ),
             input_type=('address', 'address'),
-            output_type='uint256',
+            output_types=('uint256',),
         )
 
         user_balance = bid.token.currency.network.contract_call(
@@ -741,7 +741,7 @@ class MakeBid(APIView):
             function_name='balanceOf',
             input_params=(user.username,),
             input_type=('address',),
-            output_type='uint256',
+            output_types=('uint256',),
         )
 
 

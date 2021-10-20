@@ -128,7 +128,7 @@ class Collection(models.Model):
                     function_name='getFee',
                     input_params=(),
                     input_type=(),
-                    output_type='uint256',
+                    output_types=('uint256',),
                 )
             )
 
@@ -159,7 +159,7 @@ class Collection(models.Model):
                     function_name='getFee',
                     input_params=(),
                     input_type=(),
-                    output_type='uint256',
+                    output_types=('uint256',),
                 )
             )
 
@@ -182,7 +182,7 @@ class Collection(models.Model):
                     signature
                 ),
                 input_type=('uint256', 'string', 'bytes'),
-                send = True
+                send = False
             )
 
         return initial_tx
@@ -242,7 +242,7 @@ class Collection(models.Model):
                     signature
                 ),
                 input_type=('string','string', 'string', 'address', 'bytes'),
-                send = True
+                send = False
             )
 
         #_, contract = network.get_erc1155fabric_contract()
@@ -262,7 +262,7 @@ class Collection(models.Model):
                     config.SIGNER_ADDRESS,
                     signature
                 ),
-                send = True,
+                send = False,
                 input_type=('string', 'string', 'address', 'bytes')
             )
 

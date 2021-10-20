@@ -179,7 +179,7 @@ class Network(models.Model):
                 raise "backend didn't found contract address"
         payload = {
             "visible": True,
-            "owner_address": config.SIGNER_ADDRESS,
+            "owner_address": config.SIGNER_ADDRESS.replace('0x', '41'),
             "contract_address": address,
             "function_selector": f'{function_name}{input_types}',
             "parameter": input_data,
@@ -189,7 +189,8 @@ class Network(models.Model):
             "Content-Type": "application/json"
         }
         url = self.endpoint + "/wallet/triggerconstantcontract"
-        response = requests.post(url, data=payload, headers=headers)
+        response = requests.post(url, json=payload, headers=headers)
+        print(response.json())
         constant_result = response.json()["constant_result"][0]
         decoded_data = decode_hex(constant_result)
         result = decode_abi(output_types, decoded_data)
@@ -220,12 +221,19 @@ class Network(models.Model):
             solidity_node=provider,
             event_server=provider,
             private_key=config.PRIV_KEY,
-            default_address=config.SIGNER_ADDRESS.replace('0x', '41')
         )
+
+        signer_address = tron.address.from_private_key(tron.private_key).base58
+
+        tron.default_address = signer_address
 
         params = []
         for i in range(len(input_params)):
-            params.append({"type": input_types[i], "value": input_params[i]})
+            if input_types[i] in ('bytes', 'bytes32'):
+                print(f'encoding {input_params[i]} to bytes')
+                params.append({"type": input_types[i], "value": tron.toBytes(hexstr=input_params[i])})
+            else:
+                params.append({"type": input_types[i], "value": input_params[i]})
 
         initial_tx = tron.transaction_builder.trigger_smart_contract(
             contract_address=address,
@@ -236,7 +244,7 @@ class Network(models.Model):
         )['transaction']
 
         if send:
-            signed = tron.trx.sign(initial_tx['transaction'])
+            signed = tron.trx.sign(initial_tx)
             tx_hash = tron.trx.broadcast(signed)['txid']
             return tx_hash
         return initial_tx
