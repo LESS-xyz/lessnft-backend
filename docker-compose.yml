@@ -23,28 +23,31 @@ services:
       - ./static/:/code/static/
     networks:
       dds2-net:
+    command: python manage.py runserver 0.0.0.0:8000
   rates_checker:
     build:
       context: .
-      dockerfile: dockerfiles/rates_checker.Dockerfile
+      dockerfile: Dockerfile
     depends_on:
       - db
     restart: unless-stopped
     networks:
       dds2-net:
+    command: ["python", "rates_checker.py"]
   tx_tracker:
     build:
       context: .
-      dockerfile: dockerfiles/tx_tracker.Dockerfile
+      dockerfile: Dockerfile
     depends_on:
       - db
     restart: unless-stopped
     networks:
       dds2-net:
+    command: ["python", "tx_tracker.py"]
   scanner_721:
     build:
       context: .
-      dockerfile: dockerfiles/scanner_721.Dockerfile
+      dockerfile: Dockerfile
     depends_on:
       - db
     restart: unless-stopped
@@ -53,10 +56,11 @@ services:
       - ./logs:/code/logs/
     networks:
       dds2-net:
+    command: ["python", "scaners/scaner_721.py"]
   scanner_1155:
     build:
       context: .
-      dockerfile: dockerfiles/scanner_1155.Dockerfile
+      dockerfile: Dockerfile
     depends_on:
       - db
     restart: unless-stopped
@@ -65,10 +69,11 @@ services:
       - ./logs:/code/logs/
     networks:
       dds2-net:
+    command: ["python", "scaners/scaner_1155.py"]
   scanner_money:
     build: 
       context: .
-      dockerfile: dockerfiles/scanner_money.Dockerfile
+      dockerfile: Dockerfile
     depends_on:
       - db
     restart: unless-stopped
@@ -77,6 +82,7 @@ services:
       - ./logs:/code/logs/
     networks:
       dds2-net:
+    command: ["python", "scaners/money_scanner.py"]
   redis:
     image: redis:5.0
     restart: unless-stopped
