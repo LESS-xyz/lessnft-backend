@@ -82,6 +82,13 @@ class Network(models.Model):
     def get_token_contract(self, address: str = None) -> ("Web3", "Contract"):
         return self._get_contract_by_abi(WETH_ABI, address)
 
+    def get_last_confirmed_block(self) -> int:
+        web3 = self.get_web3_connection()
+        last_block = web3.eth.block_number
+        confirmation_blocks = 6
+        last_block_confirmed = last_block - confirmation_blocks
+        return last_block_confirmed
+
     def wrap_in_checksum(self, address: str) -> str:
         """ Wrap address to checksum because calling web3 for tron will return an error """
         if self.network_type == self.Types.ethereum:
