@@ -33,35 +33,58 @@ class Status(models.TextChoices):
     COMMITTED = 'Committed'
     BURNED = 'Burned'
 
+class CollectionQuerySet(models.QuerySet):
+    def committed(self):
+        return self.filter(status=Status.COMMITTED)
 
-class CollectionManager(models.Manager):
     def get_by_short_url(self, short_url):
-        """ Return collection by id or short_url """
         collection_id = None
         if isinstance(short_url, int) or short_url.isdigit():
-            collection_id = int(short_url)  
+            collection_id = int(short_url)
         return self.get(Q(id=collection_id) | Q(short_url=short_url))
-    
+
     def user_collections(self, user, network=None):
-        """ Return committed collections for user (with default collections) """
-        return self.filter(status=Status.COMMITTED).filter(
+        return self.filter(
             Q(name__in=[config.COLLECTION_721, config.COLLECTION_1155]) | Q(creator=user)
         )
 
     def hot_collections(self, network=None):
-        """ Return committed collections for user (with default collections) """
         if not network:
             return self.exclude(name__in=(config.COLLECTION_721, config.COLLECTION_1155,)).filter(
-                Exists(Token.token_objects.committed().filter(collection__id=OuterRef('id')))
+                Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
             )
+
         return self.exclude(name__in=(config.COLLECTION_721, config.COLLECTION_1155,)).filter(
             network__name__icontains=network).filter(
-            Exists(Token.token_objects.committed().filter(collection__id=OuterRef('id')))
+            Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
         )
 
     def network(self, network):
-        """ Return collections filtered by network symbol """
         return self.filter(network__name__icontains=network)
+
+
+class CollectionManager(models.Manager):
+    def get_queryset(self):
+        return CollectionQuerySet(self.model, using=self._db)
+    
+    def commited(self):
+        return self.get_queryset().committed()
+
+    def get_by_short_url(self, short_url):
+        """ Return collection by id or short_url """
+        return self.get_queryset().get_by_short_url(short_url)
+
+    def user_collections(self, user, network=None):
+        """ Return collections for user (with default collections)"""
+        return self.get_queryset().user_collections(user, network)
+
+    def hot_collections(self, network=None):
+        """ Return non-default collections with commited tokens """
+        return self.get_queryset().hot_collections(network)
+
+    def network(self, network):
+        """ Return collections filtered by network name """
+        return self.get_queryset().network(network)
 
 
 class Collection(models.Model):
@@ -236,7 +259,7 @@ class Collection(models.Model):
                 function_name= 'makeERC721',
                 input_params=(
                     name,
-                    symbol, 
+                    symbol,
                     baseURI,
                     config.SIGNER_ADDRESS,
                     signature
@@ -289,21 +312,27 @@ def validate_nonzero(value):
             params={'value': value},
         )
 
+class TokenQuerySet(models.QuerySet):
+    def committed(self):
+        return self.filter(status=Status.COMMITTED)
+    
+    def network(self, network):
+        if network and network != 'undefined':
+            return self.filter(collection__network__name__icontains=network)
+        return self
+
+
 class TokenManager(models.Manager):
     def get_queryset(self):
-        """ Return tokens with status committed """
-        return super().get_queryset().filter(status=Status.COMMITTED)
+        return TokenQuerySet(self.model, using=self._db)
 
     def committed(self):
         """ Return tokens with status committed """
-        return self.get_queryset()
-
+        return self.get_queryset().committed()
+    
     def network(self, network):
-        """ Return token filtered by collection network symbol """
-        if network and network != 'undefined':
-            ts = self.get_queryset().filter(collection__network__name__icontains=network)
-            return self.get_queryset().filter(collection__network__name__icontains=network)
-        return self.get_queryset()
+        """ Return token filtered by collection network name"""
+        return self.get_queryset().network(network)
 
 
 class Token(models.Model):
@@ -333,8 +362,7 @@ class Token(models.Model):
     end_auction = models.DateTimeField(blank=True, null=True, default=None)
     digital_key = models.CharField(max_length=1000, blank=True, null=True, default=None)
 
-    objects = models.Manager()
-    token_objects = TokenManager()
+    objects = TokenManager()
 
     @property
     def media(self):
@@ -469,7 +497,7 @@ class Token(models.Model):
         self.end_auction = request.data.get('end_auction')
         self.creator = request.user
         collection = request.data.get('collection')
-        self.collection = Collection.objects.get_by_short_url(collection)
+        self.collection = Collection.objects.committed().get_by_short_url(collection)
         self.total_supply = request.data.get('total_supply')
         self.digital_key = request.data.get('digital_key')
 

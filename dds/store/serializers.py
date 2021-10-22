@@ -330,7 +330,7 @@ class HotCollectionSerializer(CollectionSlimSerializer):
         )
 
     def get_tokens(self, obj):
-        tokens = Token.token_objects.committed().filter(collection=obj).order_by(
+        tokens = Token.objects.committed().filter(collection=obj).order_by(
             config.SORT_STATUSES.recent
         )[:6]
         return [token.media for token in tokens]
@@ -382,7 +382,7 @@ class CollectionSerializer(CollectionSlimSerializer):
         return TokenSerializer(tokens, many=True).data
 
     def get_attributes(self, obj):
-        token_details = Token.token_objects.filter(collection=obj).values_list('details', flat=True)
+        token_details = Token.objects.committed().filter(collection=obj).values_list('details', flat=True)
 
         attribute_count = []
         #Getting a list of all keys(token attributes) from the list of token details:

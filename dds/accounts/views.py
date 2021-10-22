@@ -219,7 +219,7 @@ class LikeView(APIView):
         token_id = request_data.get('id')
 
         try:
-            item = Token.token_objects.committed().get(id=token_id)
+            item = Token.objects.committed().get(id=token_id)
         except ObjectDoesNotExist:
             return Response({'error': 'nothing to like'}, status=status.HTTP_400_BAD_REQUEST) 
 
@@ -260,7 +260,7 @@ class GetUserCollections(APIView):
         except:
             return Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        collections = Collection.objects.user_collections(user, network=network)
+        collections = Collection.objects.committed().user_collections(user, network=network)
         response_data = UserCollectionSerializer(collections, many=True).data
         return Response({'collections': response_data}, status=status.HTTP_200_OK)
 

@@ -551,7 +551,7 @@ class GetPriceHistory(APIView):
         periods = get_periods('day', 'week', 'month', 'year')
 
         try:
-            token = Token.token_objects.committed().get(id=id)
+            token = Token.objects.committed().get(id=id)
         except ObjectDoesNotExist:
             return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
         history = ListingHistory.objects.filter(token=token).filter(date__gte=periods[period])

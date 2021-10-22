@@ -87,11 +87,10 @@ class Search:
         if currency is not None:
             currency = currency[0]
 
-        tokens = Token.token_objects.network(network[0]).select_related(
+        tokens = Token.objects.committed().network(network[0]).select_related(
             "currency", 
             "owner",
         )
-
         # Below are the tokens in the form of a QUERYSET
         if owner:
             tokens = tokens.filter(
@@ -167,7 +166,7 @@ class Search:
         words = kwargs.get("words").split(" ")
         page = kwargs.get("page", [1])
 
-        collections = Collection.objects.all()
+        collections = Collection.objects.committed()
         collections_count = collections.count()
 
         for word in words:
