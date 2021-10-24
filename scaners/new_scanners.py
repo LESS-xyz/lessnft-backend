@@ -4,14 +4,13 @@ import threading
 import time
 import traceback
 
-from dds_backend_2.dds.accounts.models import AdvUser
-from dds_backend_2.dds.activity.models import BidsHistory, TokenHistory
-from dds_backend_2.dds.store.models import *
+from dds.accounts.models import AdvUser
+from dds.activity.models import BidsHistory, TokenHistory
+from dds.store.models import *
 from django.db.models import F
-from settings import HOLDERS_CHECK_TIMEOUT
 from web3 import Web3
 
-from .utils import get_last_block, save_last_block
+from utils import get_last_block, save_last_block
 
 
 def never_fall(func):
@@ -28,7 +27,11 @@ def never_fall(func):
     return wrapper
 
 
-class ScannerAbstract(threading.Thread):
+def print_log(network, text):
+    print(f'{network}: {text}')
+
+
+class ScannerAbsolute(threading.Thread):
     """
     Abstract class for event scanner
 
@@ -41,283 +44,96 @@ class ScannerAbstract(threading.Thread):
     """
 
     def __init__(
-        self, network: object, event_names: list,
-        type_contract: str, contract_address: str = None
+        self,
+        network: object,
+        type_contract: str,
+        handler: object
         ) -> None:
         super().__init__()
 
         self.network = network
-        self.events = [map(self.get_event, event_names)]
         self.type_contract = type_contract
-        self.contract_address = contract_address
-        self.connection_type = {}
-        self.block_filename = "abstract_file"
+        self.handler = handler
+        self.block_filename = f'{network.name}-{handler.__name__}-{type_contract}'
+        print_log(self.network, 'scanner init')
+
+    def run(self):
+        self.start_polling()
 
     @never_fall
     def start_polling(self) -> None:
+        print_log(self.network, 'start polling')
         while True:
-            last_block_checked = get_last_block(self.block_filename)
-            last_block_network = (
-                self.network.w3.eth.block_number - \
-                    self.network.confirmation_blocks
-            )
-            if last_block_checked <= last_block_network:
+            last_block_checked = get_last_block(
+                    self.block_filename,
+                    self.network.name
+                    )
+            last_block_network = self.network.get_last_confirmed_block()
+            if last_block_checked - last_block_network < 2:
+                print_log(self.network, 'time for sleep!')
                 time.sleep(self.network.check_timeout)
                 continue
 
-            self.save_new_presale(last_block_checked, last_block_network)
+            # self.save_new_presale(last_block_checked, last_block_network)
+            self.handler(
+                last_block_checked,
+                last_block_network,
+                self.network,
+                self.type_contract
+                ).start()
 
-            save_last_block(last_block_network, self.block_filename)
+            save_last_block(
+                last_block_network,
+                self.block_filename
+            )
 
             time.sleep(self.network.check_timeout)
 
-    def save_new_presale(
-        self, last_block_checked: int, last_block_network: int
+
+class HandlerDeploy:
+    def __init__(
+        self,
+        last_block_checked,
+        last_block_network,
+        network,
+        type_contract
         ) -> None:
+        self.event = {
+            'ERC721': network.get_erc721fabric_contract()[1].events.ERC721Made,
+            'ERC1155': network.get_erc1155fabric_contract()[1].events.ERC1155Made
+            }[type_contract]
+        self.last_block_checked = last_block_checked
+        self.last_block_network = last_block_network 
         pass
 
-    def get_event(self, event_name):
-        if self.contract_address:
-            contract_connection = self.network.get_token_contract(
-                self.contract_address
-            )[1]
-        else:
-            contract_connection = self.connection_type[self.type_contract]
-        event = getattr(contract_connection.events, event_name)()
-        return event
+    def start(self,) -> None:
+        print('start handler!')
+        event_filter = self.event.createFilter(
+            fromBlock=self.last_block_checked, 
+            toBlock=self.last_block_network
+        )
+        event_list = event_filter.get_all_entries()
+        map(self.save_event, event_list)
 
+    def save_event(self, event_data):
+        print('in save event')
+        deploy_hash = event_data['transactionHash'].hex()
+        deploy_block = event_data['blockNumber']
+        address = Web3.toChecksumAddress(
+            event_data['args']['newToken'])
 
-class ScannerDeploy(ScannerAbstract):
-    """
-    class for scan contract and catch event deploy
-    """
+        collection = Collection.objects.filter(deploy_hash=deploy_hash)
+        if not collection.exists():
+            return
 
-    def __init__(
-        self, network: object, event_names: dict, type_contract: str
-        ) -> None:
-        super().__init__(network, event_names, type_contract)
-
-        self.connection_type = {
-            "721": self.network.get_erc721fabric_contract(),
-            "1155": self.network.get_erc1155fabric_contract()
-        }
-        self.block_filename = "_".join([self.network.name, "deploy"])
-
-    def save_new_presale(
-        self, last_block_checked: int, last_block_network: int
-        ) -> None:
-        for event in self.events:
-            event_filter = event.createFilter(
-                fromBlock=last_block_checked, toBlock=last_block_network
-            )
-            event_list = event_filter.get_all_entries()
-
-            for event_data in event_list:
-                deploy_hash = event_data["transactionHash"].hex()
-                deploy_block = event_data["blockNumber"]
-                address = Web3.toChecksumAddress(event_data["args"]["newToken"])
-
-                collection = Collection.objects.filter(deploy_hash=deploy_hash)
-                if not collection.exists():
-                    continue
-
-                collection.update(
-                    status=Status.COMMITTED,
-                    deploy_block=deploy_block,
-                    address=address,
-                )
-
-
-class ScannerMintTransfer(ScannerAbstract):
-    """
-    class for check mint and transfer events
-    """
-
-    def __init__(
-        self, network: object, event_names: dict,
-        type_contract: str, contract_address: str = None
-        ) -> None:
-        super().__init__(network, event_names, type_contract, contract_address)
-
-        self.connection_type = {
-            "721": self.network.get_erc721main_contract(),
-            "1155": self.network.get_erc1155main_contract()
-        }
-        self.block_frlename = "_".join([self.network.name, "mint_transfer"])
-
-    def save_new_presale(
-        self, last_block_checked: int, last_block_network: int
-        ) -> None:
-        collection = Collection.objects.get(address="")
-        empty_address = "0x0000000000000000000000000000000000000000"
-
-        for event in self.events:
-            event_filter = event.createFilter(
-                fromBlock=last_block_checked, toBlock=last_block_network
-            )
-            event_list = event_filter.get_all_entries()
-            if not event_list:
-                continue
-
-            for event_data in event_list:
-                tx_hash, token_id, new_owner, ipfs, token = self.get_event_params(
-                    event_data, collection
-                )
-                if not token.exists() or not ipfs:
-                    logging.warning("token 404!")
-                    continue
-                logging.info(f"get token {token[0].name}")
-
-                # if from equal empty_address this is mint event
-                if event_data["args"]["from"] == empty_address:
-                    logging.info("Mint!")
-                    self.mint(token, token_id, tx_hash, new_owner)
-
-                # if from not equal empty_address tis is transfer event
-                else:
-                    old_owner_address = event_data["args"]["from"].lower()
-                    old_owner = AdvUser.objects.get(username=old_owner_address)
-
-                    if event_data["args"]["to"] == empty_address:
-                        logging.info("Burn!")
-                        self.burn(token, tx_hash, event_data["args"]["value"])
-
-                    else:
-                        logging.info("Transfer!")
-                        transfer = self.transfer(
-                            token, tx_hash, token_id, new_owner, old_owner
-                        )
-                        if not transfer:
-                            continue
-
-                    if token[0].standart == "ERC1155":
-                        ownership = self.change_ownership_1155(
-                            old_owner, token, event_data["args"]["value"],
-                            new_owner
-                        )
-                        if not ownership:
-                            continue
-
-    def mint(
-        self, token: Token, token_id: int, tx_hash: str, new_owner: AdvUser
-        ) -> None:
-        token.update(
+        collection.update(
             status=Status.COMMITTED,
-            internal_id=token_id,
-            tx_hash=tx_hash,
-        )
-        TokenHistory.objects.get_or_create(
-            token=token[0],
-            tx_hash=tx_hash,
-            method="Mint",
-            new_owner=new_owner[0],
-            old_owner=None,
-            price=None,
+            deploy_block=deploy_block,
+            address=address,
         )
 
-    def burn(self, token: Token, tx_hash: str, value: int) -> None:
-        TokenHistory.objects.get_or_create(
-            token=token[0],
-            tx_hash=tx_hash,
-            method="Burn",
-            new_owner=None,
-            old_owner=None,
-            price=None,
-        )
-        if token.first().standart == "ERC721":
-            token.update(status=Status.BURNED)
-        elif token.first().standart == "ERC1155":
-            if token.first().total_supply:
-                token.update(total_supply=F("total_supply") - value)
-            # token[0].total_supply -= event['args']['value']
-            token[0].save()
-            if token[0].total_supply == 0:
-                token.update(status=Status.BURNED)
 
-    def transfer(
-        self,
-        token: Token,
-        tx_hash: str,
-        token_id: int,
-        new_owner: AdvUser,
-        old_owner: AdvUser,
-        ) -> bool:
-        token.update(
-            owner=new_owner[0],
-            tx_hash=tx_hash,
-            internal_id=token_id,
-        )
-
-        token_history = TokenHistory.objects.filter(tx_hash=tx_hash)
-        if token_history.exists():
-            if token_history.first().method == "Buy":
-                return False
-        else:
-            TokenHistory.objects.get_or_create(
-                token=token.first(),
-                tx_hash=tx_hash,
-                method="Transfer",
-                new_owner=new_owner[0],
-                old_owner=old_owner,
-                price=None,
-            )
-            return True
-
-    def change_ownership_1155(
-        self, old_owner: AdvUser, token: Token, value: int, new_owner: AdvUser
-        ) -> bool:
-        owner = Ownership.objects.filter(
-            owner=old_owner,
-            token=token.first(),
-        )
-
-        if not owner.exists():
-            logging.info("old_owner is not exist!")
-        else:
-            if owner.first().quantity:
-                owner.update(quantity=F("quantity") - value)
-            else:
-                owner.delete()
-
-        owner = Ownership.objects.filter(owner=new_owner[0], token=token.first())
-        if owner.exists():
-            owner.update(quantity=F("quantity") + value)
-        else:
-            if not new_owner[0]:
-                return False
-            logging.info("ownership for new owner is not exist!")
-            logging.info("new_owner:", new_owner)
-            owner = Ownership.objects.create(
-                owner=new_owner[0], token=token.first(), quantity=value
-            )
-            token.first().owners.add(owner)
-
-        owner.save()
-        return True
-
-    def get_event_params(self, event_data: dict, collection) -> tuple:
-        tx_hash = event_data["transactionHash"].hex()
-        token_id = event_data["args"].get("tokenId")
-        if not token_id:
-            token_id = event_data["args"].get("id")
-
-        new_owner_address = event_data["args"].get("to").lower()
-        new_owner = AdvUser.objects.filter(username=new_owner_address)
-        if not new_owner.exists():
-            new_owner = [None]
-        ipfs = get_ipfs(token_id, collection.address)
-        try:
-            ipfs = ipfs[6:]
-        except:
-            ipfs = None
-        token = Token.objects.filter(
-            ipfs=ipfs,
-            collection=collection,
-        )
-
-        return tx_hash, token_id, new_owner, ipfs, token
-
-
+'''
 class ScannerBuy(ScannerAbstract):
     """
     class for catch buy events
@@ -325,9 +141,9 @@ class ScannerBuy(ScannerAbstract):
 
     def __init__(
         self, network: object, event_names: dict,
-        type_contract: str, contract_address: str = None
+        contract_type: str, contract_address: str = None
         ) -> None:
-        super().__init__(network, event_names, type_contract, contract_address)
+        super().__init__(network, event_names, contract_type, contract_address)
 
         self.connection_type = {
             "exchange": self.network.get_exchange_contract()
@@ -472,9 +288,9 @@ class ScannerBuy(ScannerAbstract):
 
 class AprooveBetScanner(ScannerAbstract):
     def __init__(
-        self, network: object, event_names: dict, type_contract: str
+        self, network: object, event_names: dict, contract_type: str
         ) -> None:
-        super().__init__(network, event_names, type_contract)
+        super().__init__(network, event_names, contract_type)
 
         self.connection_type = {
             "exchange": self.network.get_exchange_contract()
@@ -522,3 +338,4 @@ class AprooveBetScanner(ScannerAbstract):
             bid_is_valid = wad > item.quantity * item.amount
             if bid_is_valid:
                 self.create_bid(item)
+'''

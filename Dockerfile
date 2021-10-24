@@ -16,6 +16,6 @@ COPY . /code/
 #CMD ["gunicorn", "--bind", ":8000", "--workers", "8", "dds.wsgi:application"]
 
 
-COPY ./entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+#COPY ./entrypoint.sh /
+#RUN chmod +x /entrypoint.sh
+#ENTRYPOINT ["/entrypoint.sh"]
