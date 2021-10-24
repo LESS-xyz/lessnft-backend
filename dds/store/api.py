@@ -54,7 +54,7 @@ def token_search(words, **kwargs):
     owner = kwargs.get("owner")
     if currency is not None:
         currency = currency[0]
-    tokens = Token.token_objects.network(network[0]).select_related("currency", "owner")
+    tokens = Token.objects.committed().network(network[0]).select_related("currency", "owner")
     # Below are the tokens in the form of a QUERYSET
     if owner:
         tokens = tokens.filter(
@@ -129,7 +129,7 @@ def token_search(words, **kwargs):
 def collection_search(words, page):
     words = words.split(' ')
 
-    collections = Collection.objects.all()
+    collections = Collection.objects.committed()
 
     for word in words:
         collections = collections.filter(name__icontains=word)
@@ -140,7 +140,7 @@ def collection_search(words, page):
 
 def validate_bid(user, token_id, amount, quantity):
     try:
-        token = Token.token_objects.committed().get(id=token_id)
+        token = Token.objects.committed().get(id=token_id)
     except ObjectDoesNotExist:
         return 'Token not found'
     if not token.is_auc_selling:
