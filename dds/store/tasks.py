@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from celery import shared_task
-from dds.store.models import Token, Status
+from dds.store.models import Token, Status, Bid
 from dds.store.services.auction import end_auction
 
 
@@ -22,3 +22,34 @@ def end_auction_checker():
     )
     for token in tokens:
         end_auction(token)
+
+@shared_task(name="incorrect_bid_checker")
+def incorrect_bid_checker():
+    bids = Bid.objects.committed()
+    for bid in bids:
+        user_balance = bid.token.currency.network.contract_call(
+                method_type='read',
+                contract_type='token',
+                address=bid.token.currency.address,
+                function_name='balanceOf',
+                input_params=(bid.user.username,),
+                input_type=('address',),
+                output_types=('uint256',),
+            )
+
+        allowance = bid.token.currency.network.contract_call(
+                method_type='read',
+                contract_type='token',
+                address=bid.token.currency.address,
+                function_name='allowance',
+                input_params=(
+                    bid.user.username,
+                    bid.token.currency.network.exchange_address
+                ),
+                input_type=('address', 'address'),
+                output_types=('uint256',),
+            )
+
+        if user_balance < bid.amount * bid.quantity or allowance < bid.amount * bid.quantity:
+            bid.state = Status.EXPIRED
+            bid.save()
