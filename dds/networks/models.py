@@ -20,7 +20,7 @@ from contracts import (
 )
 
 from dds.settings import config
-from dds.utilities import sign_message
+from dds.networks.utils import tron_function_selector
 
 if TYPE_CHECKING:
     from web3.contract import Contract
@@ -189,7 +189,7 @@ class Network(models.Model):
             "visible": True,
             "owner_address": config.SIGNER_ADDRESS.replace('0x', '41'),
             "contract_address": address,
-            "function_selector": f'{function_name}{input_types}'.replace(' ', ''),
+            "function_selector": tron_function_selector(function_name, input_types),
             "parameter": input_data,
         }
         headers = {
@@ -244,6 +244,7 @@ class Network(models.Model):
 
         options = {
             'feeLimit': gas_limit,
+            #TODO set callValue (for goddamn native buying)
             'callValue': 0,
             'tokenValue': 0,
             'tokenId': 0
@@ -251,19 +252,19 @@ class Network(models.Model):
 
         initial_tx = {
             'contractAddress': address,
-            'function': f'{function_name}{input_types}'.replace(' ', ''),
-            'fee_limit': gas_limit,
+            'function': tron_function_selector(function_name, input_types),
+            'fee_limit': 1000000000,
             'options': options,
             'parameter': params
         }
 
         print(params)
-        send= True
+        send = True
         print(input_types)
         if send:
             initial_tx = tron.transaction_builder.trigger_smart_contract(
                 contract_address=address,
-                function_selector=f"{function_name}{input_types}".replace(' ', '').replace("'", ''),
+                function_selector=tron_function_selector(function_name, input_types),
                 fee_limit=1000000000,
                 call_value=0,
                 parameters=params
