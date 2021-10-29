@@ -113,7 +113,7 @@ def token_search(words, **kwargs):
     if order_by and order_by.startswith("-"):
         order_by = order_by[1:]
         reverse = True
-    
+
     if order_by == "date":
         tokens = sorted(tokens, key=token_sort_updated_at, reverse=reverse)
     elif order_by == "price":
