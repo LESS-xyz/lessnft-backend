@@ -54,7 +54,7 @@ class ScannerAbsolute(threading.Thread):
         super().__init__()
 
         self.network = network
-        self.type_contract = type_contract
+        self.type_contract = type_contract # ERC721/ ERC1155
         self.handler = handler
         self.block_filename = f'{network.name}-{handler.__name__}-{type_contract}'
         print_log(self.network, 'scanner init')
@@ -265,6 +265,9 @@ class HandlerMintTransferBurn:
             price=None,
             amount=event_args.get('value'),
         )
+        """
+        TODO: метод update не работает, потому что токен-объект
+        """
         if token.standart == 'ERC721':
             token.update(status=Status.BURNED)
         elif token.standart == 'ERC1155':
@@ -297,6 +300,9 @@ class HandlerMintTransferBurn:
         old_owner: AdvUser,
         event_args:dict
         ) -> None:
+        """
+        TODO: метод update не работает, потому что токен-объект
+        """
         token.update(
             tx_hash=tx_hash,
             internal_id=token_id,
@@ -396,6 +402,7 @@ class HandlerBuy:
             self.buy_erc721(new_owner, token)
         elif token.standart == 'ERC1155':
             self.buy_1155()
+
         self.refresh_token_history(
             event_args,
             token,
@@ -405,6 +412,7 @@ class HandlerBuy:
             )
 
     def buy_erc721(self, new_owner: AdvUser, token: Token):
+        '''смотри todo'''
         token.update(owner=new_owner, selling=False, currency_price=None)
         Bid.objects.filter(token=token).delete()
 
@@ -497,7 +505,10 @@ class HandlerAprooveBet:
         bet = Bid.objects.filter(user__username=user)
         if not bet.exists():
             return
-
+        """
+        TODO: добавить network в аргументы класса, чтобы проверять валиднеость адреса
+        см. 506 строка файла scaners
+        """
         wad = int(event_args['wad'])
 
         for item in bet:
@@ -511,6 +522,3 @@ class HandlerAprooveBet:
                     date=item.created_at
                 )
                 logging.info('bet update! \n _______________')
-            else:
-                logging.info('no money!')
-                return
