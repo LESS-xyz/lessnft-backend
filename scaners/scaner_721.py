@@ -6,15 +6,21 @@ import django
 django.setup()
 
 # from multiprocessing import Process
+'''
 import threading
 from scaners import scaner
 from dds.store.models import Collection
-from dds.networks.models import Network
 import time
+'''
+from new_scanners import ScannerAbsolute, HandlerDeploy
+from dds.networks.models import Network
 
 
 if __name__ == '__main__':
+    #networks = Network.objects.exclude(name='Tron')
     networks = Network.objects.all()
+
+    '''
     network_collections={}
     for network in networks:
         web3, contract = network.get_erc721fabric_contract()
@@ -39,3 +45,6 @@ if __name__ == '__main__':
                     threading.Thread(target=scaner, args=(web3, contract,)).start()
                 network_collections[network.name] = updated_collections
 
+    '''
+    for network in networks:
+        ScannerAbsolute(network, 'ERC721', HandlerDeploy).start()
