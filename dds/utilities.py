@@ -6,10 +6,7 @@ from dds.settings import config, PERIODS
 
 def sign_message(type, message):
     message_hash = Web3.soliditySha3(type, message)
-    print(f'message_hash: {message_hash}')
     signed = Account.signHash(message_hash, config.PRIV_KEY)
-    print(f"signed: {signed}")
-    print(f" signature: {signed['signature'].hex()}")
     return signed['signature'].hex()
 
 

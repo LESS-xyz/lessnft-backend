@@ -8,6 +8,7 @@ from eth_abi import decode_abi, encode_abi
 from django.db import models
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
+from tronapi.common.account import Account
 
 from contracts import (
     EXCHANGE,
@@ -19,7 +20,7 @@ from contracts import (
 )
 
 from dds.settings import config
-
+from dds.utilities import sign_message
 
 if TYPE_CHECKING:
     from web3.contract import Contract
@@ -188,7 +189,7 @@ class Network(models.Model):
             "visible": True,
             "owner_address": config.SIGNER_ADDRESS.replace('0x', '41'),
             "contract_address": address,
-            "function_selector": f'{function_name}{input_types}',
+            "function_selector": f'{function_name}{input_types}'.replace(' ', ''),
             "parameter": input_data,
         }
         headers = {
@@ -211,7 +212,7 @@ class Network(models.Model):
         contract_type = kwargs.get('contract_type')
         gas_limit = kwargs.get('gas_limit')
         send = kwargs.get('send', False)
-
+        print(contract_type, address)
         address_match = {
             'exchange': 'exchange_address',
             'erc721fabric': 'fabric721_address',
@@ -229,11 +230,10 @@ class Network(models.Model):
             event_server=provider,
             private_key=config.PRIV_KEY,
         )
-
+        tron.private_key = config.PRIV_KEY
         signer_address = tron.address.from_private_key(tron.private_key).base58
-
+        print(signer_address)
         tron.default_address = signer_address
-
         params = []
         for i in range(len(input_params)):
             if input_types[i] in ('bytes', 'bytes32'):
@@ -242,16 +242,45 @@ class Network(models.Model):
             else:
                 params.append({"type": input_types[i], "value": input_params[i]})
 
-        initial_tx = tron.transaction_builder.trigger_smart_contract(
-            contract_address=address,
-            function_selector=f'{function_name}{input_types}',
-            fee_limit=gas_limit,
-            call_value=0,
-            parameters=params
-        )['transaction']
+        options = {
+            'feeLimit': gas_limit,
+            'callValue': 0,
+            'tokenValue': 0,
+            'tokenId': 0
+        }
 
+        initial_tx = {
+            'contractAddress': address,
+            'function': f'{function_name}{input_types}'.replace(' ', ''),
+            'fee_limit': gas_limit,
+            'options': options,
+            'parameter': params
+        }
+
+        print(params)
+        send= True
+        print(input_types)
         if send:
+            initial_tx = tron.transaction_builder.trigger_smart_contract(
+                contract_address=address,
+                function_selector=f"{function_name}{input_types}".replace(' ', '').replace("'", ''),
+                fee_limit=1000000000,
+                call_value=0,
+                parameters=params
+            )['transaction']
+            print(
+                address, 
+                f'{function_name}{input_types}'.replace(' ', '').replace("'", ''),
+                params,
+            )
+            print(initial_tx)
             signed = tron.trx.sign(initial_tx)
             tx_hash = tron.trx.broadcast(signed)['txid']
+            print(tx_hash)
             return tx_hash
+        print(initial_tx)
         return initial_tx
+
+    @property
+    def check_timeout(self) -> int:
+        return 6

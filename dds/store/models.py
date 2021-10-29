@@ -250,8 +250,6 @@ class Collection(models.Model):
             return network.contract_call(
                 method_type = 'write',
                 contract_type='erc721fabric',
-		address=network.fabric721_address,
-
                 gas_limit = COLLECTION_CREATION_GAS_LIMIT,
                 nonce_username = owner.username,
                 tx_value = None,
@@ -272,8 +270,6 @@ class Collection(models.Model):
         return network.contract_call(
                 method_type = 'write',
                 contract_type='erc1155fabric',
-		address=network.fabric721_address,
-
                 gas_limit = COLLECTION_CREATION_GAS_LIMIT,
                 nonce_username = owner.username,
                 tx_value = None,
@@ -281,7 +277,7 @@ class Collection(models.Model):
                 function_name= 'makeERC1155',
                 input_params=(
                     name,
-                    baseURI,
+                    symbol,
                     config.SIGNER_ADDRESS,
                     signature
                 ),
