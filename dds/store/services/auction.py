@@ -3,10 +3,10 @@ from web3 import Web3, HTTPProvider
 from dds.settings import config
 from contracts import EXCHANGE
 from dds.store.models import Bid
-   
+from dds.store.models import Status
 
 def end_auction(token):
-    bet = Bid.objects.filter(token=token).order_by("-amount").last()
+    bet = Bid.objects.committed().filter(token=token).order_by("-amount").last()
     initial_tx = token.buy_token(0, bet.user, seller=token.owner, price=bet.amount)
     data = initial_tx.get("data")
     '''

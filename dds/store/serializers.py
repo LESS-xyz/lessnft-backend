@@ -93,6 +93,7 @@ class BetSerializer(serializers.ModelSerializer):
             "amount",
             "quantity",
             "user",
+            "state",
         )
 
 
@@ -112,6 +113,7 @@ class BidSerializer(serializers.ModelSerializer):
             "quantity",
             "amount",
             "currency",
+            "state",
         )
 
     def get_bidder(self, obj):

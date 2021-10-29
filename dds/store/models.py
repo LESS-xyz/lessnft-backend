@@ -32,6 +32,7 @@ class Status(models.TextChoices):
     FAILED = 'Failed'
     COMMITTED = 'Committed'
     BURNED = 'Burned'
+    EXPIRED = 'Expired'
 
 class CollectionQuerySet(models.QuerySet):
     def committed(self):
@@ -537,7 +538,7 @@ class Token(models.Model):
         self.save()
 
     def get_highest_bid(self):
-        bids = self.bid_set.all().values_list('amount', flat=True)
+        bids = self.bid_set.committed().values_list('amount', flat=True)
         return max(bids) if bids else None
 
     def get_main_contract(self):
@@ -893,6 +894,17 @@ class Tags(models.Model):
     class Meta:
         verbose_name_plural = "Tags"
 
+class BidQuerySet(models.QuerySet):
+    def committed(self):
+        return self.filter(status=Status.COMMITTED)
+
+class BidManager(models.Manager):
+    def get_queryset(self):
+        return BidQuerySet(self.model, using=self._db)
+
+    def committed(self):
+        """ Return bids with status committed """
+        return self.get_queryset().committed()
 
 class Bid(models.Model):
     token = models.ForeignKey('Token', on_delete=models.CASCADE)
@@ -908,6 +920,8 @@ class Bid(models.Model):
     currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, blank=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     state = models.CharField(max_length=50, choices=Status.choices, default=Status.PENDING)
+
+    objects = BidManager()
 
     def __str__(self):
         return f"{self.token} - {self.user}"
