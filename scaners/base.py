@@ -1,6 +1,7 @@
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from dds.utilities import RedisValues
 
 
 class HandlerABC(ABC):
@@ -27,13 +28,16 @@ class ScannerABC(ABC):
         # TODO: from config
         time.sleep(1)
 
-    @abstractmethod
-    def save_last_block(self) -> None:
-        ...
+    def save_last_block(self, name, block) -> None:
+        RedisValues.set_value(name, block)
 
-    @abstractmethod
-    def get_last_block(self) -> int:
-        ...
+    def get_last_block(self, name) -> int:
+        last_block_number = RedisValues.get_value(name)
+        if not last_block_number:
+            last_block_number = self.get_last_block_network()
+            self.save_last_block(name, last_block_number)
+        return int(last_block_number)
+
 
     @abstractmethod
     def get_last_block_network(self) -> int:

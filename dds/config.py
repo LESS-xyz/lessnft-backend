@@ -52,6 +52,9 @@ class Config:
     TITLE: str
     DESCRIPTION: str
 
+    REDIS_HOST: str
+    REDIS_PORT: int
+
 
 with open(os.path.dirname(__file__) + '/../config.yaml') as f:
     config_data = yaml.safe_load(f)

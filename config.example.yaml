@@ -41,3 +41,6 @@ API_URL: '' #API Url for rates checker
 TITLE: '' #Project name
 DESCRIPTION: '' #Project description
 
+REDIS_HOST: 
+REDIS_PORT: 
+

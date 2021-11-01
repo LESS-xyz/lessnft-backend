@@ -1,8 +1,25 @@
 from eth_account import Account
 from web3 import Web3
 from typing import Tuple
+import redis
 
 from dds.settings import config, PERIODS
+
+
+class RedisValues:
+    redis_instance = redis.StrictRedis(host=config.REDIS_HOST,
+                                        port=config.REDIS_PORT, db=0)
+
+    def get_value(self, key):
+        if self.redis_instance.exists(key):
+            value = self.redis_instance.get(key)
+            return value
+        else:
+            return None
+    
+    def set_value(self, key, value):
+        self.redis_instance.set(key, value)
+
 
 def sign_message(type, message):
     message_hash = Web3.soliditySha3(type, message)
