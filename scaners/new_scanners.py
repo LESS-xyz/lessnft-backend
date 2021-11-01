@@ -36,11 +36,10 @@ class ScannerAbsolute(threading.Thread):
 
     @property
     def block_name(self) -> str:
-        name = f"{self.handler.__name__}_{self.network}"
-        name += f"_{self.contract_type}" if self.contract_type else ""
+        name = f"{self.handler.TYPE}_{self.network.name}"
         name += f"_{self.contract.address}" if self.contract else ""
+        name += f"_{self.contract_type}" if self.contract_type else ""
         return name
-        
 
     @never_fall
     def start_polling(self) -> None:
