@@ -14,13 +14,13 @@ class RedisClient:
             db=0,
         )
 
-    def getConnection(self):
+    def set_connection(self) -> None:
         self._conn = redis.Redis(connection_pool=self.pool)
 
     @property
     def connection(self):
         if not hasattr(self, '_conn'):
-            self.getConnection()
+            self.set_connection()
         return self._conn
 
 

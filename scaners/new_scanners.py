@@ -34,11 +34,18 @@ class ScannerAbsolute(threading.Thread):
     def run(self):
         self.start_polling()
 
+    @property
+    def block_name(self) -> str:
+        name = f"{self.handler.TYPE}_{self.network.name}"
+        name += f"_{self.contract.address}" if self.contract else ""
+        name += f"_{self.contract_type}" if self.contract_type else ""
+        return name
+
     @never_fall
     def start_polling(self) -> None:
         while True:
             scanner = get_scanner(self.network, self.contract_type)
-            last_checked_block = scanner.get_last_block()
+            last_checked_block = scanner.get_last_block(self.block_name)
             last_network_block = scanner.get_last_network_block()
 
             if last_checked_block - last_network_block < 2:
@@ -59,7 +66,7 @@ class ScannerAbsolute(threading.Thread):
             if event_list:
                 map(handler.save_event, event_list)
 
-            scanner.save_last_block()
+            scanner.save_last_block(self.block_name, last_network_block)
             scanner.sleep()
 
 
