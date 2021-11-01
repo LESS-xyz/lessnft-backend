@@ -31,4 +31,5 @@ urlpatterns = [
     path('favorites/', get_favorites),
     path('support/', SupportView.as_view()),
     path('metadata/<str:address>/', GetCollectionByAdressView.as_view()),
+    path('remove-reject/', RemoveRejectView.as_view()),
 ]

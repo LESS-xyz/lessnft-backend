@@ -181,6 +181,8 @@ class TokenSerializer(serializers.ModelSerializer):
     digital_key = serializers.SerializerMethodField()
     highest_bid = serializers.SerializerMethodField()
     highest_bid_USD = serializers.SerializerMethodField()
+    minimal_bid_USD = serializers.SerializerMethodField()
+    sellers = serializers.SerializerMethodField()
     creator = CreatorSerializer()
     collection = CollectionSlimSerializer()
     currency = CurrencySerializer()
@@ -224,7 +226,9 @@ class TokenSerializer(serializers.ModelSerializer):
             "bids",
             "highest_bid",
             "highest_bid_USD",
+            "minimal_bid_USD",
             "network",
+            "sellers",
         )
         
     def get_royalty(self, obj):
@@ -236,6 +240,18 @@ class TokenSerializer(serializers.ModelSerializer):
 
     def get_like_count(self, obj):
         return obj.useraction_set.count()
+
+    def get_sellers(self, obj):
+        sellers = obj.ownership_set.filter(currency_price__isnull=False, selling=True).order_by(
+            "currency_price"
+        )
+        return OwnershipSerializer(sellers, many=True).data
+
+    def get_minimal_bid_USD(self, obj):
+        if self.get_minimal_bid(obj) and obj.currency:
+            amount = float(self.get_minimal_bid(obj))
+            decimals = obj.currency.get_decimals
+            return calculate_amount(amount*decimals, obj.currency.symbol)[0]
 
     def get_highest_bid(self, obj):
         bids = obj.bid_set.filter(state=Status.COMMITTED).order_by(
@@ -407,7 +423,6 @@ class TokenFullSerializer(TokenSerializer):
     selling = serializers.SerializerMethodField()
     history = serializers.SerializerMethodField()
     tags = serializers.SerializerMethodField()
-    sellers = serializers.SerializerMethodField()
     service_fee = serializers.SerializerMethodField()
     currency_service_fee = serializers.SerializerMethodField()
     USD_service_fee = serializers.SerializerMethodField()
@@ -418,7 +433,6 @@ class TokenFullSerializer(TokenSerializer):
         fields = TokenSerializer.Meta.fields + (
             "tags",
             "history",
-            "sellers",
             "is_liked",
             "service_fee",
             "currency_service_fee",
@@ -438,12 +452,6 @@ class TokenFullSerializer(TokenSerializer):
 
     def get_tags(self, obj):
         return [tag.name for tag in obj.tags.all()]
-
-    def get_sellers(self, obj):
-        sellers = obj.ownership_set.filter(currency_price__isnull=False, selling=True).order_by(
-            "currency_price"
-        )
-        return OwnershipSerializer(sellers, many=True).data
 
     def get_service_fee(self, obj):
         return obj.currency.service_fee

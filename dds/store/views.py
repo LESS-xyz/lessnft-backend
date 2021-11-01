@@ -3,7 +3,7 @@ import random
 from dds.accounts.models import AdvUser
 from dds.activity.models import BidsHistory, ListingHistory, UserAction
 from dds.consts import APPROVE_GAS_LIMIT
-from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid, token_search, collection_search)
+from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid)
 from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs
 
 from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token, TransactionTracker
@@ -143,15 +143,13 @@ class SearchView(APIView):
     def post(self, request):
         request_data = request.data
         words = request_data.get('text', '')
-        page = request_data.get('page', 1)
         params = request.query_params
         sort = params.get('type', 'items')
 
         sort_type = getattr(config.SEARCH_TYPES, sort)
-        token_count, search_result = getattr(Search, f"{sort_type}_search")(
+        token_count, search_result = getattr(Search(), f"{sort_type}_search")(
             words=words, 
             user=request.user, 
-            page=page, 
             **params,
         )
         response_data = {"total_tokens": token_count, "items": search_result}
@@ -209,11 +207,17 @@ class CreateView(APIView):
 
         ipfs = create_ipfs(request)
         if standart == 'ERC721':
-            signature = sign_message(['address', 'string'], [token_collection.network.wrap_in_checksum(token_collection.address), ipfs])
+            signature = sign_message(
+                ['address', 'string'],
+                [token_collection.network.wrap_in_checksum(token_collection.ethereum_address), ipfs]
+            )
             amount = 1
         else:
             amount = request_data.get('total_supply')
-            signature = sign_message(['address', 'string', 'uint256'], [token_collection.network.wrap_in_checksum(token_collection.address), ipfs, int(amount)])
+            signature = sign_message(
+                ['address', 'string', 'uint256'],
+                [token_collection.network.wrap_in_checksum(token_collection.ethereum_address), ipfs, int(amount)]
+            )
 
         initial_tx = token_collection.create_token(creator, ipfs, signature, amount)
         token = Token()
@@ -251,6 +255,7 @@ class CreateCollectionView(APIView):
         short_url = request.data.get('short_url')
         standart = request.data.get('standart')
         network = request.query_params.get('network', config.DEFAULT_NETWORK)
+        print(network)
         owner = request.user
 
         is_unique, response = Collection.collection_is_unique(name, symbol, short_url, network)
@@ -261,6 +266,7 @@ class CreateCollectionView(APIView):
             return Response('invalid collection type', status=status.HTTP_400_BAD_REQUEST)
         
         network = Network.objects.filter(name__icontains=network)
+        print(network.first().name)
         if not network:
             return Response('invalid network name', status=status.HTTP_400_BAD_REQUEST)
 
@@ -276,7 +282,8 @@ class CreateCollectionView(APIView):
             ipfs = None
         print(ipfs)
         collection.save_in_db(request, ipfs)
-        return Response(initial_tx, status=status.HTTP_200_OK)
+        response_data = {'initial_tx': initial_tx, 'collection': CollectionSlimSerializer(collection).data}
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class GetOwnedView(APIView):
@@ -1171,3 +1178,32 @@ class GetRelatedView(APIView):
         random_related = random.choices(all_related, k=4)
         response_data = TokenSerializer(random_related, many=True, context={"user": request.user}).data
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class RemoveRejectView(APIView):
+    '''
+    View for remove rejected token or collection by id.
+    '''
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Remove rejected token or collection",
+        request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+            properties={
+            'id': openapi.Schema(type=openapi.TYPE_NUMBER),
+            'type': openapi.Schema(type=openapi.TYPE_STRING),
+        }),
+        responses={200: "success"},
+    )
+    def post(self, request):
+        items = {
+            'token': Token,
+            'collection': Collection,
+        }
+        item_id = request.data.get("id")
+        item_type = request.data.get("type")
+        if item_type not in ['token', 'collection']:
+            return Response({"error": "Item type should be 'token' or 'collection'"}, status=status.HTTP_400_BAD_REQUEST)
+        items[item_type].objects.filter(status=Status.PENDING, id=item_id).delete()
+        return Response("success", status=status.HTTP_200_OK)

@@ -68,7 +68,7 @@ class CollectionManager(models.Manager):
     def get_queryset(self):
         return CollectionQuerySet(self.model, using=self._db)
     
-    def commited(self):
+    def committed(self):
         return self.get_queryset().committed()
 
     def get_by_short_url(self, short_url):
@@ -92,7 +92,7 @@ class Collection(models.Model):
     name = models.CharField(max_length=50)
     avatar_ipfs = models.CharField(max_length=200, null=True, default=None)
     cover_ipfs = models.CharField(max_length=200, null=True, default=None, blank=True)
-    address = models.CharField(max_length=60, unique=True, null=True, blank=True)
+    address = models.CharField(max_length=60, null=True, blank=True)
     symbol = models.CharField(max_length=30)
     description = models.TextField(null=True, blank=True)
     standart = models.CharField(max_length=10, choices=[('ERC721', 'ERC721'), ('ERC1155', 'ERC1155')])
@@ -103,6 +103,9 @@ class Collection(models.Model):
     network = models.ForeignKey('networks.Network', on_delete=models.CASCADE)
 
     objects = CollectionManager()
+
+    class Meta:
+        unique_together = [['address', 'network']]
 
     @property
     def avatar(self):
@@ -116,8 +119,14 @@ class Collection(models.Model):
     def url(self):
         return self.short_url if self.short_url else self.id
 
+    @property
+    def ethereum_address(self):
+        return self.network.get_ethereum_address(self.address)
+
+
     def __str__(self):
         return self.name
+
 
     def save_in_db(self, request, avatar):
         self.name = request.data.get('name')
@@ -148,12 +157,11 @@ class Collection(models.Model):
             value = int(self.network.contract_call(
                     method_type='read', 
                     contract_type='erc721fabric',
-                    address=self.address, 
                     function_name='getFee',
                     input_params=(),
                     input_type=(),
                     output_types=('uint256',),
-                )
+                )[0]
             )
 
             #_, contract = self.network.get_erc721main_contract(self.address)
@@ -179,12 +187,11 @@ class Collection(models.Model):
             value = int(self.network.contract_call(
                     method_type='read', 
                     contract_type='erc1155fabric',
-                    address=self.address, 
                     function_name='getFee',
                     input_params=(),
                     input_type=(),
                     output_types=('uint256',),
-                )
+                )[0]
             )
 
 
@@ -713,8 +720,8 @@ class Token(models.Model):
                 self.collection.network.wrap_in_checksum(fee_address),
             ],
             [
-                (int(self.creator_royalty / 100 * float(price))),
-                (int(self.currency.service_fee / 100 * float(price))),
+                (int(self.creator_royalty / 100 * float(price) * int(token_count))), 
+                (int(self.currency.service_fee / 100 * float(price) * int(token_count)))
             ],
             self.collection.network.wrap_in_checksum(buyer.username),
         ]
@@ -779,9 +786,8 @@ class Token(models.Model):
                         self.collection.network.wrap_in_checksum(fee_address)
                     ]
         feeAmounts = [
-                        (int(self.creator_royalty / 100 * float(price))),
-                        (int(self.currency.service_fee / 100 * float(price)))
-                    ]
+                (int(self.creator_royalty / 100 * float(price) * int(token_count))), 
+                (int(self.currency.service_fee / 100 * float(price) * int(token_count))),                    ]
         signature = signature
 
 

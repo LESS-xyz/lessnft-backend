@@ -1,8 +1,10 @@
+
 import requests
 from typing import TYPE_CHECKING
 
 from tronapi import Tron
 from tronapi import HttpProvider
+from tronapi.common.account import Address
 from trx_utils import decode_hex
 from eth_abi import decode_abi, encode_abi
 from django.db import models
@@ -89,6 +91,11 @@ class Network(models.Model):
         confirmation_blocks = 6
         last_block_confirmed = last_block - confirmation_blocks
         return last_block_confirmed
+
+    def get_ethereum_address(self, address):
+        if self.network_type == self.Types.tron:
+            return Web3.toChecksumAddress('0x' + Address.to_hex(address)[2:])
+        return address
 
     def wrap_in_checksum(self, address: str) -> str:
         """ Wrap address to checksum because calling web3 for tron will return an error """
@@ -185,13 +192,15 @@ class Network(models.Model):
             if not address:
                 print(f'could not get contract address for {contract_type} in {self.name}')
                 raise "backend didn't found contract address"
+        address = Address.to_hex(address)
         payload = {
-            "visible": True,
+            #"visible": True,
             "owner_address": config.SIGNER_ADDRESS.replace('0x', '41'),
             "contract_address": address,
             "function_selector": tron_function_selector(function_name, input_types),
             "parameter": input_data,
         }
+        print(payload)
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/json"
@@ -236,14 +245,14 @@ class Network(models.Model):
         tron.default_address = signer_address
         params = []
         for i in range(len(input_params)):
-            if input_types[i] in ('bytes', 'bytes32'):
+            if input_types[i] in ('bytes', 'bytes32') and send:
                 print(f'encoding {input_params[i]} to bytes')
                 params.append({"type": input_types[i], "value": tron.toBytes(hexstr=input_params[i])})
             else:
                 params.append({"type": input_types[i], "value": input_params[i]})
 
         options = {
-            'feeLimit': gas_limit,
+            'feeLimit': 1000000000,
             #TODO set callValue (for goddamn native buying)
             'callValue': 0,
             'tokenValue': 0,
@@ -259,8 +268,7 @@ class Network(models.Model):
         }
 
         print(params)
-        send = True
-        print(input_types)
+
         if send:
             initial_tx = tron.transaction_builder.trigger_smart_contract(
                 contract_address=address,
@@ -271,7 +279,7 @@ class Network(models.Model):
             )['transaction']
             print(
                 address, 
-                f'{function_name}{input_types}'.replace(' ', '').replace("'", ''),
+                tron_function_selector(function_name, input_types),
                 params,
             )
             print(initial_tx)
@@ -282,6 +290,9 @@ class Network(models.Model):
         print(initial_tx)
         return initial_tx
 
+    """
+    TODO: запихнуть в поля модели
+    """
     @property
     def check_timeout(self) -> int:
         return 6
