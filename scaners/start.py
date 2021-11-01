@@ -12,7 +12,7 @@ from scaners.new_scanners import (
     ScannerAbsolute,
     HandlerDeploy,
     HandlerBuy,
-    HandlerAprooveBet,
+    HandlerApproveBet,
     HandlerMintTransferBurn,
 )
 from dds.networks.models import Network
@@ -46,7 +46,7 @@ if __name__ == "__main__":
         _, contract = rate.network.get_token_contract(rate.address)
         ScannerAbsolute(
             network=network,
-            handler=HandlerAprooveBet,
+            handler=HandlerApproveBet,
             contract=contract,
         ).run()
 

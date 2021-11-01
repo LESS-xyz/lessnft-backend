@@ -363,7 +363,7 @@ class HandlerBuy(HandlerABC):
         )
 
 
-class HandlerAprooveBet(HandlerABC):
+class HandlerApproveBet(HandlerABC):
     def get_events(self, last_block_checked, last_block_network) -> None:
         return self.scanner.get_events_approve(
             last_block_checked,
