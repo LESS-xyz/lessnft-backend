@@ -1,14 +1,16 @@
 import threading
+from decimal import Decimal
+from typing import Optional
 
 from dds.accounts.models import AdvUser
 from dds.activity.models import BidsHistory, TokenHistory
-from dds.store.models import *
+from dds.store.models import Collection, Status, Token, Ownership, Bid
+from dds.store.services.ipfs import get_ipfs
 from dds.networks.models import Network
 from django.db.models import F
 
 from scaners.utils import get_scanner, never_fall
 from scaners.base import HandlerABC
-from typing import Optional
 
 
 class ScannerAbsolute(threading.Thread):
@@ -21,7 +23,7 @@ class ScannerAbsolute(threading.Thread):
         self,
         network: Network,
         handler: object,
-        contract_type: str=None,
+        contract_type: str = None,
         contract=None,
     ) -> None:
         super().__init__()
@@ -45,9 +47,10 @@ class ScannerAbsolute(threading.Thread):
                 continue
 
             handler = self.handler(self.network, scanner, self.contract)
-            event_list = handler.get_events(
+            event_list = getattr(scanner, f"get_events{handler.TYPE}")(
                 last_block_checked,
                 last_block_network,
+                handler.contract,
             )
 
             if event_list:
@@ -58,11 +61,7 @@ class ScannerAbsolute(threading.Thread):
 
 
 class HandlerDeploy(HandlerABC):
-    def get_events(self, last_block_checked, last_block_network) -> list:
-        return self.scanner.get_events_deploy(
-            last_block_checked,
-            last_block_network,
-        )
+    TYPE = "deploy"
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_deploy(event_data)
@@ -80,11 +79,7 @@ class HandlerDeploy(HandlerABC):
 
 
 class HandlerMintTransferBurn(HandlerABC):
-    def get_events(self, last_block_checked, last_block_network) -> list:
-        return self.scanner.get_events_mint(
-            last_block_checked,
-            last_block_network,
-        )
+    TYPE = "mint"
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_mint(event_data)
@@ -101,17 +96,17 @@ class HandlerMintTransferBurn(HandlerABC):
             token_id=token_id,
             collection=collection,
             smart_contract=self.contract,
-            is_mint=bool(old_owner.address == EMPTY_ADDRESS),
+            is_mint=bool(old_owner.address == self.scanner.EMPTY_ADDRESS),
         )
 
-        if old_owner.address == EMPTY_ADDRESS:
+        if old_owner.address == self.scanner.EMPTY_ADDRESS:
             self.mint_event(
                 token=token,
                 token_id=token_id,
                 tx_hash=data.tx_hash,
                 new_owner=new_owner,
             )
-        elif new_owner.address == EMPTY_ADDRESS:
+        elif new_owner.address == self.scanner.EMPTY_ADDRESS:
             self.burn_event(
                 token=token,
                 tx_hash=data.tx_hash,
@@ -271,11 +266,7 @@ class HandlerMintTransferBurn(HandlerABC):
 
 
 class HandlerBuy(HandlerABC):
-    def get_events(self, last_block_checked, last_block_network) -> list:
-        return self.scanner.get_events_buy(
-            last_block_checked,
-            last_block_network,
-        )
+    TYPE = "buy"
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_buy(event_data)
@@ -361,12 +352,7 @@ class HandlerBuy(HandlerABC):
 
 
 class HandlerApproveBet(HandlerABC):
-    def get_events(self, last_block_checked, last_block_network) -> None:
-        return self.scanner.get_events_approve(
-            last_block_checked,
-            last_block_network,
-            self.contract,
-        )
+    TYPE = "approve"
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_approve(event_data)
