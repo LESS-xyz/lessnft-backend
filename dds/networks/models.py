@@ -25,8 +25,11 @@ from dds.networks.utils import tron_function_selector
 if TYPE_CHECKING:
     from web3.contract import Contract
     from web3.types import ABI
-
-
+'''
+class NetworkManager(models.Manager):
+    def get_by_natural_key(self, network):
+        return self.get(network=network)
+'''
 class Network(models.Model):
     """
     Represent different networks as different blockchains, 
@@ -48,6 +51,8 @@ class Network(models.Model):
         choices=Types.choices,
         default=Types.ethereum
     )
+
+    #objects = NetworkManager()
 
     def __str__(self):
         return self.name
