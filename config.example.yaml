@@ -41,3 +41,44 @@ API_URL: '' #API Url for rates checker
 TITLE: '' #Project name
 DESCRIPTION: '' #Project description
 
+#Initial DB fixtures:
+NETWORKS:
+  - pk: #primary key
+    name: #Network name
+    needs_middlware: false
+    native_symbol: '' #Network symbol
+    endpoint: "https:/"
+    fabric721_address: "" #Fabric contracts addresses
+    fabric1155_address: ""
+    exchange_address: ""
+    network_type: ""
+
+USD_RATES:
+  - rate: 
+    coin_node: ''
+    symbol: '' #Currency symbol
+    name: '' #Currency name
+    image: "https://"
+    updated_at: ""
+    address: ""
+    decimal: #Decimal points after 0.
+    network: #Network (get by Network's PK) 
+    fee_discount: 
+
+MASTER_USER:
+  - address: ""
+    netwrok: #Network (get by Network's PK) 
+    commission: #User commision
+
+#Celery tasks:
+INTERVALS: #Intervals for a given task
+  - pk: 
+    every: #Periodicity (in periods defined bellow)
+    period: #MINUTES/HOURS etc
+PERIODIC_TASKS:
+  - pk: 
+    name: '' #Name for a task/function
+    task: ''
+    interval: #INTERVAL (get by PK)
+    enabled: true #Set task to enabled (True is deafult)
+

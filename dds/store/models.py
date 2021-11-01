@@ -6,6 +6,7 @@ from typing import Tuple, Union
 from decimal import *
 from django.db import models
 from web3 import Web3, HTTPProvider
+from collections import Counter
 
 from django.db.models import Exists, OuterRef, Q
 from django.db.models.signals import post_save
@@ -419,6 +420,22 @@ class Token(models.Model):
     def is_timed_auc_selling(self):
         if self.standart == "ERC721" and self.end_auction:
             return bool(self.selling and not self.price and self.end_auction < datetime.today())
+    
+    @property
+    def rarity(self):
+        details = self.details
+
+        if details:
+            rarity_attributes = {'Rarity points': 0}
+            total_tokens = Token.token_objects.filter(collection=self.collection).count()
+            token_details = Token.token_objects.filter(collection=self.collection).values_list('details', flat=True)
+
+            for attribute, value in details.items():
+                value_ammount = Counter(x[attribute] for x in token_details if attribute in x)
+                rarity_attributes[attribute] = {'value': value, 'points': total_tokens/value_ammount[value]}
+                rarity_attributes['Rarity points'] += len(token_details)/value_ammount[value]
+
+        return rarity_attributes
 
     def __str__(self):
         return self.name
@@ -835,7 +852,6 @@ class Token(models.Model):
             }
             owners_auction_info.append(info)
         return owners_auction_info
-
 
 def token_save_dispatcher(sender, instance, created, **kwargs):
     if instance.standart == 'ERC1155':
