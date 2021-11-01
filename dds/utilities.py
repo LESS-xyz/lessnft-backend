@@ -6,19 +6,22 @@ import redis
 from dds.settings import config, PERIODS
 
 
-class RedisValues:
-    redis_instance = redis.StrictRedis(host=config.REDIS_HOST,
-                                        port=config.REDIS_PORT, db=0)
+class RedisClient:
+    def __init__(self):
+        self.pool = redis.ConnectionPool(
+            host=config.REDIS_HOST,
+            port=config.REDIS_PORT, 
+            db=0,
+        )
 
-    def get_value(self, key):
-        if self.redis_instance.exists(key):
-            value = self.redis_instance.get(key)
-            return value
-        else:
-            return None
-    
-    def set_value(self, key, value):
-        self.redis_instance.set(key, value)
+    def getConnection(self):
+        self._conn = redis.Redis(connection_pool=self.pool)
+
+    @property
+    def connection(self):
+        if not hasattr(self, '_conn'):
+            self.getConnection()
+        return self._conn
 
 
 def sign_message(type, message):

@@ -1,7 +1,7 @@
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from dds.utilities import RedisValues
+from dds.utilities import RedisClient
 from typing import Optional
 from dds.accounts.models import AdvUser
 
@@ -30,11 +30,11 @@ class ScannerABC(ABC):
         time.sleep(1)
 
     def save_last_block(self, name, block) -> None:
-        RedisValues.set_value(name, block)
+        RedisClient.connection.set(name, block)
 
     def get_last_block(self, name) -> int:
-        last_block_number = RedisValues.get_value(name)
-        if not last_block_number:
+        last_block_number = RedisClient.connection.get(name)
+        if last_block_number is None:
             last_block_number = self.get_last_block_network()
             self.save_last_block(name, last_block_number)
         return int(last_block_number)
