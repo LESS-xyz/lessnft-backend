@@ -185,7 +185,7 @@ class HandlerMintTransferBurn(HandlerABC):
         else:
             token.total_supply = max(token.total_supply - amount, 0)
             if token.total_supply == 0:
-                token.update(status=Status.BURNED)
+                token.status=Status.BURNED
         token.save()
         TokenHistory.objects.get_or_create(
             token=token,
@@ -206,8 +206,8 @@ class HandlerMintTransferBurn(HandlerABC):
         old_owner: AdvUser,
         amount: int,
     ) -> None:
-        token.tx_hash = (tx_hash,)
-        token.internal_id = (token_id,)
+        token.tx_hash = tx_hash
+        token.internal_id = token_id
 
         if token.standart == "ERC721":
             token.owner = new_owner
@@ -216,7 +216,7 @@ class HandlerMintTransferBurn(HandlerABC):
 
         token.save()
 
-        if TokenHistory.objects.get(tx_hash=tx_hash, method="Buy").exists():
+        if TokenHistory.objects.filter(tx_hash=tx_hash, method="Buy").exists():
             return
 
         TokenHistory.objects.update_or_create(
