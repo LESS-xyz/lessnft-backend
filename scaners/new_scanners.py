@@ -38,17 +38,21 @@ class ScannerAbsolute(threading.Thread):
     def start_polling(self) -> None:
         while True:
             scanner = get_scanner(self.network, self.contract_type)
-            last_block_checked = scanner.get_last_block()
-            last_block_network = scanner.get_last_block_network()
+            last_checked_block = scanner.get_last_block()
+            last_network_block = scanner.get_last_network_block()
 
-            if last_block_checked - last_block_network < 2:
+            if last_checked_block - last_network_block < 2:
                 scanner.sleep()
                 continue
 
+            # filter cannot support more than 5000 blocks at one query
+            if last_network_block - last_checked_block > 5000:
+                last_network_block = last_checked_block + 4990
+
             handler = self.handler(self.network, scanner, self.contract)
             event_list = getattr(scanner, f"get_events{handler.TYPE}")(
-                last_block_checked,
-                last_block_network,
+                last_checked_block,
+                last_network_block,
                 handler.contract,
             )
 
@@ -182,10 +186,12 @@ class HandlerMintTransferBurn(HandlerABC):
     ) -> None:
         if token.standart == "ERC721":
             token.status = Status.BURNED
+            token.first().bid_set.all().delete()
         else:
             token.total_supply = max(token.total_supply - amount, 0)
             if token.total_supply == 0:
-                token.status=Status.BURNED
+                token.status = Status.BURNED
+                token.first().bid_set.all().delete()
         token.save()
         TokenHistory.objects.get_or_create(
             token=token,
