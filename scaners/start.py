@@ -71,6 +71,7 @@ if __name__ == "__main__":
                 ScannerAbsolute(
                     network=network,
                     handler=HandlerMintTransferBurn,
+                    contract=collection.get_contract(),
                     contract_type=collection.standart,
                 ).run()
             collections = updated_collections
