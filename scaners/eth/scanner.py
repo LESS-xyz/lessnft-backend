@@ -9,6 +9,8 @@ class Scanner(
     BuyMixin,
     MintMixin,
 ):
+    EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000"
+
     def save_last_block(self) -> None:
         # TODO: set last block number to redis
         ...

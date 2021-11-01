@@ -11,9 +11,6 @@ from scaners.base import HandlerABC
 from typing import Optional
 
 
-EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000"
-
-
 class ScannerAbsolute(threading.Thread):
     """
     ScannerAbsolute launches a scanner of the appropriate type
