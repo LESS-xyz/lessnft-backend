@@ -19,7 +19,7 @@ class HandlerABC(ABC):
 
 
 class ScannerABC(ABC):
-    def __init__(self, network, contract_type):
+    def __init__(self, network, contract_type=None):
         self.network = network
         self.contract_type = contract_type
 

@@ -1,8 +1,10 @@
+import time
 import os
-from web3 import Web3
+import sys
+import traceback
 from dds.networks.models import Network, Types
-from scanner.eth.scanner import Scanner as EthereumScanner
-from scanner.tron.scanner import Scanner as TronScanner
+from scaners.eth.scanner import Scanner as EthereumScanner
+from scaners.tron.scanner import Scanner as TronScanner
 
 base_dir = "blocks"
 
@@ -25,7 +27,7 @@ def save_last_block(last_block_number, network_name):
         file.write(str(last_block_number))
 
 
-def get_scanner(network, contract_type):
+def get_scanner(network, contract_type=None):
     # TODO: refactor
     if network.network_type == Types.ethereum:
         return EthereumScanner(network, contract_type)
