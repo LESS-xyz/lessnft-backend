@@ -1,6 +1,5 @@
 import threading
 from decimal import Decimal
-from typing import Optional
 
 from dds.accounts.models import AdvUser
 from dds.activity.models import BidsHistory, TokenHistory
@@ -153,9 +152,6 @@ class HandlerMintTransferBurn(HandlerABC):
             collection=collection,
         )
 
-    def get_owner(self, new_owner_address: str) -> Optional[AdvUser]:
-        return AdvUser.objects.get(username=new_owner_address).first()
-
     def mint_event(
         self,
         token: Token,
@@ -281,7 +277,7 @@ class HandlerBuy(HandlerABC):
         self.refresh_token_history(token, data)
 
     def buy_ERC721(self, token: Token, data):
-        new_owner = AdvUser.objects.filter(username=data.buyer)
+        new_owner = self.get_owner(data.buyer)
         token.owner = new_owner
         token.selling = False
         token.currency_price = None
@@ -289,8 +285,8 @@ class HandlerBuy(HandlerABC):
         Bid.objects.filter(token=token).delete()
 
     def buy_ERC1155(self, token: Token, data):
-        new_owner = AdvUser.objects.filter(username=data.buyer)
-        old_owner = AdvUser.objects.filter(username=data.seller)
+        new_owner = self.get_owner(data.buyer)
+        old_owner = self.get_owner(data.seller)
         owner = Ownership.objects.filter(
             owner=new_owner,
             token=token,
@@ -332,8 +328,8 @@ class HandlerBuy(HandlerABC):
                 bet.save()
 
     def refresh_token_history(self, token, data):
-        new_owner = AdvUser.objects.filter(username=data.buyer)
-        old_owner = AdvUser.objects.filter(username=data.seller)
+        new_owner = self.get_owner(data.buyer)
+        old_owner = self.get_owner(data.seller)
 
         decimals = token.currency.get_decimals
         price = Decimal(data.price / decimals)
