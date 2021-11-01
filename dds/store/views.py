@@ -1,7 +1,7 @@
 import random
 
 from dds.accounts.models import AdvUser
-from dds.activity.models import BidsHistory, ListingHistory, UserAction
+from dds.activity.models import BidsHistory, TokenHistory, UserAction
 from dds.consts import APPROVE_GAS_LIMIT
 from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid, token_search, collection_search)
 from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs
@@ -446,11 +446,12 @@ class GetView(APIView):
         # add changes to listing
         if status:
             if price != old_price:
-                ListingHistory.objects.create(
+                TokenHistory.objects.create(
                     token=token,
                     user=user,
                     quantity=quantity,
                     price=price,
+                    method='Listing',
                 )
 
         response_data = TokenFullSerializer(token, context={"user": request.user}).data

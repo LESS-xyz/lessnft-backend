@@ -48,7 +48,7 @@ class TokenHistory(models.Model):
     tx_hash = models.CharField(max_length=200)
     method = models.CharField(
         max_length=10,
-        choices=[('Transfer', 'Transfer'), ('Buy', 'Buy'), ('Mint', 'Mint'), ('Burn', 'Burn')],
+        choices=[('Transfer', 'Transfer'), ('Buy', 'Buy'), ('Mint', 'Mint'), ('Burn', 'Burn'), ('Listing', 'Listing')],
         default='Transfer'
     )
     new_owner = models.ForeignKey(
@@ -69,6 +69,8 @@ class TokenHistory(models.Model):
     USD_price = models.DecimalField(max_digits=18, decimal_places=2, default=None, blank=True, null=True)
     is_viewed = models.BooleanField(default=False)
     amount = models.PositiveIntegerField(default=None, blank=True, null=True)
+    quantity = models.IntegerField()
+    user = models.ForeignKey('accounts.AdvUser', on_delete=models.CASCADE)
 
 
 def token_history_dispatcher(sender, instance, created, **kwargs):
@@ -84,7 +86,7 @@ def token_history_dispatcher(sender, instance, created, **kwargs):
 
 post_save.connect(token_history_dispatcher, sender=TokenHistory)
 
-
+'''
 class ListingHistory(models.Model):
     token = models.ForeignKey('store.Token', on_delete=models.CASCADE)
     date = models.DateTimeField(auto_now_add=True)
@@ -93,7 +95,7 @@ class ListingHistory(models.Model):
     price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=18, default=None, blank=True, null=True)
     method = models.CharField(choices=[('Listing', 'Listing')], default='Listing', max_length=7)
     is_viewed = models.BooleanField(default=False)
-
+'''
 
 class BidsHistory(models.Model):
     token = models.ForeignKey('store.Token', on_delete=models.CASCADE)

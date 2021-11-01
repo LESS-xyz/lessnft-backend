@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserAction, TokenHistory, BidsHistory, ListingHistory
+from .models import UserAction, TokenHistory, BidsHistory
 
 
 class UserActionAdmin(admin.ModelAdmin):
@@ -22,7 +22,7 @@ class BidsHistoryAdmin(admin.ModelAdmin):
     ordering = ('-date',)
 
 class ListingHistoryAdmin(admin.ModelAdmin):
-    model = ListingHistory
+    model = TokenHistory
     readonly_fields = ('date',)
     list_display = ('token', 'quantity', 'user', 'price', 'method')
     ordering = ('-date',)
@@ -31,4 +31,4 @@ class ListingHistoryAdmin(admin.ModelAdmin):
 admin.site.register(UserAction, UserActionAdmin)
 admin.site.register(TokenHistory, TokenHistoryAdmin)
 admin.site.register(BidsHistory, BidsHistoryAdmin)
-admin.site.register(ListingHistory, ListingHistoryAdmin)
+admin.site.register(TokenHistory, ListingHistoryAdmin)
