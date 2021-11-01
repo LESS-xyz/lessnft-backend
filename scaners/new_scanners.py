@@ -1,17 +1,15 @@
 import threading
+from decimal import Decimal
 
 from dds.accounts.models import AdvUser
 from dds.activity.models import BidsHistory, TokenHistory
-from dds.store.models import *
+from dds.store.models import Collection, Status, Token, Ownership, Bid
+from dds.store.services.ipfs import get_ipfs
 from dds.networks.models import Network
 from django.db.models import F
 
 from scaners.utils import get_scanner, never_fall
 from scaners.base import HandlerABC
-from typing import Optional
-
-
-EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 
 class ScannerAbsolute(threading.Thread):
@@ -23,14 +21,14 @@ class ScannerAbsolute(threading.Thread):
     def __init__(
         self,
         network: Network,
-        type_contract: str,
         handler: object,
+        contract_type: str = None,
         contract=None,
     ) -> None:
         super().__init__()
         self.network = network
-        self.type_contract = type_contract  # ERC721/ ERC1155
         self.handler = handler
+        self.contract_type = contract_type  # ERC721/ ERC1155
         self.contract = contract
 
     def run(self):
@@ -39,7 +37,7 @@ class ScannerAbsolute(threading.Thread):
     @never_fall
     def start_polling(self) -> None:
         while True:
-            scanner = get_scanner(self.network, self.type_contract)
+            scanner = get_scanner(self.network, self.contract_type)
             last_block_checked = scanner.get_last_block()
             last_block_network = scanner.get_last_block_network()
 
@@ -48,9 +46,10 @@ class ScannerAbsolute(threading.Thread):
                 continue
 
             handler = self.handler(self.network, scanner, self.contract)
-            event_list = handler.get_events(
+            event_list = getattr(scanner, f"get_events{handler.TYPE}")(
                 last_block_checked,
                 last_block_network,
+                handler.contract,
             )
 
             if event_list:
@@ -61,11 +60,7 @@ class ScannerAbsolute(threading.Thread):
 
 
 class HandlerDeploy(HandlerABC):
-    def get_events(self, last_block_checked, last_block_network) -> list:
-        return self.scanner.get_events_deploy(
-            last_block_checked,
-            last_block_network,
-        )
+    TYPE = "deploy"
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_deploy(event_data)
@@ -83,11 +78,7 @@ class HandlerDeploy(HandlerABC):
 
 
 class HandlerMintTransferBurn(HandlerABC):
-    def get_events(self, last_block_checked, last_block_network) -> list:
-        return self.scanner.get_events_mint(
-            last_block_checked,
-            last_block_network,
-        )
+    TYPE = "mint"
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_mint(event_data)
@@ -104,17 +95,17 @@ class HandlerMintTransferBurn(HandlerABC):
             token_id=token_id,
             collection=collection,
             smart_contract=self.contract,
-            is_mint=bool(old_owner.address == EMPTY_ADDRESS),
+            is_mint=bool(old_owner.address == self.scanner.EMPTY_ADDRESS),
         )
 
-        if old_owner.address == EMPTY_ADDRESS:
+        if old_owner.address == self.scanner.EMPTY_ADDRESS:
             self.mint_event(
                 token=token,
                 token_id=token_id,
                 tx_hash=data.tx_hash,
                 new_owner=new_owner,
             )
-        elif new_owner.address == EMPTY_ADDRESS:
+        elif new_owner.address == self.scanner.EMPTY_ADDRESS:
             self.burn_event(
                 token=token,
                 tx_hash=data.tx_hash,
@@ -161,9 +152,6 @@ class HandlerMintTransferBurn(HandlerABC):
             collection=collection,
         )
 
-    def get_owner(self, new_owner_address: str) -> Optional[AdvUser]:
-        return AdvUser.objects.get(username=new_owner_address).first()
-
     def mint_event(
         self,
         token: Token,
@@ -197,7 +185,7 @@ class HandlerMintTransferBurn(HandlerABC):
         else:
             token.total_supply = max(token.total_supply - amount, 0)
             if token.total_supply == 0:
-                token.update(status=Status.BURNED)
+                token.status=Status.BURNED
         token.save()
         TokenHistory.objects.get_or_create(
             token=token,
@@ -218,8 +206,8 @@ class HandlerMintTransferBurn(HandlerABC):
         old_owner: AdvUser,
         amount: int,
     ) -> None:
-        token.tx_hash = (tx_hash,)
-        token.internal_id = (token_id,)
+        token.tx_hash = tx_hash
+        token.internal_id = token_id
 
         if token.standart == "ERC721":
             token.owner = new_owner
@@ -228,7 +216,7 @@ class HandlerMintTransferBurn(HandlerABC):
 
         token.save()
 
-        if TokenHistory.objects.get(tx_hash=tx_hash, method="Buy").exists():
+        if TokenHistory.objects.filter(tx_hash=tx_hash, method="Buy").exists():
             return
 
         TokenHistory.objects.update_or_create(
@@ -274,11 +262,7 @@ class HandlerMintTransferBurn(HandlerABC):
 
 
 class HandlerBuy(HandlerABC):
-    def get_events(self, last_block_checked, last_block_network) -> list:
-        return self.scanner.get_events_buy(
-            last_block_checked,
-            last_block_network,
-        )
+    TYPE = "buy"
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_buy(event_data)
@@ -293,7 +277,7 @@ class HandlerBuy(HandlerABC):
         self.refresh_token_history(token, data)
 
     def buy_ERC721(self, token: Token, data):
-        new_owner = AdvUser.objects.filter(username=data.buyer)
+        new_owner = self.get_owner(data.buyer)
         token.owner = new_owner
         token.selling = False
         token.currency_price = None
@@ -301,8 +285,8 @@ class HandlerBuy(HandlerABC):
         Bid.objects.filter(token=token).delete()
 
     def buy_ERC1155(self, token: Token, data):
-        new_owner = AdvUser.objects.filter(username=data.buyer)
-        old_owner = AdvUser.objects.filter(username=data.seller)
+        new_owner = self.get_owner(data.buyer)
+        old_owner = self.get_owner(data.seller)
         owner = Ownership.objects.filter(
             owner=new_owner,
             token=token,
@@ -344,8 +328,8 @@ class HandlerBuy(HandlerABC):
                 bet.save()
 
     def refresh_token_history(self, token, data):
-        new_owner = AdvUser.objects.filter(username=data.buyer)
-        old_owner = AdvUser.objects.filter(username=data.seller)
+        new_owner = self.get_owner(data.buyer)
+        old_owner = self.get_owner(data.seller)
 
         decimals = token.currency.get_decimals
         price = Decimal(data.price / decimals)
@@ -363,13 +347,8 @@ class HandlerBuy(HandlerABC):
         )
 
 
-class HandlerAprooveBet(HandlerABC):
-    def get_events(self, last_block_checked, last_block_network) -> None:
-        return self.scanner.get_events_approve(
-            last_block_checked,
-            last_block_network,
-            self.contract,
-        )
+class HandlerApproveBet(HandlerABC):
+    TYPE = "approve"
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_approve(event_data)

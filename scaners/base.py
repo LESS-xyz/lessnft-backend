@@ -2,6 +2,8 @@ import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from dds.utilities import RedisValues
+from typing import Optional
+from dds.accounts.models import AdvUser
 
 
 class HandlerABC(ABC):
@@ -10,9 +12,8 @@ class HandlerABC(ABC):
         self.scanner = scanner
         self.contract = contract
 
-    @abstractmethod
-    def get_events(self) -> list:
-        ...
+    def get_owner(self, owner_address: str) -> Optional[AdvUser]:
+        return AdvUser.objects.filter(username=owner_address).first()
 
     @abstractmethod
     def save_event(self) -> None:
@@ -20,7 +21,7 @@ class HandlerABC(ABC):
 
 
 class ScannerABC(ABC):
-    def __init__(self, network, contract_type):
+    def __init__(self, network, contract_type=None):
         self.network = network
         self.contract_type = contract_type
 

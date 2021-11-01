@@ -9,13 +9,7 @@ class Scanner(
     BuyMixin,
     MintMixin,
 ):
-    def save_last_block(self) -> None:
-        # TODO: set last block number to redis
-        ...
-
-    def get_last_block(self) -> int:
-        # TODO: get last block number from redis
-        ...
+    EMPTY_ADDRESS = "0x0000000000000000000000000000000000000000"
 
     def get_last_block_network(self) -> int:
         return self.network.get_web3_connection().eth.blockNumber
