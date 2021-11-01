@@ -15,10 +15,6 @@ class HandlerABC(ABC):
         return AdvUser.objects.filter(username=owner_address).first()
 
     @abstractmethod
-    def get_events(self) -> list:
-        ...
-
-    @abstractmethod
     def save_event(self) -> None:
         ...
 
@@ -32,11 +28,9 @@ class ScannerABC(ABC):
         # TODO: from config
         time.sleep(1)
 
-    @abstractmethod
     def save_last_block(self) -> None:
         ...
 
-    @abstractmethod
     def get_last_block(self) -> int:
         ...
 
