@@ -63,15 +63,14 @@ if __name__ == "__main__":
 
     while True:
         time.sleep(60)
-        for network in networks:
-            updated_collections = Collection.objects.committed()
-            new_collections = list(set(updated_collections) - set(collections))
+        updated_collections = Collection.objects.committed()
+        new_collections = list(set(updated_collections) - set(collections))
 
-            if new_collections:
-                for collection in new_collections:
-                    ScannerAbsolute(
-                        network=network,
-                        handler=HandlerMintTransferBurn,
-                        contract_type=collection.standart,
-                    ).run()
-                collections = updated_collections
+        if new_collections:
+            for collection in new_collections:
+                ScannerAbsolute(
+                    network=network,
+                    handler=HandlerMintTransferBurn,
+                    contract_type=collection.standart,
+                ).run()
+            collections = updated_collections
