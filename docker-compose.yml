@@ -46,6 +46,10 @@ services:
     networks:
       dds2-net:
   scanner:
+    build:
+      context: .
+    env_file:
+      - ./.env
     depends_on:
       - db
     restart: unless-stopped

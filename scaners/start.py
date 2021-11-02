@@ -24,15 +24,19 @@ if __name__ == "__main__":
     networks = Network.objects.all()
     rates = UsdRate.objects.all()
     for network in networks:
+        for standart in ["ERC721", "ERC1155"]:
         ##################################################
         #                  BUY SCANNER                   #
         ##################################################
-        ScannerAbsolute(network=network, handler=HandlerBuy).run()
+            ScannerAbsolute(
+                network=network, 
+                handler=HandlerBuy,
+                contract_type=standart,
+            ).run()
 
         ##################################################
         #                 DEPLOY SCANNER                 #
         ##################################################
-        for standart in ["ERC721", "ERC1155"]:
             ScannerAbsolute(
                 network=network,
                 contract_type=standart,

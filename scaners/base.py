@@ -21,9 +21,10 @@ class HandlerABC(ABC):
 
 
 class ScannerABC(ABC):
-    def __init__(self, network, contract_type=None):
+    def __init__(self, network, contract_type=None, contract=None):
         self.network = network
         self.contract_type = contract_type
+        self.contract = contract
 
     def sleep(self) -> None:
         # TODO: from config

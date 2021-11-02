@@ -44,7 +44,7 @@ class ScannerAbsolute(threading.Thread):
     @never_fall
     def start_polling(self) -> None:
         while True:
-            scanner = get_scanner(self.network, self.contract_type)
+            scanner = get_scanner(self.network, self.contract_type, self.contract)
             last_checked_block = scanner.get_last_block(self.block_name)
             last_network_block = scanner.get_last_network_block()
 
