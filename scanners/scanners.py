@@ -93,7 +93,6 @@ class HandlerDeploy(HandlerABC):
                 deploy_block=data.deploy_block,
                 address=data.address,
             )
-        return True
 
 
 class HandlerMintTransferBurn(HandlerABC):

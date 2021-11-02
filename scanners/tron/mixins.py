@@ -81,6 +81,6 @@ class MintMixin:
             token_id=token_id,
             new_owner=event["result"]["to"].lower(),
             old_owner=event["result"]["from"].lower(),
-            tx_hash=event["transactionHash"].hex(),
+            tx_hash=event["transaction_id"].hex(),
             amount=event["result"]["value"],
         )
