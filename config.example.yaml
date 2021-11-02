@@ -41,6 +41,7 @@ API_URL: '' #API Url for rates checker
 TITLE: '' #Project name
 DESCRIPTION: '' #Project description
 
+
 #Initial DB fixtures:
 NETWORKS:
   - pk: #primary key
@@ -81,4 +82,7 @@ PERIODIC_TASKS:
     task: ''
     interval: #INTERVAL (get by PK)
     enabled: true #Set task to enabled (True is deafult)
+
+REDIS_HOST: 
+REDIS_PORT: 
 

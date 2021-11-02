@@ -81,7 +81,7 @@ class CollectionManager(models.Manager):
         return self.get_queryset().user_collections(user, network)
 
     def hot_collections(self, network=None):
-        """ Return non-default collections with commited tokens """
+        """ Return non-default collections with committed tokens """
         return self.get_queryset().hot_collections(network)
 
     def network(self, network):

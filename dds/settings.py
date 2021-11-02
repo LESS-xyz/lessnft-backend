@@ -167,8 +167,8 @@ REST_FRAMEWORK = {
     ]
 }
 
-CELERY_BROKER_URL = "redis://redis:6379"
-CELERY_RESULT_BACKEND = "redis://redis:6379"
+CELERY_BROKER_URL = f"redis://{config.REDIS_HOST}:{config.REDIS_PORT}"
+CELERY_RESULT_BACKEND = f"redis://{config.REDIS_HOST}:{config.REDIS_PORT}"
 
 SHELL_PLUS = 'ptpython'
 

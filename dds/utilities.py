@@ -1,8 +1,28 @@
 from eth_account import Account
 from web3 import Web3
 from typing import Tuple
+import redis
 
 from dds.settings import config, PERIODS
+
+
+class RedisClient:
+    def __init__(self):
+        self.pool = redis.ConnectionPool(
+            host=config.REDIS_HOST,
+            port=config.REDIS_PORT, 
+            db=0,
+        )
+
+    def set_connection(self) -> None:
+        self._conn = redis.Redis(connection_pool=self.pool)
+
+    @property
+    def connection(self):
+        if not hasattr(self, '_conn'):
+            self.set_connection()
+        return self._conn
+
 
 def sign_message(type, message):
     message_hash = Web3.soliditySha3(type, message)

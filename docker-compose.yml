@@ -45,43 +45,17 @@ services:
     command: ["python", "tx_tracker.py"]
     networks:
       dds2-net:
-  scanner_721:
+  scanner:
     build:
       context: .
-      dockerfile: Dockerfile
+    env_file:
+      - ./.env
     depends_on:
       - db
     restart: unless-stopped
     volumes:
-      - ./dds/blocks:/code/blocks
       - ./logs:/code/logs/
-    command: ["python", "scaners/scaner_721.py"]
-    networks:
-      dds2-net:
-  scanner_1155:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    depends_on:
-      - db
-    restart: unless-stopped
-    volumes:
-      - ./dds/blocks:/code/blocks
-      - ./logs:/code/logs/
-    command: ["python", "scaners/scaner_1155.py"]
-    networks:
-      dds2-net:
-  scanner_money:
-    build: 
-      context: .
-      dockerfile: Dockerfile
-    depends_on:
-      - db
-    restart: unless-stopped
-    volumes: 
-      - ./dds/blocks:/code/blocks
-      - ./logs:/code/logs/
-    command: ["python", "scaners/money_scanner.py"]
+    command: ["python", "scanners/start.py"]
     networks:
       dds2-net:
   redis:

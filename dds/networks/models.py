@@ -27,20 +27,18 @@ from dds.networks.utils import tron_function_selector
 if TYPE_CHECKING:
     from web3.contract import Contract
     from web3.types import ABI
-'''
-class NetworkManager(models.Manager):
-    def get_by_natural_key(self, network):
-        return self.get(network=network)
-'''
+
+
+class Types(models.TextChoices):
+    ethereum = 'ethereum'
+    tron = 'tron'
+
+
 class Network(models.Model):
     """
     Represent different networks as different blockchains, 
     in witch we have our contracts.
     """
-    class Types(models.TextChoices):
-        ethereum = 'ethereum'
-        tron = 'tron'
-
     name = models.CharField(max_length=100)
     needs_middleware = models.BooleanField(default=False)
     native_symbol = models.CharField(max_length=10, blank=True, null=True, default=None)
