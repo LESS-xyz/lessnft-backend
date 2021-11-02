@@ -1,6 +1,6 @@
 from tronapi import Tron, HttpProvider
-from scaners.base import ScannerABC
-from scaners.tron.mixins import DeployMixin, ApproveMixin, BuyMixin, MintMixin
+from scanners.base import ScannerABC
+from scanners.tron.mixins import DeployMixin, ApproveMixin, BuyMixin, MintMixin
 
 class Scanner(
     ScannerABC,

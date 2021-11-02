@@ -1,5 +1,5 @@
-from scaners.base import ScannerABC
-from scaners.eth.mixins import DeployMixin, ApproveMixin, BuyMixin, MintMixin
+from scanners.base import ScannerABC
+from scanners.eth.mixins import DeployMixin, ApproveMixin, BuyMixin, MintMixin
 
 
 class Scanner(

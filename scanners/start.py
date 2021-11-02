@@ -8,7 +8,7 @@ import django
 
 django.setup()
 
-from scaners.new_scanners import (
+from scanners.scanners import (
     ScannerAbsolute,
     HandlerDeploy,
     HandlerBuy,

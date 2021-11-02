@@ -9,8 +9,8 @@ from dds.store.services.ipfs import get_ipfs
 from dds.networks.models import Network
 from django.db.models import F
 
-from scaners.utils import get_scanner, never_fall
-from scaners.base import HandlerABC
+from scanners.utils import get_scanner, never_fall
+from scanners.base import HandlerABC
 
 
 class ScannerAbsolute(threading.Thread):

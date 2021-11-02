@@ -55,7 +55,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./logs:/code/logs/
-    command: ["python", "scaners/start.py"]
+    command: ["python", "scanners/start.py"]
     networks:
       dds2-net:
   redis:

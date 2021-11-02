@@ -3,8 +3,8 @@ import os
 import sys
 import traceback
 from dds.networks.models import Network, Types
-from scaners.eth.scanner import Scanner as EthereumScanner
-from scaners.tron.scanner import Scanner as TronScanner
+from scanners.eth.scanner import Scanner as EthereumScanner
+from scanners.tron.scanner import Scanner as TronScanner
 
 base_dir = "blocks"
 
