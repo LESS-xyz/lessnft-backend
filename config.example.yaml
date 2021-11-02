@@ -55,12 +55,10 @@ NETWORKS:
     network_type: ""
 
 USD_RATES:
-  - rate: 
-    coin_node: ''
+  - coin_node: ''
     symbol: '' #Currency symbol
     name: '' #Currency name
     image: "https://"
-    updated_at: ""
     address: ""
     decimal: #Decimal points after 0.
     network: #Network (get by Network's PK) 
