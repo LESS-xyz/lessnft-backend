@@ -34,7 +34,7 @@ def update_users_stat(network):
                     type_: user,
                 }
                 history = TokenHistory.objects.filter(**filter_data).annotate(
-                    user=F(type_),
+                    old_owner=F(type_),
                     price_=F('USD_price'),
                 ).values('user').annotate(price=Sum('price_'))
                 if history:

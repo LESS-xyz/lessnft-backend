@@ -424,7 +424,7 @@ class GetView(APIView):
         
         if token.standart == "ERC721":
             old_price = token.currency_price
-            quantity = 1
+            amount = 1
 
             request_data['start_auction'] = start_auction
             request_data['end_auction'] = end_auction
@@ -436,7 +436,7 @@ class GetView(APIView):
         else:
             ownership = Ownership.objects.get(owner=user, token=token)
             old_price = ownership.currency_price
-            quantity = ownership.quantity
+            amount = ownership.quantity
             ownership.selling = selling
             ownership.currency_price = price
             ownership.currency_minimal_bid = minimal_bid
@@ -448,8 +448,8 @@ class GetView(APIView):
             if price != old_price:
                 TokenHistory.objects.create(
                     token=token,
-                    user=user,
-                    quantity=quantity,
+                    old_owner=user,
+                    amount=amount,
                     price=price,
                     method='Listing',
                 )
@@ -780,7 +780,7 @@ class MakeBid(APIView):
         bid.state = Status.COMMITTED
         bid.full_clean()
         bid.save()
-        
+
         BidsHistory.objects.create(
             token=bid.token,
             user=bid.user,
