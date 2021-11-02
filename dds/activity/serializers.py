@@ -55,23 +55,6 @@ class UserStatSerializer(serializers.ModelSerializer):
         stat_status = getattr(obj, status)
         return getattr(stat_status, time_range)
 
-'''
-class ListingHistorySerializer(serializers.ModelSerializer):
-    amount = serializers.SerializerMethodField()
-    currency = serializers.CharField(source='token.currency')
-
-    class Meta:
-        model = TokenHistory
-        fields = (
-            'id',
-            'price',
-            'date',
-            'currency',
-        )
-
-    def get_amount(self, obj):
-        return int(obj.price / get_decimals(obj.token.currency))
-'''
 
 class BidsHistorySerializer(serializers.ModelSerializer):
     amount = serializers.SerializerMethodField()

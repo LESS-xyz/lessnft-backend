@@ -69,8 +69,6 @@ class TokenHistory(models.Model):
     USD_price = models.DecimalField(max_digits=18, decimal_places=2, default=None, blank=True, null=True)
     is_viewed = models.BooleanField(default=False)
     amount = models.PositiveIntegerField(default=None, blank=True, null=True)
-    #quantity = models.IntegerField()
-    #user = models.ForeignKey('accounts.AdvUser', on_delete=models.CASCADE)
 
 
 def token_history_dispatcher(sender, instance, created, **kwargs):
