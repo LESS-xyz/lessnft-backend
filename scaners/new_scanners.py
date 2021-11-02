@@ -1,3 +1,4 @@
+from loguru import logger
 import threading
 from decimal import Decimal
 
@@ -41,8 +42,15 @@ class ScannerAbsolute(threading.Thread):
         name += f"_{self.contract_type}" if self.contract_type else ""
         return name
 
+    @logger.catch
     @never_fall
     def start_polling(self) -> None:
+        logger.add(
+            f"logs/scanner_{self.handler.TYPE}.log",
+            format="{time:DD.MM.YYYY HH:mm:ss} | {level} | {message}",
+            enqueue=True,
+            level="DEBUG",
+        )
         while True:
             scanner = get_scanner(self.network, self.contract_type, self.contract)
             last_checked_block = scanner.get_last_block(self.block_name)
@@ -74,6 +82,7 @@ class HandlerDeploy(HandlerABC):
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_deploy(event_data)
+        logger.debug(f"New event: {data}")
 
         collection = Collection.objects.filter(
             name__iexact=data.collection_name,
@@ -93,10 +102,16 @@ class HandlerMintTransferBurn(HandlerABC):
     def save_event(self, event_data):
         data = self.scanner.parse_data_mint(event_data)
 
-        collection = Collection.objects.get(
-            network=self.network,
-            address=self.contract.address,
-        )
+        try:
+            collection = Collection.objects.get(
+                network=self.network,
+                address=self.contract.address,
+            )
+        except Collection.DoesNotExist:
+            logger.warning(
+                f"Collection not found. Network: {self.network}, address: {self.contract.address}"
+            )
+            return
         token_id = data.token_id
         new_owner = self.get_owner(data.new_owner)
         old_owner = self.get_owner(data.old_owner)
@@ -107,8 +122,12 @@ class HandlerMintTransferBurn(HandlerABC):
             smart_contract=self.contract,
             is_mint=bool(old_owner.address == self.scanner.EMPTY_ADDRESS),
         )
+        if token is None:
+            logger.warning(f"Token not found")
+            return
 
         if old_owner.address == self.scanner.EMPTY_ADDRESS:
+            logger.debug(f"New mint event: {data}")
             self.mint_event(
                 token=token,
                 token_id=token_id,
@@ -116,6 +135,7 @@ class HandlerMintTransferBurn(HandlerABC):
                 new_owner=new_owner,
             )
         elif new_owner.address == self.scanner.EMPTY_ADDRESS:
+            logger.debug(f"New burn event: {data}")
             self.burn_event(
                 token=token,
                 tx_hash=data.tx_hash,
@@ -129,6 +149,7 @@ class HandlerMintTransferBurn(HandlerABC):
                 amount=data.amount,
             )
         else:
+            logger.debug(f"New transfer event: {data}")
             self.transfer_event(
                 token=token,
                 tx_hash=data.tx_hash,
@@ -153,14 +174,14 @@ class HandlerMintTransferBurn(HandlerABC):
     ) -> Token:
         if is_mint:
             ipfs = get_ipfs(token_id, smart_contract)
-            return Token.objects.get(
+            return Token.objects.filter(
                 ipfs=ipfs,
                 collection=collection,
-            )
-        return Token.objects.get(
+            ).first()
+        return Token.objects.filter(
             internal_id=token_id,
             collection=collection,
-        )
+        ).first()
 
     def mint_event(
         self,
@@ -251,7 +272,13 @@ class HandlerMintTransferBurn(HandlerABC):
         amount: int,
     ) -> None:
         if old_owner is not None:
-            ownership = Ownership.objects.get(owner=old_owner, token=token)
+            try:
+                ownership = Ownership.objects.get(owner=old_owner, token=token)
+            except Ownership.DoesNotExist:
+                logger.warning(
+                    f"Ownership is not found: owner {old_owner}, token {token}"
+                )
+                return
             ownership.quantity = max(ownership.quantity - amount, 0)
             ownership.save()
             if ownership.quantity <= 0:
@@ -270,14 +297,13 @@ class HandlerMintTransferBurn(HandlerABC):
             ownership.save()
             if created:
                 token.owners.add(ownership)
-                token.save()
-
 
 class HandlerBuy(HandlerABC):
     TYPE = "buy"
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_buy(event_data)
+        logger.debug(f"New event: {data}")
 
         token = Token.objects.get(
             collection_address=data.collection_address,
@@ -322,7 +348,11 @@ class HandlerBuy(HandlerABC):
             token.owners.add(owner)
 
         if not token_history.exists():
-            owner = Ownership.objects.get(owner=old_owner, token=token)
+            try:
+                owner = Ownership.objects.get(owner=old_owner, token=token)
+            except Ownership.DoesNotExist:
+                logger.warning(f"Ownership not found owner {old_owner}, token {token}")
+                return
             owner.quantity = max(owner.quantity - data.amount, 0)
             if owner.quantity:
                 owner.save()
@@ -364,6 +394,7 @@ class HandlerApproveBet(HandlerABC):
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_approve(event_data)
+        logger.debug(f"New event: {data}")
 
         if data.exchange != self.network.exchange_address:
             return
