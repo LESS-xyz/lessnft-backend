@@ -562,7 +562,6 @@ class GetPriceHistory(APIView):
             token = Token.objects.committed().get(id=id)
         except ObjectDoesNotExist:
             return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
-        #history = ListingHistory.objects.filter(token=token).filter(date__gte=periods[period])
         history = TokenHistory.objects.filter(token=token, method="Listing").filter(date__gte=periods[period])
         bids = BidsHistory.objects.filter(token=token).filter(date__gte=periods[period])
         response_data = {}

@@ -86,16 +86,6 @@ def token_history_dispatcher(sender, instance, created, **kwargs):
 
 post_save.connect(token_history_dispatcher, sender=TokenHistory)
 
-'''
-class ListingHistory(models.Model):
-    token = models.ForeignKey('store.Token', on_delete=models.CASCADE)
-    date = models.DateTimeField(auto_now_add=True)
-    quantity = models.IntegerField()
-    user = models.ForeignKey('accounts.AdvUser', on_delete=models.CASCADE)
-    price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=18, default=None, blank=True, null=True)
-    method = models.CharField(choices=[('Listing', 'Listing')], default='Listing', max_length=7)
-    is_viewed = models.BooleanField(default=False)
-'''
 
 class BidsHistory(models.Model):
     token = models.ForeignKey('store.Token', on_delete=models.CASCADE)
