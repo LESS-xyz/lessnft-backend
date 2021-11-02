@@ -2,14 +2,14 @@ from scaners.base import DeployData, BuyData, ApproveData, MintData
 
 
 class DeployMixin:
-    def get_events_deploy(self, last_block_checked, last_block_network):
+    def get_events_deploy(self, last_checked_block, last_network_block):
         event = {
             "ERC721": self.network.get_erc721fabric_contract()[1].events.ERC721Made,
             "ERC1155": self.network.get_erc1155fabric_contract()[1].events.ERC1155Made,
         }[self.contract_type]
         return event.createFilter(
-            fromBlock=last_block_checked,
-            toBlock=last_block_network,
+            fromBlock=last_checked_block,
+            toBlock=last_network_block,
         ).get_all_entries()
 
     def parse_data_deploy(self, event) -> DeployData:
@@ -21,7 +21,7 @@ class DeployMixin:
 
 
 class BuyMixin:
-    def get_events_buy(self, last_block_checked, last_block_network):
+    def get_events_buy(self, last_checked_block, last_network_block):
         event = {
             "ERC721": self.network.get_exchange_contract()[1].events.ExchangeMadeErc721,
             "ERC1155": self.network.get_exchange_contract()[
@@ -29,8 +29,8 @@ class BuyMixin:
             ].events.ExchangeMadeErc1155,
         }[self.contract_type]
         return event.createFilter(
-            fromBlock=last_block_checked,
-            toBlock=last_block_network,
+            fromBlock=last_checked_block,
+            toBlock=last_network_block,
         ).get_all_entries()
 
     def parse_data_buy(event) -> BuyData:
@@ -46,10 +46,10 @@ class BuyMixin:
 
 
 class ApproveMixin:
-    def get_events_approve(self, last_block_checked, last_block_network, contract):
+    def get_events_approve(self, last_checked_block, last_network_block, contract):
         return contract.events.Approval.createFilter(
-            fromBlock=last_block_checked,
-            toBlock=last_block_network,
+            fromBlock=last_checked_block,
+            toBlock=last_network_block,
         ).get_all_entries()
 
     def parse_data_approve(event) -> ApproveData:
@@ -61,14 +61,14 @@ class ApproveMixin:
 
 
 class MintMixin:
-    def get_events_mint(self, last_block_checked, last_block_network):
+    def get_events_mint(self, last_checked_block, last_network_block):
         event = {
             "ERC721": self.network.get_erc721main_contract()[1].events.Transfer,
             "ERC1155": self.network.get_erc1155main_contract()[1].events.TransferSingle,
         }[self.contract_type]
         return event.createFilter(
-            fromBlock=last_block_checked,
-            toBlock=last_block_network,
+            fromBlock=last_checked_block,
+            toBlock=last_network_block,
         ).get_all_entries()
 
     def parse_data_mint(event) -> MintData:
