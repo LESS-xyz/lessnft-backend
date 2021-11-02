@@ -60,7 +60,6 @@ class ScannerAbsolute(threading.Thread):
             event_list = getattr(scanner, f"get_events{handler.TYPE}")(
                 last_checked_block,
                 last_network_block,
-                handler.contract,
             )
 
             if event_list:
