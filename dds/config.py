@@ -113,7 +113,7 @@ class Config:
         items: str
         users: str
         collections: str
-    
+    '''
     @dataclass
     class UsdRate:
         rate: float
@@ -152,7 +152,7 @@ class Config:
         task: str
         interval: int
         enabled: bool
-
+    '''
 
     SORT_STATUSES: SortStatus
 
@@ -179,7 +179,7 @@ class Config:
 
     TITLE: str
     DESCRIPTION: str
-
+    '''
     NETWORKS: List[Network]
     USD_RATES: List[UsdRate]
     ADV_USER: AdvUser
@@ -187,7 +187,7 @@ class Config:
 
     INTERVALS: List[Intervals]
     PERIODIC_TASKS: List[PeriodicTasks]
-
+    '''
     REDIS_HOST: str
     REDIS_PORT: int
 

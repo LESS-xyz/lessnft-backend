@@ -27,12 +27,12 @@ def save_last_block(last_block_number, network_name):
         file.write(str(last_block_number))
 
 
-def get_scanner(network, contract_type=None):
+def get_scanner(network, contract_type=None, contract=None):
     # TODO: refactor
     if network.network_type == Types.ethereum:
-        return EthereumScanner(network, contract_type)
+        return EthereumScanner(network, contract_type, contract=contract)
     if network.network_type == Types.tron:
-        return TronScanner(network, contract_type)
+        return TronScanner(network, contract_type, contract=contract)
 
 
 def never_fall(func):

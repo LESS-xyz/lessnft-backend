@@ -17,9 +17,9 @@ class DeployMixin:
 
     def parse_data_deploy(self, event) -> DeployData:
         return DeployData(
-            collection_name=event["args"]["name"],
-            address=self.network.wrap_in_checksum(["args"]["newToken"]),
-            deploy_block=event["blockNumber"],
+            collection_name=event["result"]["name"],
+            address=self.network.wrap_in_checksum(event["result"]["newToken"]),
+            deploy_block=event["block_number"],
         )
 
 
@@ -38,13 +38,13 @@ class BuyMixin:
 
     def parse_data_buy(event) -> BuyData:
         return BuyData(
-            buyer=event["args"]["buyer"].lower(),
-            seller=event["args"]["seller"],
-            price=event["args"]["buyAmount"],
-            amount=event["args"]["sellAmount"],
-            tx_hash=event["transactionHash"].hex(),
-            token_id=event["args"]["sellId"],
-            collection_address=event["args"]["sellTokenAddress"],
+            buyer=event["result"]["buyer"].lower(),
+            seller=event["result"]["seller"],
+            price=event["result"]["buyAmount"],
+            amount=event["result"]["sellAmount"],
+            tx_hash=event["transaction_id"].hex(),
+            token_id=event["result"]["sellId"],
+            collection_address=event["result"]["sellTokenAddress"],
         )
 
 
@@ -59,9 +59,9 @@ class ApproveMixin:
 
     def parse_data_approve(event) -> ApproveData:
         return ApproveData(
-            exchange=event["args"]["guy"],
-            user=event["args"]["src"].lower(),
-            wad=event["args"]["wad"],
+            exchange=event["result"]["guy"],
+            user=event["result"]["src"].lower(),
+            wad=event["result"]["wad"],
         )
 
 
@@ -74,13 +74,13 @@ class MintMixin:
         return events
 
     def parse_data_mint(event) -> MintData:
-        token_id = event["args"].get("tokenId")
+        token_id = event["result"].get("tokenId")
         if token_id is None:
-            token_id = event["args"].get("id")
+            token_id = event["result"].get("id")
         return MintData(
             token_id=token_id,
-            new_owner=event["args"]["to"].lower(),
-            old_owner=event["args"]["from"].lower(),
+            new_owner=event["result"]["to"].lower(),
+            old_owner=event["result"]["from"].lower(),
             tx_hash=event["transactionHash"].hex(),
-            amount=event["args"]["value"],
+            amount=event["result"]["value"],
         )

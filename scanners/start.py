@@ -22,7 +22,7 @@ from dds.store.models import Collection
 
 if __name__ == "__main__":
     networks = Network.objects.all()
-    rates = UsdRate.objects.all()
+    rates = UsdRate.objects.exclude(address='0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE')
     for network in networks:
         for standart in ["ERC721", "ERC1155"]:
         ##################################################
@@ -32,7 +32,7 @@ if __name__ == "__main__":
                 network=network, 
                 handler=HandlerBuy,
                 contract_type=standart,
-            ).run()
+            ).start()
 
         ##################################################
         #                 DEPLOY SCANNER                 #
@@ -41,18 +41,18 @@ if __name__ == "__main__":
                 network=network,
                 contract_type=standart,
                 handler=HandlerDeploy,
-            ).run()
+            ).start()
 
     ##################################################
     #               APPROVE BET SCANNER              #
     ##################################################
     for rate in rates:
-        _, contract = rate.network.get_token_contract(rate.address)
+        contract = rate.network.get_token_contract(rate.address)
         ScannerAbsolute(
-            network=network,
+            network=rate.network,
             handler=HandlerApproveBet,
             contract=contract,
-        ).run()
+        ).start()
 
     ##################################################
     #                  MINT SCANNER                  #
@@ -60,10 +60,11 @@ if __name__ == "__main__":
     collections = Collection.objects.committed()
     for collection in collections:
         ScannerAbsolute(
-            network=network,
+            network=collection.network,
             handler=HandlerMintTransferBurn,
             contract_type=collection.standart,
-        ).run()
+            contract=collection.get_contract()
+        ).start()
 
     while True:
         time.sleep(60)
@@ -73,9 +74,9 @@ if __name__ == "__main__":
         if new_collections:
             for collection in new_collections:
                 ScannerAbsolute(
-                    network=network,
+                    network=collection.network,
                     handler=HandlerMintTransferBurn,
                     contract=collection.get_contract(),
                     contract_type=collection.standart,
-                ).run()
+                ).start()
             collections = updated_collections

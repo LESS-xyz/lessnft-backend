@@ -17,7 +17,6 @@ class RedisClient:
     def set_connection(self) -> None:
         self._conn = redis.Redis(connection_pool=self.pool)
 
-    @property
     def connection(self):
         if not hasattr(self, '_conn'):
             self.set_connection()

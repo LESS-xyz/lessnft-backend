@@ -24,7 +24,7 @@ class ScannerAbsolute(threading.Thread):
         network: Network,
         handler: object,
         contract_type: str = None,
-        contract=None,
+        contract: object = None,
     ) -> None:
         super().__init__()
         self.network = network
@@ -52,11 +52,12 @@ class ScannerAbsolute(threading.Thread):
             level="DEBUG",
         )
         while True:
+
             scanner = get_scanner(self.network, self.contract_type, self.contract)
             last_checked_block = scanner.get_last_block(self.block_name)
             last_network_block = scanner.get_last_network_block()
 
-            if last_checked_block - last_network_block < 2:
+            if last_network_block - last_checked_block < 2:
                 scanner.sleep()
                 continue
 
@@ -65,14 +66,12 @@ class ScannerAbsolute(threading.Thread):
                 last_network_block = last_checked_block + 4990
 
             handler = self.handler(self.network, scanner, self.contract)
-            event_list = getattr(scanner, f"get_events{handler.TYPE}")(
+            event_list = getattr(scanner, f"get_events_{handler.TYPE}")(
                 last_checked_block,
                 last_network_block,
             )
-
             if event_list:
-                map(handler.save_event, event_list)
-
+                list(map(handler.save_event, event_list))
             scanner.save_last_block(self.block_name, last_network_block)
             scanner.sleep()
 
@@ -94,6 +93,7 @@ class HandlerDeploy(HandlerABC):
                 deploy_block=data.deploy_block,
                 address=data.address,
             )
+        return True
 
 
 class HandlerMintTransferBurn(HandlerABC):

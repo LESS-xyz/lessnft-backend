@@ -33,6 +33,9 @@ class Types(models.TextChoices):
     ethereum = 'ethereum'
     tron = 'tron'
 
+class Address():
+    def __init__(self, address):
+        self.address = address
 
 class Network(models.Model):
     """
@@ -68,9 +71,9 @@ class Network(models.Model):
         if address:
             address = self.wrap_in_checksum(address)
         contract = web3.eth.contract(address=address, abi=abi)
-        return web3, contract
+        return contract
 
-    def get_exchage_contract(self) -> ("Web3", "Contract"):
+    def get_exchange_contract(self) -> ("Web3", "Contract"):
         return self._get_contract_by_abi(EXCHANGE, self.exchange_address)
 
     def get_erc721fabric_contract(self) -> ("Web3", "Contract"):
@@ -80,13 +83,19 @@ class Network(models.Model):
         return self._get_contract_by_abi(ERC1155_FABRIC, self.fabric1155_address)
 
     def get_erc721main_contract(self, address: str = None) -> ("Web3", "Contract"):
-        return self._get_contract_by_abi(ERC721_MAIN, address)
+        if self.network_type == Types.ethereum:
+            return self._get_contract_by_abi(ERC721_MAIN, address)
+        return Address(address)
 
     def get_erc1155main_contract(self, address: str = None) -> ("Web3", "Contract"):
-        return self._get_contract_by_abi(ERC1155_MAIN, address)
+        if self.network_type == Types.ethereum:
+            return self._get_contract_by_abi(ERC1155_MAIN, address)
+        return Address(address)
 
     def get_token_contract(self, address: str = None) -> ("Web3", "Contract"):
-        return self._get_contract_by_abi(WETH_ABI, address)
+        if self.network_type == Types.ethereum:
+            return self._get_contract_by_abi(WETH_ABI, address)
+        return Address(address)
 
     def get_last_confirmed_block(self) -> int:
         web3 = self.get_web3_connection()
@@ -96,13 +105,13 @@ class Network(models.Model):
         return last_block_confirmed
 
     def get_ethereum_address(self, address):
-        if self.network_type == self.Types.tron:
+        if self.network_type == Types.tron:
             return Web3.toChecksumAddress('0x' + Address.to_hex(address)[2:])
         return address
 
     def wrap_in_checksum(self, address: str) -> str:
         """ Wrap address to checksum because calling web3 for tron will return an error """
-        if self.network_type == self.Types.ethereum:
+        if self.network_type == Types.ethereum:
             return Web3.toChecksumAddress(address)
         return address
 
@@ -128,9 +137,9 @@ class Network(models.Model):
         input_params = kwargs.get('input_params')
         #don't like this if-else , TODO refactor
         if contract_type in ('exchange', 'erc721fabric', 'erc1155fabric'):
-            _, contract = getattr(self, f'get_{contract_type}_contract')()
+            contract = getattr(self, f'get_{contract_type}_contract')()
         else:
-            _, contract = getattr(self, f'get_{contract_type}_contract')(address)
+            contract = getattr(self, f'get_{contract_type}_contract')(address)
         # to not send None into function args
         if input_params:
             return getattr(contract.functions, function_name)(*input_params).call()
@@ -140,10 +149,11 @@ class Network(models.Model):
         contract_type = kwargs.get('contract_type')
         address = kwargs.get('address')
         send = kwargs.get('send', False)
+        web3 = self.get_web3_connection()
         if address:
-            web3, contract = getattr(self, f'get_{contract_type}_contract')(address)
+            contract = getattr(self, f'get_{contract_type}_contract')(address)
         else:
-            web3, contract = getattr(self, f'get_{contract_type}_contract')()
+            contract = getattr(self, f'get_{contract_type}_contract')()
 
         gas_limit = kwargs.get('gas_limit')
         nonce_username = kwargs.get('nonce_username')

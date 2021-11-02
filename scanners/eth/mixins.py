@@ -4,8 +4,8 @@ from scanners.base import DeployData, BuyData, ApproveData, MintData
 class DeployMixin:
     def get_events_deploy(self, last_checked_block, last_network_block):
         event = {
-            "ERC721": self.network.get_erc721fabric_contract()[1].events.ERC721Made,
-            "ERC1155": self.network.get_erc1155fabric_contract()[1].events.ERC1155Made,
+            "ERC721": self.network.get_erc721fabric_contract().events.ERC721Made,
+            "ERC1155": self.network.get_erc1155fabric_contract().events.ERC1155Made,
         }[self.contract_type]
         return event.createFilter(
             fromBlock=last_checked_block,
@@ -23,10 +23,8 @@ class DeployMixin:
 class BuyMixin:
     def get_events_buy(self, last_checked_block, last_network_block):
         event = {
-            "ERC721": self.network.get_exchange_contract()[1].events.ExchangeMadeErc721,
-            "ERC1155": self.network.get_exchange_contract()[
-                1
-            ].events.ExchangeMadeErc1155,
+            "ERC721": self.network.get_exchange_contract().events.ExchangeMadeErc721,
+            "ERC1155": self.network.get_exchange_contract().events.ExchangeMadeErc1155,
         }[self.contract_type]
         return event.createFilter(
             fromBlock=last_checked_block,
@@ -63,8 +61,8 @@ class ApproveMixin:
 class MintMixin:
     def get_events_mint(self, last_checked_block, last_network_block):
         event = {
-            "ERC721": self.network.get_erc721main_contract(self.contract.address)[1].events.Transfer,
-            "ERC1155": self.network.get_erc1155main_contract(self.contract.address)[1].events.TransferSingle,
+            "ERC721": self.network.get_erc721main_contract(self.contract.address).events.Transfer,
+            "ERC1155": self.network.get_erc1155main_contract(self.contract.address).events.TransferSingle,
         }[self.contract_type]
         return event.createFilter(
             fromBlock=last_checked_block,

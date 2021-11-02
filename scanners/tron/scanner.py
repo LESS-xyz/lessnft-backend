@@ -32,4 +32,4 @@ class Scanner(
 
     def get_last_network_block(self):
         tron = self.get_tron_instance()
-        return tron.trx.get_block('latest')['number']
+        return tron.trx.get_block('latest')['block_header']['raw_data']['number']
