@@ -32,11 +32,11 @@ class ScannerABC(ABC):
 
     def save_last_block(self, name, block) -> None:
         redis_ = RedisClient()
-        redis_.connection().set(name, block)
+        redis_.connection.set(name, block)
 
     def get_last_block(self, name) -> int:
         redis_ = RedisClient()
-        last_block_number = redis_.connection().get(name)
+        last_block_number = redis_.connection.get(name)
         if last_block_number is None:
             last_block_number = self.get_last_network_block()
             self.save_last_block(name, last_block_number)

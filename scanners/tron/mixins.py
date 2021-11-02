@@ -1,6 +1,6 @@
 import requests
 from scanners.base import DeployData, BuyData, ApproveData, MintData
-
+from tronapi import Tron
 
 class DeployMixin:
     def get_events_deploy(self, last_checked_block, last_network_block):
@@ -16,9 +16,10 @@ class DeployMixin:
         return events
 
     def parse_data_deploy(self, event) -> DeployData:
+        tron = Tron()
         return DeployData(
             collection_name=event["result"]["name"],
-            address=self.network.wrap_in_checksum(event["result"]["newToken"]),
+            address=tron.address.from_hex(event["result"]["newToken"].replace('0x', '41')).decode(),
             deploy_block=event["block_number"],
         )
 
@@ -36,7 +37,7 @@ class BuyMixin:
         events = requests.get(url).json()['data']
         return events
 
-    def parse_data_buy(event) -> BuyData:
+    def parse_data_buy(self, event) -> BuyData:
         return BuyData(
             buyer=event["result"]["buyer"].lower(),
             seller=event["result"]["seller"],
@@ -57,7 +58,7 @@ class ApproveMixin:
 
         return events
 
-    def parse_data_approve(event) -> ApproveData:
+    def parse_data_approve(self, event) -> ApproveData:
         return ApproveData(
             exchange=event["result"]["guy"],
             user=event["result"]["src"].lower(),
@@ -68,12 +69,13 @@ class ApproveMixin:
 class MintMixin:
     def get_events_mint(self, last_checked_block, last_network_block):
         collection_address = self.contract.address
+
         event_name = 'Transfer'
         url = self.build_tronapi_url(last_checked_block, last_network_block, collection_address, event_name)
         events = requests.get(url).json()['data']
         return events
 
-    def parse_data_mint(event) -> MintData:
+    def parse_data_mint(self, event) -> MintData:
         token_id = event["result"].get("tokenId")
         if token_id is None:
             token_id = event["result"].get("id")

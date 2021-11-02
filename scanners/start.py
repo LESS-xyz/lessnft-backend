@@ -80,3 +80,4 @@ if __name__ == "__main__":
                     contract_type=collection.standart,
                 ).start()
             collections = updated_collections
+

@@ -73,26 +73,26 @@ class Network(models.Model):
         contract = web3.eth.contract(address=address, abi=abi)
         return contract
 
-    def get_exchange_contract(self) -> ("Web3", "Contract"):
+    def get_exchange_contract(self) -> "Contract":
         return self._get_contract_by_abi(EXCHANGE, self.exchange_address)
 
-    def get_erc721fabric_contract(self) -> ("Web3", "Contract"):
+    def get_erc721fabric_contract(self) -> "Contract":
         return self._get_contract_by_abi(ERC721_FABRIC, self.fabric721_address)
 
-    def get_erc1155fabric_contract(self) -> ("Web3", "Contract"):
+    def get_erc1155fabric_contract(self) -> "Contract":
         return self._get_contract_by_abi(ERC1155_FABRIC, self.fabric1155_address)
 
-    def get_erc721main_contract(self, address: str = None) -> ("Web3", "Contract"):
+    def get_erc721main_contract(self, address: str = None) -> "Contract":
         if self.network_type == Types.ethereum:
             return self._get_contract_by_abi(ERC721_MAIN, address)
         return Address(address)
 
-    def get_erc1155main_contract(self, address: str = None) -> ("Web3", "Contract"):
+    def get_erc1155main_contract(self, address: str = None) -> "Contract":
         if self.network_type == Types.ethereum:
             return self._get_contract_by_abi(ERC1155_MAIN, address)
         return Address(address)
 
-    def get_token_contract(self, address: str = None) -> ("Web3", "Contract"):
+    def get_token_contract(self, address: str = None) -> "Contract":
         if self.network_type == Types.ethereum:
             return self._get_contract_by_abi(WETH_ABI, address)
         return Address(address)
