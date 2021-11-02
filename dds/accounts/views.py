@@ -241,7 +241,7 @@ class GetUserCollections(APIView):
     '''
     View for get collections by user
     '''
-
+    permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
         operation_description="get collections by user",
         manual_parameters=[
@@ -249,18 +249,9 @@ class GetUserCollections(APIView):
         ],
         resposnes={200: UserCollectionSerializer, 401: not_found_response}
     )
-    def get(self, request, param):
+    def get(self, request):
         network = request.query_params.get('network', config.DEFAULT_NETWORK)
-        try:
-            if param[:2] == '0x':
-                user = AdvUser.objects.get(username=param)
-            else:
-                user = AdvUser.objects.get(auth_token=param)
-
-        except:
-            return Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
-
-        collections = Collection.objects.committed().user_collections(user, network=network)
+        collections = Collection.objects.committed().user_collections(request.user, network=network)
         response_data = UserCollectionSerializer(collections, many=True).data
         return Response({'collections': response_data}, status=status.HTTP_200_OK)
 
