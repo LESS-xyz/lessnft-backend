@@ -31,7 +31,7 @@ class BuyMixin:
             toBlock=last_network_block,
         ).get_all_entries()
 
-    def parse_data_buy(event) -> BuyData:
+    def parse_data_buy(self, event) -> BuyData:
         return BuyData(
             buyer=event["args"]["buyer"].lower(),
             seller=event["args"]["seller"],
@@ -50,7 +50,7 @@ class ApproveMixin:
             toBlock=last_network_block,
         ).get_all_entries()
 
-    def parse_data_approve(event) -> ApproveData:
+    def parse_data_approve(self, event) -> ApproveData:
         return ApproveData(
             exchange=event["args"]["guy"],
             user=event["args"]["src"].lower(),
@@ -69,7 +69,7 @@ class MintMixin:
             toBlock=last_network_block,
         ).get_all_entries()
 
-    def parse_data_mint(event) -> MintData:
+    def parse_data_mint(self, event) -> MintData:
         token_id = event["args"].get("tokenId")
         if token_id is None:
             token_id = event["args"].get("id")
