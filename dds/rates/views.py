@@ -1,12 +1,11 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-
+from dds.rates.models import UsdRate
+from dds.rates.serializers import UsdRateSerializer
+from dds.settings import config
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from dds.rates.serializers import UsdRateSerializer
-from dds.rates.models import UsdRate
-from dds.settings import config
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 
 class RateRequest(APIView):

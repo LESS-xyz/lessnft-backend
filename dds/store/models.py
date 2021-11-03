@@ -1,31 +1,32 @@
-import json 
+import json
 import random
-from datetime import datetime
 import secrets
-from typing import Tuple, Union
-from decimal import *
-from django.db import models
-from web3 import Web3, HTTPProvider
 from collections import Counter
+from datetime import datetime
+from decimal import Decimal
+from typing import Tuple, Union
 
-from django.db.models import Exists, OuterRef, Q
-from django.db.models.signals import post_save
-from django.core.validators import MaxValueValidator, MinValueValidator
-from dds.consts import MAX_AMOUNT_LEN
-from dds.utilities import sign_message, get_media_from_ipfs
 from dds.accounts.models import AdvUser, DefaultAvatar
+from dds.consts import (
+    COLLECTION_CREATION_GAS_LIMIT, 
+    MAX_AMOUNT_LEN,
+    TOKEN_BUY_GAS_LIMIT, 
+    TOKEN_MINT_GAS_LIMIT,
+    TOKEN_TRANSFER_GAS_LIMIT,
+)
 from dds.networks.models import Network
 from dds.rates.models import UsdRate
-from dds.consts import ( 
-    TOKEN_MINT_GAS_LIMIT,  
-    TOKEN_TRANSFER_GAS_LIMIT, 
-    TOKEN_BUY_GAS_LIMIT, 
-    COLLECTION_CREATION_GAS_LIMIT
-)
 from dds.settings import config
+from dds.utilities import get_media_from_ipfs, sign_message
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator
+from django.db import models
+from django.db.models import Exists, OuterRef, Q
+from django.db.models.signals import post_save
 from rest_framework import status
 from rest_framework.response import Response
-from .services.ipfs import get_ipfs, get_ipfs_by_hash
+
+from .services.ipfs import get_ipfs_by_hash
 
 
 class Status(models.TextChoices):
@@ -497,7 +498,7 @@ class Token(models.Model):
                 ownership = self.ownership_set.filter(owner=seller).filter(selling=True)
                 if not ownership:
                     return False, Response({'error': 'user is not owner or token is not on sell'})
-            except ObjectDoesNotExist:
+            except AdvUser.DoesNotExist:
                 return False, Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
 
         return True, None

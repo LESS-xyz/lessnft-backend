@@ -1,11 +1,9 @@
-from rest_framework import serializers
-from rest_framework.exceptions import PermissionDenied
-from rest_auth.registration.serializers import SocialLoginSerializer
-
+from dds.accounts.models import AdvUser
 from dds.accounts.utils import valid_metamask_message
 from dds.store.models import Token
-from dds.accounts.models import AdvUser
-from dds.rates.serializers import CurrencySerializer
+from rest_auth.registration.serializers import SocialLoginSerializer
+from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 
 
 class TokenSlimSerializer(serializers.ModelSerializer):

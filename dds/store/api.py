@@ -1,12 +1,11 @@
 import json
-import requests
-from web3 import Web3
-from django.core.exceptions import ObjectDoesNotExist
-from django.core.mail import get_connection
-from django.db.models import Q
 
+import requests
+from dds.rates.api import calculate_amount
 from dds.settings import config
 from dds.store.models import Token
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.mail import get_connection
 
 
 def token_selling_filter(is_selling) -> bool:
