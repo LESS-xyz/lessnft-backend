@@ -1,27 +1,27 @@
-from django.utils import timezone
-from datetime import timedelta
-import datetime
-
+from dds.activity.serializers import (
+    BidsHistorySerializer,
+    TokenHistorySerializer,
+    UserStatSerializer,
+)
+from dds.activity.services.top_users import get_top_users
+from dds.settings import config
+from dds.store.models import Token
+from dds.utilities import get_page_slice, get_periods
 from django.db.models import Q
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
+from rest_framework.permissions import (
+    IsAuthenticated,
+    IsAuthenticatedOrReadOnly,
+)
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
-from dds.utilities import get_page_slice, get_periods
+from .api import get_activity_response
 from .models import BidsHistory, TokenHistory, UserAction
 from .utils import quick_sort
-from .api import get_activity_response
-from dds.accounts.serializers import UserSerializer
-from dds.activity.serializers import (
-    UserStatSerializer,
-    BidsHistorySerializer,
-    TokenHistorySerializer,
-)
-from dds.activity.services.top_users import get_top_users
-from dds.settings import config
+
 
 class ActivityView(APIView):
     """
@@ -99,8 +99,6 @@ class ActivityView(APIView):
                 token__collection__network__name__icontains=network,   
             ).exclude(
                 method="Burn"
-            #).exclude(
-            #    Q(method="Burn") | Q(method="Transfer")
             ).order_by("-date")[:end]
             activities.extend(history)
             bit = BidsHistory.objects.filter(
@@ -526,7 +524,7 @@ class GetPriceHistory(APIView):
 
         try:
             token = Token.objects.committed().get(id=id)
-        except ObjectDoesNotExist:
+        except Token.DoesNotExist:
             return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
         history = TokenHistory.objects.filter(token=token, method="Listing").filter(date__gte=periods[period])
         bids = BidsHistory.objects.filter(token=token).filter(date__gte=periods[period])

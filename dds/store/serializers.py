@@ -1,24 +1,23 @@
-from rest_framework import serializers
 from collections import Counter
 from decimal import Decimal
 
+from dds.accounts.serializers import CreatorSerializer, UserOwnerSerializer
+from dds.activity.models import UserAction
+from dds.activity.serializers import TokenHistorySerializer
+from dds.networks.serializers import NetworkSerializer
 from dds.rates.api import calculate_amount
+from dds.rates.serializers import CurrencySerializer
+from dds.settings import config
 from dds.store.models import (
-    Status,
+    Bid, 
+    Collection, 
+    Ownership, 
+    Status, 
     Token,
-    Collection,
-    Ownership,
-    Bid,
     TransactionTracker,
 )
-from dds.accounts.serializers import CreatorSerializer, UserSerializer, UserOwnerSerializer
-from dds.activity.serializers import TokenHistorySerializer 
-from dds.activity.models import UserAction
-from dds.rates.models import UsdRate
-from dds.rates.serializers import CurrencySerializer
-from django.db.models import Min, Sum, Count
-from dds.networks.serializers import NetworkSerializer
-from dds.settings import config
+from django.db.models import Count, Min, Sum
+from rest_framework import serializers
 
 
 class TokenPatchSerializer(serializers.ModelSerializer):

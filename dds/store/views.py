@@ -1,41 +1,49 @@
 import random
+from decimal import Decimal
 
 from dds.accounts.models import AdvUser
 from dds.activity.models import BidsHistory, TokenHistory, UserAction
 from dds.consts import APPROVE_GAS_LIMIT
-from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid)
-from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs
-
-from dds.store.models import Bid, Collection, Ownership, Status, Tags, Token, TransactionTracker
 from dds.networks.models import Network
-from dds.store.serializers import (
-    TokenPatchSerializer, 
-    TokenSerializer,
-    TokenFullSerializer,
-    CollectionSerializer,
-    HotCollectionSerializer,
-    BetSerializer,
-    BidSerializer,
-    CollectionMetadataSerializer,
+from dds.rates.api import calculate_amount
+from dds.rates.models import UsdRate
+from dds.services.search import Search
+from dds.settings import config
+from dds.store.api import check_captcha, get_dds_email_connection, validate_bid
+from dds.store.models import (
+    Bid, 
+    Collection, 
+    Ownership, 
+    Status, 
+    Tags, 
+    Token,
+    TransactionTracker,
 )
-from dds.utilities import sign_message, get_page_slice
+from dds.store.serializers import (
+    BetSerializer, 
+    BidSerializer,
+   CollectionMetadataSerializer,
+   CollectionSerializer,
+   CollectionSlimSerializer,
+   HotCollectionSerializer,
+   TokenFullSerializer, TokenPatchSerializer,
+   TokenSerializer,
+)
+from dds.store.services.ipfs import create_ipfs, send_to_ipfs
+from dds.utilities import get_page_slice, sign_message
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
-from dds.consts import APPROVE_GAS_LIMIT
-from django.db.models import Q, Count, Sum
-from decimal import Decimal
+from django.db.models import Count, Q, Sum
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import (
+    IsAuthenticated,
+    IsAuthenticatedOrReadOnly,
+)
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from web3 import Web3
-
-from dds.settings import config
-from dds.rates.api import calculate_amount
-from dds.services.search import Search
 
 
 transfer_tx = openapi.Response(
@@ -283,55 +291,6 @@ class CreateCollectionView(APIView):
         print(ipfs)
         collection.save_in_db(request, ipfs)
         response_data = {'initial_tx': initial_tx, 'collection': CollectionSlimSerializer(collection).data}
-        return Response(response_data, status=status.HTTP_200_OK)
-
-
-class GetOwnedView(APIView):
-    '''
-    View for getting all items owned by address
-    '''
-    @swagger_auto_schema(
-        operation_description="get tokens owned by address",
-        responses={200: TokenSerializer(many=True), 401: not_found_response},
-    )
-
-    def get(self, request, address, page):
-        network = request.query_params.get('network', config.DEFAULT_NETWORK)
-        try:
-            user = AdvUser.objects.get(username=address)
-        except ObjectDoesNotExist:
-            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
-
-        tokens = Token.objects.committed().network(network).filter(Q(owner=user) | Q(owners=user)).order_by('-id')
-
-        start, end = get_page_slice(page, len(tokens))
-
-        token_list = tokens[start:end]
-        response_data = TokenSerializer(token_list, many=True, context={"user": request.user}).data
-        return Response(response_data, status=status.HTTP_200_OK)
-
-
-class GetCreatedView(APIView):
-    '''
-    View for getting all items created by address
-    '''
-    @swagger_auto_schema(
-        operation_description="get tokens created by address",
-        responses={200: TokenSerializer(many=True), 401: not_found_response},
-    )
-
-    def get(self, request, address, page):
-        network = request.query_params.get('network', config.DEFAULT_NETWORK)
-        try:
-            user = AdvUser.objects.get(username=address)
-        except ObjectDoesNotExist:
-            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
-
-        tokens = Token.objects.committed().network(network).filter(creator=user).order_by('-id')
-
-        start, end = get_page_slice(page, len(tokens))
-        token_list = tokens[start:end]
-        response_data = TokenSerializer(token_list, many=True, context={"user": request.user}).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -605,13 +564,11 @@ class TransferOwned(APIView):
         amount = request.data.get("amount")
         user = request.user
         transferring_token = Token.objects.get(id=token)
-        new_user = AdvUser.objects.get(username__iexact=address)
 
         is_valid, response = transferring_token.is_valid(user=user)
         if not is_valid:
             return response
 
-        current_owner = transferring_token.collection.network.wrap_in_checksum(request.user.username)
         initial_tx = transferring_token.transfer(user, address, amount)
         return Response({"initial_tx": initial_tx}, status=status.HTTP_200_OK)
 
@@ -706,7 +663,7 @@ class MakeBid(APIView):
             )
 
         #returns OK if valid, or error message
-        result = validate_bid(user, token_id, amount, token_contract, quantity)
+        result = validate_bid(user, token_id, amount, quantity)
 
         if result != 'OK':
             return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
@@ -991,7 +948,7 @@ class SetCoverView(APIView):
 @api_view(http_method_names=['GET'])
 def get_fee(request):
     currency_symbol = request.query_params.get('currency')
-    currency = Currency.objects.get(symbol=currency_symbol)
+    currency = UsdRate.objects.get(symbol=currency_symbol)
     return Response(currency.service_fee, status=status.HTTP_200_OK)
 
 

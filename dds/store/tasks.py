@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
+
 from celery import shared_task
-from dds.store.models import Token, Status, Bid
+from dds.store.models import Bid, Status, Token
 from dds.store.services.auction import end_auction
 
 

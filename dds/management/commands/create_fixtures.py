@@ -1,17 +1,9 @@
-from django.core.management.base import BaseCommand
-
-from dds.accounts.models import AdvUser, MasterUser
+from dds.accounts.models import MasterUser
 from dds.networks.models import Network
-from dds.store.models import UsdRate
-from django_celery_beat.models import (
-    IntervalSchedule,
-    CrontabSchedule,
-    SolarSchedule,
-    ClockedSchedule,
-    PeriodicTask,
-)
-
 from dds.settings import config
+from dds.store.models import UsdRate
+from django.core.management.base import BaseCommand
+from django_celery_beat.models import IntervalSchedule, PeriodicTask
 
 
 class Command(BaseCommand):
@@ -33,15 +25,15 @@ class Command(BaseCommand):
                 )
 
         """Create UsdRates objects"""
-        for usdRate in config.USD_RATES:
+        for usd_rate in config.USD_RATES:
             obj, created = UsdRate.objects.get_or_create(
-                coin_node=usdRate.coin_node,
-                symbol=usdRate.symbol,
-                name=usdRate.name,
-                image=usdRate.image,
-                address=usdRate.address,
-                network=usdRate.network,
-                fee_discount=usdRate.fee_discount
+                coin_node=usd_rate.coin_node,
+                symbol=usd_rate.symbol,
+                name=usd_rate.name,
+                image=usd_rate.image,
+                address=usd_rate.address,
+                network=usd_rate.network,
+                fee_discount=usd_rate.fee_discount
                 )
             if created:
                 obj.set_decimals()

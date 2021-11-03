@@ -1,28 +1,25 @@
 
-import requests
 from typing import TYPE_CHECKING
 
-from tronapi import Tron
-from tronapi import HttpProvider
+import requests
+from contracts import (
+    ERC721_FABRIC, 
+    ERC721_MAIN, 
+    ERC1155_FABRIC,
+    ERC1155_MAIN, 
+    EXCHANGE, 
+    WETH_ABI,
+)
+from dds.networks.utils import tron_function_selector
+from dds.settings import config
+from django.db import models
+from eth_abi import decode_abi, encode_abi
+from tronapi import HttpProvider, Tron
 from tronapi.common.account import Address
 from trx_utils import decode_hex
-from eth_abi import decode_abi, encode_abi
-from django.db import models
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
-from tronapi.common.account import Account
 
-from contracts import (
-    EXCHANGE,
-    WETH_ABI,
-    ERC721_MAIN,
-    ERC721_FABRIC,
-    ERC1155_MAIN,
-    ERC1155_FABRIC,
-)
-
-from dds.settings import config
-from dds.networks.utils import tron_function_selector
 
 if TYPE_CHECKING:
     from web3.contract import Contract
@@ -33,9 +30,11 @@ class Types(models.TextChoices):
     ethereum = 'ethereum'
     tron = 'tron'
 
+
 class Address():
     def __init__(self, address):
         self.address = address
+
 
 class Network(models.Model):
     """
@@ -54,8 +53,6 @@ class Network(models.Model):
         choices=Types.choices,
         default=Types.ethereum
     )
-
-    #objects = NetworkManager()
 
     def __str__(self):
         return self.name

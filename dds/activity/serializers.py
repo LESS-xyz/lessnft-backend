@@ -1,8 +1,7 @@
-from rest_framework import serializers
-
-from dds.activity.models import TokenHistory, UserStat, BidsHistory
 from dds.accounts.serializers import UserSlimSerializer
+from dds.activity.models import BidsHistory, TokenHistory, UserStat
 from dds.rates.api import get_decimals
+from rest_framework import serializers
 
 
 class TokenHistorySerializer(serializers.ModelSerializer):

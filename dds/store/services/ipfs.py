@@ -1,9 +1,8 @@
 import json
-import ipfshttpclient
-from web3 import Web3, HTTPProvider
-from dds.settings import config
-from contracts import ERC721_MAIN, ERC1155_MAIN
 
+import ipfshttpclient
+from dds.settings import config
+from dds.store.models import Collection
 from django.apps import apps
 
 

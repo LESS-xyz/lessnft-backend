@@ -1,13 +1,12 @@
 from decimal import Decimal
 
-from django.db.models import Count, Q
-
 from dds.accounts.models import AdvUser
 from dds.accounts.serializers import UserSearchSerializer
 from dds.rates.api import calculate_amount
 from dds.store.models import Collection, Ownership, Token
 from dds.store.serializers import CollectionSearchSerializer, TokenSerializer
 from dds.utilities import get_page_slice
+from django.db.models import Count, Q
 
 
 class Search:
