@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from dds.activity.models import TokenHistory, UserStat, ListingHistory, BidsHistory
+from dds.activity.models import TokenHistory, UserStat, BidsHistory
 from dds.accounts.serializers import UserSlimSerializer
 from dds.rates.api import get_decimals
 
@@ -9,6 +9,8 @@ class TokenHistorySerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
+    amount = serializers.SerializerMethodField()
+    currency = serializers.CharField(source='token.currency')
 
     class Meta:
         model = TokenHistory
@@ -19,6 +21,7 @@ class TokenHistorySerializer(serializers.ModelSerializer):
             'method',
             'date',
             'price',
+            'currency',
         )
 
     def get_id(self, obj):
@@ -29,6 +32,9 @@ class TokenHistorySerializer(serializers.ModelSerializer):
 
     def get_avatar(self, obj):
         return obj.new_owner.avatar
+
+    def get_amount(self, obj):
+        return int(obj.price / get_decimals(obj.token.currency))
 
 
 class UserStatSerializer(serializers.ModelSerializer):
@@ -48,23 +54,6 @@ class UserStatSerializer(serializers.ModelSerializer):
         time_range = self.context.get("time_range")
         stat_status = getattr(obj, status)
         return getattr(stat_status, time_range)
-
-
-class ListingHistorySerializer(serializers.ModelSerializer):
-    amount = serializers.SerializerMethodField()
-    currency = serializers.CharField(source='token.currency')
-
-    class Meta:
-        model = ListingHistory
-        fields = (
-            'id',
-            'price',
-            'date',
-            'currency',
-        )
-
-    def get_amount(self, obj):
-        return int(obj.price / get_decimals(obj.token.currency))
 
 
 class BidsHistorySerializer(serializers.ModelSerializer):

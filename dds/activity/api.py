@@ -24,9 +24,9 @@ def get_activity_response(activities):
             currency = None
 
         try:
-            quantity = getattr(activ, "quantity")
+            amount = getattr(activ, 'amount')
         except AttributeError:
-            quantity = None
+            amount = None
 
         item = {
             "token_id": activ.token.id if activ.token else None,
@@ -45,7 +45,7 @@ def get_activity_response(activities):
             "id": activ.id,
             "price": price,
             "currency": currency,
-            "quantity": quantity,
+            "amount": amount,
             "is_viewed": activ.is_viewed,
         }
         if item not in sorted_activity:

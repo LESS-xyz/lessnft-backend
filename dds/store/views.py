@@ -1,7 +1,7 @@
 import random
 
 from dds.accounts.models import AdvUser
-from dds.activity.models import BidsHistory, ListingHistory, UserAction
+from dds.activity.models import BidsHistory, TokenHistory, UserAction
 from dds.consts import APPROVE_GAS_LIMIT
 from dds.store.api import (check_captcha, get_dds_email_connection, validate_bid)
 from dds.store.services.ipfs import create_ipfs, get_ipfs_by_hash, send_to_ipfs
@@ -431,7 +431,7 @@ class GetView(APIView):
         
         if token.standart == "ERC721":
             old_price = token.currency_price
-            quantity = 1
+            amount = 1
 
             request_data['start_auction'] = start_auction
             request_data['end_auction'] = end_auction
@@ -443,7 +443,7 @@ class GetView(APIView):
         else:
             ownership = Ownership.objects.get(owner=user, token=token)
             old_price = ownership.currency_price
-            quantity = ownership.quantity
+            amount = ownership.quantity
             ownership.selling = selling
             ownership.currency_price = price
             ownership.currency_minimal_bid = minimal_bid
@@ -453,11 +453,12 @@ class GetView(APIView):
         # add changes to listing
         if status:
             if price != old_price:
-                ListingHistory.objects.create(
+                TokenHistory.objects.create(
                     token=token,
-                    user=user,
-                    quantity=quantity,
+                    old_owner=user,
+                    amount=amount,
                     price=price,
+                    method='Listing',
                 )
 
         response_data = TokenFullSerializer(token, context={"user": request.user}).data
@@ -786,7 +787,7 @@ class MakeBid(APIView):
         bid.state = Status.COMMITTED
         bid.full_clean()
         bid.save()
-        
+
         BidsHistory.objects.create(
             token=bid.token,
             user=bid.user,
