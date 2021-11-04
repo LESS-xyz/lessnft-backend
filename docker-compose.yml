@@ -19,7 +19,6 @@ services:
       - db
     volumes:
       - ./src/:/code/src/
-      - ./media/:/code/media/
       - ./static/:/code/static/
     command: python manage.py runserver 0.0.0.0:8000
     restart: unless-stopped

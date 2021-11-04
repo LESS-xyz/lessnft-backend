@@ -1,41 +1,10 @@
 import json
 
 import requests
-from src.rates.api import calculate_amount
 from src.settings import config
 from src.store.models import Token
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import get_connection
-
-
-def token_selling_filter(is_selling) -> bool:
-   def token_filter(token):
-       if is_selling:
-           return token.is_selling or token.is_auc_selling
-       return not token.is_selling and not token.is_auc_selling
-   return token_filter
-
-
-def token_sort_price(token, reverse=False):
-    currency = token.currency.symbol
-    if not (token.is_selling or token.is_auc_selling):
-        return 0
-    if token.standart=="ERC721":
-        price = token.price if token.currency_price else token.minimal_bid
-        return calculate_amount(price, currency)[0]
-    owners = token.ownership_set.all()
-    prices = [calculate_amount(owner.get_currency_price, currency)[0] for owner in owners if owner.get_currency_price]
-    if reverse:
-        return max(prices)
-    return min(prices)
-
-
-def token_sort_likes(token, reverse=False):
-    return token.useraction_set.filter(method="like").count()
-
-
-def token_sort_updated_at(token, reverse=False):
-    return token.updated_at
 
 
 def validate_bid(user, token_id, amount, quantity):
