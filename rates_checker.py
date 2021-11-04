@@ -4,16 +4,16 @@ import time
 import requests
 import traceback
 
-from dds.settings import config
+from src.settings import config
 
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dds.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "src.settings")
 import django
 
 django.setup()
 
-from dds.rates.models import UsdRate
-from dds.settings import RATES_CHECKER_TIMEOUT
+from src.rates.models import UsdRate
+from src.settings import RATES_CHECKER_TIMEOUT
 
 QUERY_FSYM = "usd"
 

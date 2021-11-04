@@ -2,7 +2,7 @@ import time
 import os
 import sys
 import traceback
-from dds.networks.models import Network, Types
+from src.networks.models import Network, Types
 from scanners.eth.scanner import Scanner as EthereumScanner
 from scanners.tron.scanner import Scanner as TronScanner
 

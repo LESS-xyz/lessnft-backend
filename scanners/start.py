@@ -3,7 +3,7 @@ import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dds.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "src.settings")
 import django
 
 django.setup()
@@ -15,9 +15,9 @@ from scanners.scanners import (
     HandlerApproveBet,
     HandlerMintTransferBurn,
 )
-from dds.networks.models import Network
-from dds.rates.models import UsdRate
-from dds.store.models import Collection
+from src.networks.models import Network
+from src.rates.models import UsdRate
+from src.store.models import Collection
 
 
 if __name__ == "__main__":
