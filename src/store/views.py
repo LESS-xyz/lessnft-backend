@@ -953,6 +953,17 @@ def get_fee(request):
 
 
 @api_view(http_method_names=['GET'])
+def get_random_token(request):
+    network = request.query_params.get('network', config.DEFAULT_NETWORK)
+    token_list = Token.objects.committed().network(network).filter(
+        Q(owner__is_verificated=True) | Q(owners__is_verificated=True)
+    )
+    token = random.choice(token_list)
+    response_data = TokenSerializer(token, context={"user": request.user}).data
+    return Response(response_data, status=status.HTTP_200_OK)
+
+
+@api_view(http_method_names=['GET'])
 def get_favorites(request):
     network = request.query_params.get('network', config.DEFAULT_NETWORK)
     token_list = Token.objects.committed().network(network).filter(is_favorite=True).order_by("-updated_at")
