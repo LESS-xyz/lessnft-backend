@@ -1,14 +1,21 @@
+from dds.store.models import (
+    Bid, 
+    Collection, 
+    Ownership, 
+    Tags, 
+    Token,
+    TransactionTracker,
+)
 from django.contrib import admin
 from django.db import models
 from django.forms import CheckboxSelectMultiple
-from dds.store.models import Token, Collection, Tags, Ownership, Bid, TransactionTracker
 from django.utils.safestring import mark_safe
 from django_celery_beat.models import (
-    IntervalSchedule,
+    ClockedSchedule, 
     CrontabSchedule,
-    SolarSchedule,
-    ClockedSchedule,
+    IntervalSchedule, 
     PeriodicTask,
+    SolarSchedule,
 )
 
 

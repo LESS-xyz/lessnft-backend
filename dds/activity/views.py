@@ -1,27 +1,27 @@
-from django.utils import timezone
-from datetime import timedelta
-import datetime
-
+from dds.activity.serializers import (
+    BidsHistorySerializer,
+    TokenHistorySerializer,
+    UserStatSerializer,
+)
+from dds.activity.services.top_users import get_top_users
+from dds.settings import config
+from dds.store.models import Token
+from dds.utilities import get_page_slice, get_periods
 from django.db.models import Q
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
+from rest_framework.permissions import (
+    IsAuthenticated,
+    IsAuthenticatedOrReadOnly,
+)
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
-from dds.utilities import get_page_slice, get_periods
-from .models import BidsHistory, ListingHistory, TokenHistory, UserAction
-from .utils import quick_sort
 from .api import get_activity_response
-from dds.accounts.serializers import UserSerializer
-from dds.activity.serializers import (
-    UserStatSerializer,
-    BidsHistorySerializer,
-    ListingHistorySerializer
-)
-from dds.activity.services.top_users import get_top_users
-from dds.settings import config
+from .models import BidsHistory, TokenHistory, UserAction
+from .utils import quick_sort
+
 
 class ActivityView(APIView):
     """
@@ -49,6 +49,7 @@ class ActivityView(APIView):
             "transfer": "Transfer",
             "mint": "Mint",
             "burn": "Burn",
+            "list": "Listing",
         }
         action_methods = {
             "like": "like",
@@ -88,11 +89,7 @@ class ActivityView(APIView):
                         :end
                     ]
                     activities.extend(items)
-            if "list" in types:
-                listing = ListingHistory.objects.filter(
-                    token__collection__network__name__icontains=network,
-                ).order_by("-date")[start:end]
-                activities.extend(listing)
+
         else:
             actions = UserAction.objects.filter(
                 Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
@@ -102,18 +99,12 @@ class ActivityView(APIView):
                 token__collection__network__name__icontains=network,   
             ).exclude(
                 method="Burn"
-            #).exclude(
-            #    Q(method="Burn") | Q(method="Transfer")
             ).order_by("-date")[:end]
             activities.extend(history)
             bit = BidsHistory.objects.filter(
                 token__collection__network__name__icontains=network,
             ).order_by("-date")[:end]
             activities.extend(bit)
-            listing = ListingHistory.objects.filter(
-                token__collection__network__name__icontains=network,
-            ).order_by("-date")[:end]
-            activities.extend(listing)
 
         quick_sort(activities)
         response_data = get_activity_response(activities)[start:end]
@@ -142,6 +133,10 @@ class NotificationActivityView(APIView):
             'Mint',
             'Burn',
         ]
+        old_owner_methods = [
+            'Buy',
+            'Listing'
+        ]
 
         items = TokenHistory.objects.filter(
             token__collection__network__name__icontains=network,
@@ -151,13 +146,13 @@ class NotificationActivityView(APIView):
         ).order_by("-date")[:end]
         activities.extend(items)
 
-        buy = TokenHistory.objects.filter(
+        buy_listing = TokenHistory.objects.filter(
             token__collection__network__name__icontains=network,
             old_owner__username=address,
-            method='Buy',
+            method__in=old_owner_methods,
             is_viewed=False,
         ).order_by("-date")[:end]
-        activities.extend(buy)
+        activities.extend(buy_listing)
 
         user_actions = UserAction.objects.filter(
             Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
@@ -172,13 +167,6 @@ class NotificationActivityView(APIView):
             is_viewed=False,
         ).order_by("-date")[:end]
         activities.extend(bids)
-
-        listing = ListingHistory.objects.filter(
-            token__collection__network__name__icontains=network,
-            user__username=address,
-            is_viewed=False,
-        ).order_by("-date")[:end]
-        activities.extend(listing)
 
         quick_sort(activities)
         response_data = get_activity_response(activities)[:end]
@@ -203,6 +191,10 @@ class NotificationActivityView(APIView):
             'Mint',
             'Burn',
         ]
+        old_owner_methods = [
+            'Buy',
+            "Listing",
+        ]
         if method == "all":
             token_history = TokenHistory.objects.filter(
                 new_owner__username=address,
@@ -212,7 +204,7 @@ class NotificationActivityView(APIView):
 
             token_history = TokenHistory.objects.filter(
                 old_owner__username=address,
-                method="Buy",
+                method__in=old_owner_methods,
                 is_viewed=False,
             ).update(is_viewed=True)
 
@@ -226,10 +218,6 @@ class NotificationActivityView(APIView):
                 is_viewed=False,
             ).update(is_viewed=True)
 
-            listing = ListingHistory.objects.filter(
-                user__username=address,
-                is_viewed=False,
-            ).update(is_viewed=True)
             return Response('Marked all as viewed', status=status.HTTP_200_OK)
 
         methods = {
@@ -240,7 +228,7 @@ class NotificationActivityView(APIView):
             "like": UserAction,
             "follow": UserAction,
             "Bet": BidsHistory,
-            "Listing": ListingHistory,
+            "Listing": TokenHistory,
         }
         action = methods[method].objects.get(id=int(activity_id))
         action.is_viewed = True
@@ -268,8 +256,9 @@ class UserActivityView(APIView):
 
         start, end = get_page_slice(page)
 
-        token_transfer_methods = {
+        old_owner_methods = {
             "sale": "Buy",
+            "listing": "Listing",
         }
         action_methods = {
             "like": "like",
@@ -288,7 +277,7 @@ class UserActivityView(APIView):
         activities = list()
 
         if types:
-            for param, method in token_transfer_methods.items():
+            for param, method in old_owner_methods.items():
                 if param in types:
                     items = TokenHistory.objects.filter(
                         token__collection__network__name__icontains=network,
@@ -324,18 +313,17 @@ class UserActivityView(APIView):
                         method=method,
                     ).order_by("-date")[:end]
                     activities.extend(items)
-            if "list" in types:
-                listing = ListingHistory.objects.filter(
-                    token__collection__network__name__icontains=network,
-                    user__username=address,
-                    is_viewed=False,
-                ).order_by("-date")[:end]
-                activities.extend(listing)
+
         else:
             new_owner_methods = [
                 'Transfer',
                 'Mint',
                 'Burn',
+            ]
+
+            old_owner_methods = [
+                'Buy',
+                'Listing',
             ]
 
             items = TokenHistory.objects.filter(
@@ -349,7 +337,7 @@ class UserActivityView(APIView):
             buy = TokenHistory.objects.filter(
                 token__collection__network__name__icontains=network,
                 old_owner__username=address,
-                method='Buy',
+                method__in=old_owner_methods,
                 is_viewed=False,
             ).order_by("-date")[:end]
             activities.extend(buy)
@@ -360,14 +348,6 @@ class UserActivityView(APIView):
                 is_viewed=False,
             ).order_by("-date")[:end]
             activities.extend(user_actions)
-
-            listing = ListingHistory.objects.filter(
-                user__username=address,
-                token__collection__network__name__icontains=network,
-            ).order_by(
-                "-date"
-            )[:end]
-            activities.extend(listing)
 
             bit = BidsHistory.objects.filter(
                 user__username=address,
@@ -404,6 +384,7 @@ class FollowingActivityView(APIView):
             "purchase": "Buy",
             "sale": "Buy",
             "transfer": "Transfer",
+            "list": "Listing",
         }
         action_methods = {
             "like": "like",
@@ -459,11 +440,7 @@ class FollowingActivityView(APIView):
                         token__collection__network__name__icontains=network,
                     ).order_by("-date")[:end]
                     activities.extend(items)
-            if "list" in types:
-                listing = ListingHistory.objects.filter(
-                    user__id__in=following_ids,
-                    token__collection__network__name__icontains=network,
-                ).order_by("-date")[:end]
+
         else:
             actions = UserAction.objects.filter(
                 Q(user__id__in=following_ids) | Q(whom_follow__id__in=following_ids),
@@ -481,11 +458,6 @@ class FollowingActivityView(APIView):
                 .order_by("-date")[:end]
             )
             activities.extend(history)
-            listing = ListingHistory.objects.filter(
-                user__id__in=following_ids,
-                token__collection__network__name__icontains=network,
-            ).order_by("-date")[:end]
-            activities.extend(listing)
             bit = BidsHistory.objects.filter(
                 user__id__in=following_ids,
                 token__collection__network__name__icontains=network,
@@ -552,12 +524,12 @@ class GetPriceHistory(APIView):
 
         try:
             token = Token.objects.committed().get(id=id)
-        except ObjectDoesNotExist:
+        except Token.DoesNotExist:
             return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
-        history = ListingHistory.objects.filter(token=token).filter(date__gte=periods[period])
+        history = TokenHistory.objects.filter(token=token, method="Listing").filter(date__gte=periods[period])
         bids = BidsHistory.objects.filter(token=token).filter(date__gte=periods[period])
         response_data = {}
-        response_data['price_history'] = ListingHistorySerializer(history, many=True).data
+        response_data['price_history'] = TokenHistorySerializer(history, many=True).data
         response_data['bids_history'] = BidsHistorySerializer(bids, many=True).data
         return Response(response_data, status=status.HTTP_200_OK)
 

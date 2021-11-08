@@ -1,8 +1,7 @@
+from dds.consts import MAX_AMOUNT_LEN
+from dds.rates.api import calculate_amount
 from django.db import models
 from django.db.models.signals import post_save
-from dds.rates.api import calculate_amount
-
-from dds.consts import MAX_AMOUNT_LEN
 
 
 class UserAction(models.Model):
@@ -48,7 +47,7 @@ class TokenHistory(models.Model):
     tx_hash = models.CharField(max_length=200)
     method = models.CharField(
         max_length=10,
-        choices=[('Transfer', 'Transfer'), ('Buy', 'Buy'), ('Mint', 'Mint'), ('Burn', 'Burn')],
+        choices=[('Transfer', 'Transfer'), ('Buy', 'Buy'), ('Mint', 'Mint'), ('Burn', 'Burn'), ('Listing', 'Listing')],
         default='Transfer'
     )
     new_owner = models.ForeignKey(
@@ -83,16 +82,6 @@ def token_history_dispatcher(sender, instance, created, **kwargs):
 
 
 post_save.connect(token_history_dispatcher, sender=TokenHistory)
-
-
-class ListingHistory(models.Model):
-    token = models.ForeignKey('store.Token', on_delete=models.CASCADE)
-    date = models.DateTimeField(auto_now_add=True)
-    quantity = models.IntegerField()
-    user = models.ForeignKey('accounts.AdvUser', on_delete=models.CASCADE)
-    price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=18, default=None, blank=True, null=True)
-    method = models.CharField(choices=[('Listing', 'Listing')], default='Listing', max_length=7)
-    is_viewed = models.BooleanField(default=False)
 
 
 class BidsHistory(models.Model):

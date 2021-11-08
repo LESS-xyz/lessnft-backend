@@ -23,9 +23,10 @@ redis==3.5.3
 httpcore
 httpx
 marshmallow_dataclass
+marshmallow-enum
 trx-utils==1.0.4
 eth-abi==2.1.1
-tronapi==3.1.5
+tronapi @ git+https://github.com/MyWishPlatform/tron-api-python.git@21efb1b359c18c3ab17efcc2bb324dffada7ec9a
 pyyaml
 eth-keys==0.2.4
 eth-keyfile==0.5.1

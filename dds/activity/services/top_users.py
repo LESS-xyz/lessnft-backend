@@ -1,10 +1,8 @@
 import json
-from django.utils import timezone
-from datetime import timedelta
 from django.db.models import Sum, F, Count
 from dds.accounts.models import AdvUser
-from dds.activity.models import TokenHistory, UserStat, UserAction
-from dds.rates.api import calculate_amount
+from dds.activity.models import TokenHistory, UserStat
+from dds.networks.models import Network
 from dds.utilities import get_periods
 
 
@@ -45,6 +43,7 @@ def update_users_stat(network):
  
     for period, time_delta in periods.items():
         users = AdvUser.objects.filter(following__date__gte=time_delta).annotate(follow_count = Count('following'))
+        networks = Network.objects.all()
         for user in users:
             user_stat = UserStat.objects.filter(user=user)
             if not user_stat.exists():
@@ -63,7 +62,6 @@ def update_users_stat(network):
 
 
 def get_top_users(type_, period, network):
-    stat_data = f"{type_}__{period}"
     user_filter = {"network": network, f"{type_}__isnull": False}
     users = UserStat.objects.filter(**user_filter)
     users = [u for u in users if isinstance(getattr(u, type_), str) and json.loads(getattr(u, type_))[period]]
