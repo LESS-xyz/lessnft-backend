@@ -692,16 +692,16 @@ class Token(models.Model):
 
 
     def buy_token(self, token_amount, buyer, seller=None, price=None, auc=False):
-        fee_address = self.currency.fee_address()
+        fee_address = self.collection.network.get_ethereum_address(self.currency.fee_address)
 
         id_order = '0x%s' % secrets.token_hex(32)
         token_count = token_amount
 
         if self.standart == "ERC721":
-            seller_address = self.owner.username
+            seller_address = self.collection.network.get_ethereum_address(self.owner.username)
             token_count = 1
         else:
-            seller_address = seller.username
+            seller_address = self.collection.network.get_ethereum_address(seller.username)
 
         if not price:
             if self.standart == 'ERC721':
@@ -709,8 +709,11 @@ class Token(models.Model):
             else:
                 price = Ownership.objects.get(token=self, owner=seller, selling=True).price
         address = self.currency.address
+        address = self.collection.network.get_ethereum_address(self.currency.address)
+        creator_address = self.collection.network.get_ethereum_address(self.creator.username)
+        buyer_address = self.collection.network.get_ethereum_address(buyer.username)
         value = 0
-        if address == '0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE':
+        if address.lower() == '0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE'.lower():
             value = int(price) * int(token_count)
         types_list = [
             'bytes32',
@@ -728,20 +731,20 @@ class Token(models.Model):
         values_list = [
             id_order,
             self.collection.network.wrap_in_checksum(seller_address),
-            self.collection.network.wrap_in_checksum(self.collection.address),
+            self.collection.network.wrap_in_checksum(self.collection.ethereum_address),
             self.internal_id,
             token_amount,
             self.collection.network.wrap_in_checksum(address),
             int(price) * int(token_count),
             [
-                self.collection.network.wrap_in_checksum(self.creator.username),
+                self.collection.network.wrap_in_checksum(creator_address),
                 self.collection.network.wrap_in_checksum(fee_address),
             ],
             [
                 (int(self.creator_royalty / 100 * float(price) * int(token_count))), 
                 (int(self.currency.service_fee / 100 * float(price) * int(token_count)))
             ],
-            self.collection.network.wrap_in_checksum(buyer.username),
+            self.collection.network.wrap_in_checksum(buyer_address),
         ]
         signature = sign_message(
             types_list,
@@ -788,10 +791,10 @@ class Token(models.Model):
         idOrder= id_order,
         SellerBuyer = [
                         self.collection.network.wrap_in_checksum(seller_address), 
-                        self.collection.network.wrap_in_checksum(buyer.username)
+                        self.collection.network.wrap_in_checksum(buyer_address)
                     ]
         tokenToBuy = {
-                        "tokenAddress": self.collection.network.wrap_in_checksum(self.collection.address),
+                        "tokenAddress": self.collection.network.wrap_in_checksum(self.collection.ethereum_address),
                         'id': int(self.internal_id),
                         'amount': int(token_amount),
                     }
@@ -800,7 +803,7 @@ class Token(models.Model):
                         'id': 0,
                         'amount': int(price) * int(token_count),
                     }
-        feeAddresses = [self.collection.network.wrap_in_checksum(self.creator.username),
+        feeAddresses = [self.collection.network.wrap_in_checksum(creator_address),
                         self.collection.network.wrap_in_checksum(fee_address)
                     ]
         feeAmounts = [
@@ -812,7 +815,7 @@ class Token(models.Model):
         return self.collection.network.contract_call(
                 method_type = 'write',
                 contract_type='token',
-                address=self.collection.address,
+                address=self.collection.network.exchange_address,
 
                 gas_limit = TOKEN_BUY_GAS_LIMIT,
                 nonce_username = buyer_nonce,

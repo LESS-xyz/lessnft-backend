@@ -956,7 +956,7 @@ def get_fee(request):
 def get_favorites(request):
     network = request.query_params.get('network', config.DEFAULT_NETWORK)
     token_list = Token.objects.committed().network(network).filter(is_favorite=True).order_by("-updated_at")
-    response_data = TokenSerializer(token_list, many=True, context={"user": request.user}).data
+    response_data = TokenFullSerializer(token_list, many=True, context={"user": request.user}).data
     return Response(response_data, status=status.HTTP_200_OK)
 
 

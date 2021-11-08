@@ -15,7 +15,7 @@ from src.settings import config
 from django.db import models
 from eth_abi import decode_abi, encode_abi
 from tronapi import HttpProvider, Tron
-from tronapi.common.account import Address
+from tronapi.common.account import Address as TronAddress
 from trx_utils import decode_hex
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
@@ -103,7 +103,7 @@ class Network(models.Model):
 
     def get_ethereum_address(self, address):
         if self.network_type == Types.tron:
-            return Web3.toChecksumAddress('0x' + Address.to_hex(address)[2:])
+            return Web3.toChecksumAddress('0x' + TronAddress.to_hex(address)[2:])
         return address
 
     def wrap_in_checksum(self, address: str) -> str:
@@ -202,7 +202,7 @@ class Network(models.Model):
             if not address:
                 print(f'could not get contract address for {contract_type} in {self.name}')
                 raise "backend didn't found contract address"
-        address = Address.to_hex(address)
+        address = TronAddress.to_hex(address)
         payload = {
             #"visible": True,
             "owner_address": config.SIGNER_ADDRESS.replace('0x', '41'),
@@ -230,6 +230,7 @@ class Network(models.Model):
         address = kwargs.get('address')
         contract_type = kwargs.get('contract_type')
         gas_limit = kwargs.get('gas_limit')
+        tx_value = kwargs.get('tx_value', 0)
         send = kwargs.get('send', False)
         print(contract_type, address)
         address_match = {
@@ -264,7 +265,7 @@ class Network(models.Model):
         options = {
             'feeLimit': 1000000000,
             #TODO set callValue (for goddamn native buying)
-            'callValue': 0,
+            'callValue': tx_value,
             'tokenValue': 0,
             'tokenId': 0
         }

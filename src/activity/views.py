@@ -6,6 +6,7 @@ from src.activity.serializers import (
 from src.activity.services.top_users import get_top_users
 from src.settings import config
 from src.store.models import Token
+from src.networks.models import Network
 from src.utilities import get_page_slice, get_periods
 from django.db.models import Q
 from drf_yasg import openapi
@@ -491,7 +492,8 @@ class GetBestDealView(APIView):
     def get(self, request):
         type_ = request.query_params.get("type")                # seller, buyer, follows
         sort_period = request.query_params.get("sort_period")   # day, week, month
-        network = request.query_params.get("network", config.DEFAULT_NETWORK)
+        network_name = request.query_params.get("network", config.DEFAULT_NETWORK)
+        network = Network.objects.get(name__icontains=network_name)
 
         top_users = get_top_users(type_, sort_period, network)
         response_data = UserStatSerializer(top_users, many=True, context={

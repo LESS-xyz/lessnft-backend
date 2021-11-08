@@ -28,7 +28,7 @@ class ScannerABC(ABC):
 
     def sleep(self) -> None:
         # TODO: from config
-        time.sleep(1)
+        time.sleep(10)
 
     def save_last_block(self, name, block) -> None:
         redis_ = RedisClient()

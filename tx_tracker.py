@@ -2,9 +2,6 @@ import os
 import time
 import django
 
-from web3.exceptions import TransactionNotFound
-from web3 import Web3, HTTPProvider
-
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "src.settings")
 django.setup()
 
@@ -24,7 +21,10 @@ if __name__ == "__main__":
                     tx.item.selling = True
                     tx.item.save()
                 tx.delete()
-            except TransactionNotFound:
+            except:
                 print("Transaction not yet mined")
+                tx.item.selling = True
+                tx.item.save()
+                tx.delete()
                 continue
         time.sleep(config.TX_TRACKER_TIMEOUT)
