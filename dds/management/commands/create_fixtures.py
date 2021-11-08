@@ -33,15 +33,15 @@ class Command(BaseCommand):
                 )
 
         """Create UsdRates objects"""
-        for usdRate in config.USD_RATES:
+        for rate in config.USD_RATES:
             obj, created = UsdRate.objects.get_or_create(
-                coin_node=usdRate.coin_node,
-                symbol=usdRate.symbol,
-                name=usdRate.name,
-                image=usdRate.image,
-                address=usdRate.address,
-                network=usdRate.network,
-                fee_discount=usdRate.fee_discount
+                coin_node=rate.coin_node,
+                symbol=rate.symbol,
+                name=rate.name,
+                image=rate.image,
+                address=rate.address,
+                network=rate.network,
+                fee_discount=rate.fee_discount
                 )
             if created:
                 obj.set_decimals()
