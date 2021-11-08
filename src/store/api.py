@@ -39,8 +39,8 @@ def get_email_connection():
     return get_connection(
         host=config.EMAIL_HOST,
         port=config.EMAIL_PORT,
-        username=config.src_HOST_USER,
-        password=config.src_HOST_PASSWORD,
+        username=config.HOST_USER,
+        password=config.HOST_PASSWORD,
         use_tls=config.EMAIL_USE_TLS,
     )
 
