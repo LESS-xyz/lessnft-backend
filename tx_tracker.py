@@ -2,14 +2,12 @@ import os
 import time
 import django
 
-from web3.exceptions import TransactionNotFound
-from web3 import Web3, HTTPProvider
-
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "dds.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "src.settings")
 django.setup()
 
-from dds.settings import config
-from dds.store.models import TransactionTracker
+from src.settings import config
+from src.store.models import TransactionTracker
+from web3.exceptions import TransactionNotFound
 
 
 if __name__ == "__main__":

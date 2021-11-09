@@ -1,9 +1,9 @@
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from dds.utilities import RedisClient
+from src.utilities import RedisClient
 from typing import Optional
-from dds.accounts.models import AdvUser
+from src.accounts.models import AdvUser
 
 
 class HandlerABC(ABC):
@@ -28,7 +28,7 @@ class ScannerABC(ABC):
 
     def sleep(self) -> None:
         # TODO: from config
-        time.sleep(1)
+        time.sleep(10)
 
     def save_last_block(self, name, block) -> None:
         redis_ = RedisClient()

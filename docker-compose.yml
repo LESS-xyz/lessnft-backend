@@ -6,7 +6,7 @@ services:
     volumes:
       - ./.docker/postgres-data:/var/lib/postgresql/data
     networks:
-      dds2-net:
+      nft-net:
   web:
     build:
       context: .
@@ -18,13 +18,12 @@ services:
     depends_on:
       - db
     volumes:
-      - ./dds/:/code/dds/
-      - ./media/:/code/media/
+      - ./src/:/code/src/
       - ./static/:/code/static/
     command: python manage.py runserver 0.0.0.0:8000
     restart: unless-stopped
     networks:
-      dds2-net:
+      nft-net:
   rates_checker:
     build:
       context: .
@@ -34,7 +33,7 @@ services:
     restart: unless-stopped
     command: ["python", "rates_checker.py"]
     networks:
-      dds2-net:
+      nft-net:
   tx_tracker:
     build:
       context: .
@@ -44,7 +43,7 @@ services:
     restart: unless-stopped
     command: ["python", "tx_tracker.py"]
     networks:
-      dds2-net:
+      nft-net:
   scanner:
     build:
       context: .
@@ -58,29 +57,29 @@ services:
       - ./logs:/code/logs/
     command: ["python", "scanners/start.py"]
     networks:
-      dds2-net:
+      nft-net:
   redis:
     image: redis:5.0
     restart: unless-stopped
     volumes:
       - ./.docker/redis-data:/data
     networks:
-      dds2-net:
+      nft-net:
   celery:
     build: .
     image: celery:3.1
-    command: "celery -A dds worker -l info"
+    command: "celery -A src worker -l info"
     depends_on:
       - redis
     networks:
-      dds2-net:
+      nft-net:
   celery_beat:
     build: .
     image: celery:3.1
-    command: "celery -A dds beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    command: "celery -A src beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     depends_on:
       - redis
     networks:
-      dds2-net:
+      nft-net:
 networks:
-  dds2-net:
+  nft-net:

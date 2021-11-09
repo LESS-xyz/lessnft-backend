@@ -2,11 +2,11 @@ from loguru import logger
 import threading
 from decimal import Decimal
 
-from dds.accounts.models import AdvUser
-from dds.activity.models import BidsHistory, TokenHistory
-from dds.store.models import Collection, Status, Token, Ownership, Bid
-from dds.store.services.ipfs import get_ipfs
-from dds.networks.models import Network
+from src.accounts.models import AdvUser
+from src.activity.models import BidsHistory, TokenHistory
+from src.store.models import Collection, Status, Token, Ownership, Bid
+from src.store.services.ipfs import get_ipfs
+from src.networks.models import Network
 from django.db.models import F
 
 from scanners.utils import get_scanner, never_fall

@@ -13,7 +13,7 @@ EXPOSE 8000
 
 COPY . /code/
 
-#CMD ["gunicorn", "--bind", ":8000", "--workers", "8", "dds.wsgi:application"]
+#CMD ["gunicorn", "--bind", ":8000", "--workers", "8", "src.wsgi:application"]
 
 
 #COPY ./entrypoint.sh /
