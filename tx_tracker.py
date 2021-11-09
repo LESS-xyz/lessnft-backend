@@ -7,6 +7,7 @@ django.setup()
 
 from src.settings import config
 from src.store.models import TransactionTracker
+from web3.exceptions import TransactionNotFound
 
 
 if __name__ == "__main__":
@@ -21,10 +22,7 @@ if __name__ == "__main__":
                     tx.item.selling = True
                     tx.item.save()
                 tx.delete()
-            except:
+            except TransactionNotFound:
                 print("Transaction not yet mined")
-                tx.item.selling = True
-                tx.item.save()
-                tx.delete()
                 continue
         time.sleep(config.TX_TRACKER_TIMEOUT)
