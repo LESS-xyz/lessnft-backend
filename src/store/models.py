@@ -22,7 +22,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Exists, OuterRef, Q
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -36,6 +36,7 @@ class Status(models.TextChoices):
     BURNED = 'Burned'
     EXPIRED = 'Expired'
 
+
 class CollectionQuerySet(models.QuerySet):
     def committed(self):
         return self.filter(status=Status.COMMITTED)
@@ -47,26 +48,27 @@ class CollectionQuerySet(models.QuerySet):
         return self.get(Q(id=collection_id) | Q(short_url=short_url))
 
     def user_collections(self, user, network=None):
-        if network:
-            return self.filter(status=Status.COMMITTED, network__name__icontains=network).filter(
-                Q(name__in=[config.COLLECTION_721, config.COLLECTION_1155]) | Q(creator=user)
-            )
+        if network is None or network == "undefined":
+            return self.filter(status=Status.COMMITTED).filter(Q(is_default=True) | Q(creator=user))
         return self.filter(
-            Q(name__in=[config.COLLECTION_721, config.COLLECTION_1155]) | Q(creator=user)
-        )
+            status=Status.COMMITTED, 
+            network__name__icontains=network,
+        ).filter(Q(is_default=True) | Q(creator=user))
 
     def hot_collections(self, network=None):
-        if not network:
-            return self.exclude(name__in=(config.COLLECTION_721, config.COLLECTION_1155,)).filter(
+        if network is None or network == "undefined":
+            return self.filter(is_default=False).filter(
                 Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
             )
-
-        return self.exclude(name__in=(config.COLLECTION_721, config.COLLECTION_1155,)).filter(
-            network__name__icontains=network).filter(
-            Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
+        return self.filter(is_default=False).filter(
+            network__name__icontains=network,
+        ).filter(
+            Exists(Token.objects.committed().filter(collection__id=OuterRef('id'))),
         )
 
     def network(self, network):
+        if network is None or network == "undefined":
+            return self
         return self.filter(network__name__icontains=network)
 
 
@@ -107,6 +109,7 @@ class Collection(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices)
     deploy_block = models.IntegerField(null=True, default=None)
     network = models.ForeignKey('networks.Network', on_delete=models.CASCADE)
+    is_default = models.BooleanField(default=False)
 
     objects = CollectionManager()
 
@@ -312,7 +315,18 @@ def collection_created_dispatcher(sender, instance, created, **kwargs):
             instance.save()
 
 
+def default_collection_validators(sender, instance, **kwargs):
+    if (
+        instance.is_default
+        and Collection.objects.filter(
+            is_default=True, network=instance.network, standart=instance.standart
+        ).exists()
+    ):
+        raise ValidationError("Unique validation error.")
+
+
 post_save.connect(collection_created_dispatcher, sender=Collection)
+pre_save.connect(default_collection_validators, sender=Collection)
 
 def validate_nonzero(value):
     if value < 0:
@@ -326,9 +340,9 @@ class TokenQuerySet(models.QuerySet):
         return self.filter(status=Status.COMMITTED)
     
     def network(self, network):
-        if network and network != 'undefined':
-            return self.filter(collection__network__name__icontains=network)
-        return self
+        if network is None or network == 'undefined':
+            return self
+        return self.filter(collection__network__name__icontains=network)
 
 
 class TokenManager(models.Manager):
