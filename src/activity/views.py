@@ -1,3 +1,7 @@
+from dateutil.relativedelta import relativedelta
+from datetime import timedelta
+from collections import namedtuple
+
 from src.activity.serializers import (
     BidsHistorySerializer,
     TokenHistorySerializer,
@@ -7,8 +11,10 @@ from src.activity.serializers import (
 from src.activity.services.top_users import get_top_users
 from src.settings import config
 from src.store.models import Token
+from src.networks.models import Network
 from src.utilities import get_page_slice, get_periods
-from django.db.models import Q
+from django.db.models import Q, Avg
+from django.db.models.functions import TruncMonth, TruncDay, TruncHour
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -61,6 +67,7 @@ class ActivityView(APIView):
 
         activities = list()
 
+        total_items = 0
         if types:
             for param, method in history_methods.items():
                 if param in types:
@@ -69,47 +76,49 @@ class ActivityView(APIView):
                         token__collection__network__name__icontains=network,
                     ).order_by(
                         "-date"
-                    )[:end]
+                    )
+                    total_items += items.count()
+                    items = items[:end]
                     activities.extend(items)
             for param, method in action_methods.items():
                 if param in types:
                     items = UserAction.objects.filter(
                         Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
                         method=method,
-                    ).order_by("-date")[
-                        :end
-                    ]
+                    ).order_by("-date")
+                    total_items += items.count()
+                    items = items[:end]
                     activities.extend(items)
             for param, method in bids_methods.items():
                 if param in types:
                     items = BidsHistory.objects.filter(
                         method=method,
                         token__collection__network__name__icontains=network,
-                    ).order_by("-date")[
-                        :end
-                    ]
+                    ).order_by("-date")
+                    total_items += items.count()
+                    items = items[:end]
                     activities.extend(items)
 
         else:
             actions = UserAction.objects.filter(
                 Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
-            ).order_by("-date")[:end]
-            activities.extend(actions)
+            ).order_by("-date")
             history = TokenHistory.objects.filter(
                 token__collection__network__name__icontains=network,   
             ).exclude(
                 method="Burn"
-            ).order_by("-date")[:end]
-            activities.extend(history)
+            ).order_by("-date")
             bit = BidsHistory.objects.filter(
                 token__collection__network__name__icontains=network,
-            ).order_by("-date")[:end]
-            activities.extend(bit)
+            ).order_by("-date")
 
         quick_sort(activities)
-        response_data = ActivitySerializer(activities, many=True).data[start:end]
+        items = ActivitySerializer(activities, many=True).data
+        total_items = len(items)
+        response_data = {'total_items': total_items, 'items': items[start:end]}
         return Response(response_data, status=status.HTTP_200_OK)
 
+      
 class NotificationActivityView(APIView):
     """
     View for get user notifications
@@ -476,13 +485,15 @@ class GetBestDealView(APIView):
             openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter(
                 "type", 
-                openapi.IN_QUERY, 
+                openapi.IN_QUERY,
+                required=True,
                 type=openapi.TYPE_STRING, 
                 description="seller, buyer, follows",
             ),
             openapi.Parameter(
                 "sort_period", 
-                openapi.IN_QUERY, 
+                openapi.IN_QUERY,
+                required=True,
                 type=openapi.TYPE_STRING, 
                 description="day, week, month",
             ),
@@ -491,12 +502,14 @@ class GetBestDealView(APIView):
     def get(self, request):
         type_ = request.query_params.get("type")                # seller, buyer, follows
         sort_period = request.query_params.get("sort_period")   # day, week, month
-        network = request.query_params.get("network", config.DEFAULT_NETWORK)
+        network_name = request.query_params.get("network", config.DEFAULT_NETWORK)
+        network = Network.objects.get(name__icontains=network_name)
 
         top_users = get_top_users(type_, sort_period, network)
         response_data = UserStatSerializer(top_users, many=True, context={
             "status": type_, 
             "time_range": sort_period,
+            "network": network,
         }).data 
 
         return Response(response_data, status=status.HTTP_200_OK)
@@ -526,10 +539,50 @@ class GetPriceHistory(APIView):
             token = Token.objects.committed().get(id=id)
         except Token.DoesNotExist:
             return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
-        history = TokenHistory.objects.filter(token=token, method="Listing").filter(date__gte=periods[period])
-        bids = BidsHistory.objects.filter(token=token).filter(date__gte=periods[period])
-        response_data = {}
-        response_data['price_history'] = TokenHistorySerializer(history, many=True).data
-        response_data['bids_history'] = BidsHistorySerializer(bids, many=True).data
-        return Response(response_data, status=status.HTTP_200_OK)
+
+        # TODO: REFACTOR THIS SHIT
+        history = TokenHistory.objects.filter(token=token).filter(date__gte=periods[period])
+        Period = namedtuple('Period', ['func', 'range', 'delta'])
+        filter_periods = {
+            'day': Period(TruncHour, 24, 'hours'),
+            'week': Period(TruncDay, 7, 'days'),
+            'month': Period(TruncDay, 30, 'days'),
+            'year': Period(TruncMonth, 12, 'months'),
+        }
+        filter_period = filter_periods[period]
+        listing_history = TokenHistory.objects.filter(token=token).filter(date__gte=periods[period]).annotate(
+            **{period: filter_period.func('date')}
+        ).values(period).annotate(avg_price=Avg('price')).values(period, 'avg_price')
+
+        listing_history = {h.get(period): h.get('avg_price') for h in listing_history}
+        date_list = [
+            periods[period] + timedelta(days=1) + relativedelta(**{filter_period.delta: days_count})
+            for days_count in range(filter_period.range)
+        ]
+        last_value = None
+        if not listing_history.keys() or (list(listing_history.keys())[0] != periods[period] + timedelta(days=1)):
+            listing = TokenHistory.objects.filter(token=token).filter(date__lte=periods[period]).annotate(
+                **{period: filter_period.func('date')}
+            ).values(period).annotate(avg_price=Avg('price')).values(period, 'avg_price')
+            if listing:
+                last_value = listing[len(listing)-1].get('avg_price')
+
+        chart_response = list()
+        date_replace = {
+            'minute': 0,
+            'second': 0,
+            'microsecond': 0,
+        }
+        if period != 'day':
+            date_replace['hour'] = 0
+        for date in date_list:
+            date = date.replace(**date_replace)
+            avg_price = listing_history.get(date)
+            if avg_price is None:
+                avg_price = last_value
+            else:
+                last_value = avg_price
+            chart_response.append({'date': date, 'avg_price': avg_price})
+
+        return Response(chart_response, status=status.HTTP_200_OK)
 

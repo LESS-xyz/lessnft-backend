@@ -1,6 +1,8 @@
+from django.db.models import Q
+
 from src.accounts.models import AdvUser
 from src.accounts.utils import valid_metamask_message
-from src.store.models import Token
+from src.store.models import Token, Status
 from rest_auth.registration.serializers import SocialLoginSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
@@ -93,20 +95,50 @@ class BaseAdvUserSerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
     created_tokens = serializers.SerializerMethodField()
+    owned_tokens = serializers.SerializerMethodField()
+    address = serializers.SerializerMethodField()
 
     class Meta:
         model = AdvUser
-        read_only_fields = ("avatar", "created_at", 'twitter', 'instagram', 'facebook', 'site', 'created_tokens')
+        read_only_fields = (
+            "avatar",
+            "created_at",
+            'twitter',
+            'instagram',
+            'facebook',
+            'site',
+            'created_tokens',
+            'owned_tokens',
+            "address",
+            "display_name",
+            "custom_url",
+            "bio",
+            "is_verificated",
+        )
         fields = read_only_fields + ("id", "name",)
 
     def get_id(self, obj):
         return obj.url
 
+    def get_address(self, obj):
+        return obj.username
+
     def get_name(self, obj):
         return obj.get_name()
 
     def get_created_tokens(self, obj):
-        return obj.token_creator.count()
+        return obj.token_creator.filter(
+            status=Status.COMMITTED
+        ).count()
+
+    def get_owned_tokens(self, obj):
+        owned_tokens = Token.objects.filter(
+            Q(owner=obj) | Q(owners=obj),
+        ).filter(status=Status.COMMITTED)
+        network = self.context.get('network')
+        if network:
+            owned_tokens = owned_tokens.filter(collection__network__name__icontains=network)
+        return owned_tokens.count()
 
  
 class UserOwnerSerializer(BaseAdvUserSerializer):

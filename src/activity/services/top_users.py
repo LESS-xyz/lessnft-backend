@@ -16,7 +16,7 @@ def update_users_stat(network):
         user_filter = {f"{type_}__method": "Buy"}
         users = AdvUser.objects.filter(**user_filter).distinct()
         for user in users:
-            user_stat, _ = UserStat.objects.get_or_create(network, user=user)
+            user_stat, _ = UserStat.objects.get_or_create(network=network, user=user)
 
             stat = getattr(user_stat, types[type_])
             if isinstance(stat, str):
@@ -62,8 +62,8 @@ def update_users_stat(network):
 
 
 def get_top_users(type_, period, network):
-    user_filter = {"network": network, f"{type_}__isnull": False}
+    user_filter = {"network__name__icontains": network, f"{type_}__isnull": False}
     users = UserStat.objects.filter(**user_filter)
-    users = [u for u in users if isinstance(getattr(u, type_), str) and json.loads(getattr(u, type_))[period]]
-    users = sorted(users, key=lambda x: json.loads(getattr(x, type_))[period])
+    users = [u for u in users if isinstance(getattr(u, type_), str) and json.loads(getattr(u, type_)).get(period)]
+    users = sorted(users, key=lambda x: json.loads(getattr(x, type_))[period], reverse=True)
     return users

@@ -48,7 +48,6 @@ class ScannerAbsolute(threading.Thread):
         logger.add(
             f"logs/scanner_{self.handler.TYPE}.log",
             format="{time:DD.MM.YYYY HH:mm:ss} | {level} | {message}",
-            enqueue=True,
             level="DEBUG",
         )
         while True:
@@ -119,13 +118,13 @@ class HandlerMintTransferBurn(HandlerABC):
             token_id=token_id,
             collection=collection,
             smart_contract=self.contract,
-            is_mint=bool(old_owner.address == self.scanner.EMPTY_ADDRESS),
+            is_mint=bool(data.old_owner == self.scanner.EMPTY_ADDRESS.lower()),
         )
         if token is None:
             logger.warning(f"Token not found")
             return
 
-        if old_owner.address == self.scanner.EMPTY_ADDRESS:
+        if data.old_owner == self.scanner.EMPTY_ADDRESS.lower():
             logger.debug(f"New mint event: {data}")
             self.mint_event(
                 token=token,
@@ -133,7 +132,7 @@ class HandlerMintTransferBurn(HandlerABC):
                 tx_hash=data.tx_hash,
                 new_owner=new_owner,
             )
-        elif new_owner.address == self.scanner.EMPTY_ADDRESS:
+        elif data.new_owner == self.scanner.EMPTY_ADDRESS.lower():
             logger.debug(f"New burn event: {data}")
             self.burn_event(
                 token=token,
@@ -149,6 +148,10 @@ class HandlerMintTransferBurn(HandlerABC):
             )
         else:
             logger.debug(f"New transfer event: {data}")
+
+            if TokenHistory.objects.filter(tx_hash=data.tx_hash).exists():
+                return
+
             self.transfer_event(
                 token=token,
                 tx_hash=data.tx_hash,
@@ -203,6 +206,23 @@ class HandlerMintTransferBurn(HandlerABC):
             price=None,
         )
 
+        if token.collection.standart == 'ERC721':
+            price = token.price
+        else:
+            price = token.ownership_set.first().price
+        if price:
+            price = price / token.currency.get_decimals
+        if token.is_selling or token.is_auc_selling:
+            TokenHistory.objects.create(
+                token=token,
+                old_owner=token.creator,
+                new_owner=None,
+                method='Listing',
+                tx_hash=tx_hash,
+                amount=token.total_supply,
+                price=price,
+            )
+
     def burn_event(
         self,
         token: Token,
@@ -247,9 +267,6 @@ class HandlerMintTransferBurn(HandlerABC):
             token.currency_price = None
 
         token.save()
-
-        if TokenHistory.objects.filter(tx_hash=tx_hash, method="Buy").exists():
-            return
 
         TokenHistory.objects.update_or_create(
             tx_hash=tx_hash,
@@ -305,7 +322,7 @@ class HandlerBuy(HandlerABC):
         logger.debug(f"New event: {data}")
 
         token = Token.objects.get(
-            collection_address=data.collection_address,
+            collection__address=data.collection_address,
             internal_id=data.token_id,
         )
 
@@ -406,7 +423,7 @@ class HandlerApproveBet(HandlerABC):
             if data.wad > item.quantity * item.amount:
                 item.state = Status.COMMITTED
                 item.save()
-                BidsHistory.objects.create(
+                BidsHistory.objects.get_or_create(
                     token=item.token,
                     user=item.user,
                     price=item.amount,

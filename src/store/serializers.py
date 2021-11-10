@@ -172,6 +172,7 @@ class TokenSlimSerializer(serializers.ModelSerializer):
 class TokenSerializer(serializers.ModelSerializer):
     available = serializers.SerializerMethodField()
     USD_price = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField()
     owners = serializers.SerializerMethodField()
     royalty = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
@@ -196,6 +197,7 @@ class TokenSerializer(serializers.ModelSerializer):
             "is_auc_selling",
             "is_timed_auc_selling",
             "like_count",
+            "tags",
         )
         fields = read_only_fields + (
             "id",
@@ -232,7 +234,10 @@ class TokenSerializer(serializers.ModelSerializer):
         
     def get_royalty(self, obj):
         return obj.creator_royalty
-        
+
+    def get_tags(self, obj):
+        return [{"value": tag.name, "media": tag.ipfs_media} for tag in obj.tags.all()]
+
     def get_network(self, obj):
         network = obj.currency.network
         return NetworkSerializer(network).data
@@ -383,6 +388,7 @@ class CollectionSerializer(CollectionSlimSerializer):
     tokens = serializers.SerializerMethodField()
     creator = CreatorSerializer()
     attributes = serializers.SerializerMethodField()
+    tokens_count = serializers.SerializerMethodField()
 
     class Meta(CollectionSlimSerializer.Meta):
         read_only_fields = CollectionSlimSerializer.Meta.read_only_fields + ("cover",)
@@ -391,8 +397,12 @@ class CollectionSerializer(CollectionSlimSerializer):
             "creator",
             "description",
             "tokens",
+            "tokens_count",
             "attributes",
         )
+
+    def get_tokens_count(self, obj):
+        return self.context.get("tokens_count")
 
     def get_tokens(self, obj):
         tokens = self.context.get("tokens") 
@@ -403,7 +413,7 @@ class CollectionSerializer(CollectionSlimSerializer):
 
         attribute_count = []
         #Getting a list of all keys(token attributes) from the list of token details:
-        all_attributes = set().union(*(d.keys() for d in token_details))
+        all_attributes = set().union(*(d.keys() for d in token_details if d is not None))
         #initialising a counter to iterate over value dicts in a list:
         for attribute in all_attributes:
             #Counting all occurrencies of each attribute value and writing it into a list of dicts like
@@ -421,7 +431,6 @@ class CollectionSerializer(CollectionSlimSerializer):
 class TokenFullSerializer(TokenSerializer):
     selling = serializers.SerializerMethodField()
     history = serializers.SerializerMethodField()
-    tags = serializers.SerializerMethodField()
     service_fee = serializers.SerializerMethodField()
     currency_service_fee = serializers.SerializerMethodField()
     USD_service_fee = serializers.SerializerMethodField()
@@ -430,7 +439,6 @@ class TokenFullSerializer(TokenSerializer):
 
     class Meta(TokenSerializer.Meta):
         fields = TokenSerializer.Meta.fields + (
-            "tags",
             "history",
             "is_liked",
             "service_fee",
@@ -448,9 +456,6 @@ class TokenFullSerializer(TokenSerializer):
     def get_history(self, obj):
         history = obj.tokenhistory_set.exclude(method="Burn").order_by("-id")
         return TokenHistorySerializer(history, many=True).data
-
-    def get_tags(self, obj):
-        return [tag.name for tag in obj.tags.all()]
 
     def get_service_fee(self, obj):
         return obj.currency.service_fee

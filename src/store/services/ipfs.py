@@ -2,7 +2,6 @@ import json
 
 import ipfshttpclient
 from src.settings import config
-from src.store.models import Collection
 from django.apps import apps
 
 
@@ -42,9 +41,9 @@ def get_ipfs(token_id, contract) -> dict:
     """
     collection_model = apps.get_model('store.Collection')
     collection = collection_model.objects.filter(address=contract.address).first()
-    return Collection.network.contract_call(
+    return collection.network.contract_call(
             method_type='read',
-            contract_type=f'erc{collection.standart.lower()}main',
+            contract_type=f'{collection.standart.lower()}main',
             address=collection.address,
             function_name='tokenURI',
             input_params=(token_id,),

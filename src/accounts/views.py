@@ -1,6 +1,6 @@
 import random
 
-from src.store.api import get_src_email_connection
+from src.store.api import get_email_connection
 from src.accounts.models import AdvUser, VerificationForm
 from src.accounts.serializers import (
     PatchSerializer, 
@@ -331,7 +331,7 @@ class VerificationView(APIView):
             return Response({'error': 'Request already sent'}, status=status.HTTP_400_BAD_REQUEST)
         verification.save_form(request)
 
-        connection = get_src_email_connection()
+        connection = get_email_connection()
         text = """
                         New veridication request arrived!
                         URL: https://{domain}/django-admin/accounts/advuser/{id}/change/
@@ -340,8 +340,8 @@ class VerificationView(APIView):
         send_mail(
             'New verification request',
             text,
-            config.src_HOST_USER,
-            [config.src_MAIL],
+            config.HOST_USER,
+            [config.MAIL],
             connection=connection,
         )
         print('message sent')

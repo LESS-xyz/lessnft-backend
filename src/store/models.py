@@ -22,7 +22,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Exists, OuterRef, Q
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -36,6 +36,7 @@ class Status(models.TextChoices):
     BURNED = 'Burned'
     EXPIRED = 'Expired'
 
+
 class CollectionQuerySet(models.QuerySet):
     def committed(self):
         return self.filter(status=Status.COMMITTED)
@@ -47,22 +48,27 @@ class CollectionQuerySet(models.QuerySet):
         return self.get(Q(id=collection_id) | Q(short_url=short_url))
 
     def user_collections(self, user, network=None):
+        if network is None or network == "undefined":
+            return self.filter(status=Status.COMMITTED).filter(Q(is_default=True) | Q(creator=user))
         return self.filter(
-            Q(name__in=[config.COLLECTION_721, config.COLLECTION_1155]) | Q(creator=user)
-        )
+            status=Status.COMMITTED, 
+            network__name__icontains=network,
+        ).filter(Q(is_default=True) | Q(creator=user))
 
     def hot_collections(self, network=None):
-        if not network:
-            return self.exclude(name__in=(config.COLLECTION_721, config.COLLECTION_1155,)).filter(
+        if network is None or network == "undefined":
+            return self.filter(is_default=False).filter(
                 Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
             )
-
-        return self.exclude(name__in=(config.COLLECTION_721, config.COLLECTION_1155,)).filter(
-            network__name__icontains=network).filter(
-            Exists(Token.objects.committed().filter(collection__id=OuterRef('id')))
+        return self.filter(is_default=False).filter(
+            network__name__icontains=network,
+        ).filter(
+            Exists(Token.objects.committed().filter(collection__id=OuterRef('id'))),
         )
 
     def network(self, network):
+        if network is None or network == "undefined":
+            return self
         return self.filter(network__name__icontains=network)
 
 
@@ -103,6 +109,7 @@ class Collection(models.Model):
     status = models.CharField(max_length=20, choices=Status.choices)
     deploy_block = models.IntegerField(null=True, default=None)
     network = models.ForeignKey('networks.Network', on_delete=models.CASCADE)
+    is_default = models.BooleanField(default=False)
 
     objects = CollectionManager()
 
@@ -153,8 +160,15 @@ class Collection(models.Model):
                     input_params=(),
                     input_type=(),
                     output_types=('uint256',),
-                )[0]
+            value = self.network.contract_call(
+                method_type='read', 
+                contract_type='erc721fabric',
+                function_name='getFee',
+                input_params=(),
+                input_type=(),
+                output_types=('uint256',),
             )
+            print(value)
 
             initial_tx = self.network.contract_call(
                 method_type = 'write',
@@ -173,15 +187,15 @@ class Collection(models.Model):
                 input_type=('string', 'bytes')
             )
         else:
-            value = int(self.network.contract_call(
+
+            value = self.network.contract_call(
                     method_type='read', 
                     contract_type='erc1155fabric',
                     function_name='getFee',
                     input_params=(),
                     input_type=(),
                     output_types=('uint256',),
-                )[0]
-            )
+                )
 
             initial_tx = self.network.contract_call(
                 method_type = 'write',
@@ -274,12 +288,23 @@ def collection_created_dispatcher(sender, instance, created, **kwargs):
             instance.save()
 
 
+def default_collection_validators(sender, instance, **kwargs):
+    if (
+        instance.is_default
+        and Collection.objects.filter(
+            is_default=True, network=instance.network, standart=instance.standart
+        ).exists()
+    ):
+        raise ValidationError("Unique validation error.")
+
+
 post_save.connect(collection_created_dispatcher, sender=Collection)
+pre_save.connect(default_collection_validators, sender=Collection)
 
 def validate_nonzero(value):
-    if value == 0:
+    if value < 0:
         raise ValidationError(
-            _('Quantity %(value)s is not allowed'),
+            'Quantity %(value)s is not allowed',
             params={'value': value},
         )
 
@@ -288,9 +313,9 @@ class TokenQuerySet(models.QuerySet):
         return self.filter(status=Status.COMMITTED)
     
     def network(self, network):
-        if network and network != 'undefined':
-            return self.filter(collection__network__name__icontains=network)
-        return self
+        if network is None or network == 'undefined':
+            return self
+        return self.filter(collection__network__name__icontains=network)
 
 
 class TokenManager(models.Manager):
@@ -615,16 +640,16 @@ class Token(models.Model):
 
 
     def buy_token(self, token_amount, buyer, seller=None, price=None, auc=False):
-        fee_address = self.currency.fee_address()
+        fee_address = self.collection.network.get_ethereum_address(self.currency.fee_address)
 
         id_order = '0x%s' % secrets.token_hex(32)
         token_count = token_amount
 
         if self.standart == "ERC721":
-            seller_address = self.owner.username
+            seller_address = self.collection.network.get_ethereum_address(self.owner.username)
             token_count = 1
         else:
-            seller_address = seller.username
+            seller_address = self.collection.network.get_ethereum_address(seller.username)
 
         if not price:
             if self.standart == 'ERC721':
@@ -632,9 +657,13 @@ class Token(models.Model):
             else:
                 price = Ownership.objects.get(token=self, owner=seller, selling=True).price
         address = self.currency.address
+        address = self.collection.network.get_ethereum_address(self.currency.address)
+        creator_address = self.collection.network.get_ethereum_address(self.creator.username)
+        buyer_address = self.collection.network.get_ethereum_address(buyer.username)
         value = 0
-        if address == '0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE':
+        if address.lower() == '0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE'.lower():
             value = int(price) * int(token_count)
+        total_amount = int(price) * int(token_count)
         types_list = [
             'bytes32',
             'address',
@@ -651,20 +680,20 @@ class Token(models.Model):
         values_list = [
             id_order,
             self.collection.network.wrap_in_checksum(seller_address),
-            self.collection.network.wrap_in_checksum(self.collection.address),
+            self.collection.network.wrap_in_checksum(self.collection.ethereum_address),
             self.internal_id,
             token_amount,
             self.collection.network.wrap_in_checksum(address),
-            int(price) * int(token_count),
+            total_amount,
             [
-                self.collection.network.wrap_in_checksum(self.creator.username),
+                self.collection.network.wrap_in_checksum(creator_address),
                 self.collection.network.wrap_in_checksum(fee_address),
             ],
             [
-                (int(self.creator_royalty / 100 * float(price) * int(token_count))), 
-                (int(self.currency.service_fee / 100 * float(price) * int(token_count)))
+                (int(self.creator_royalty / 100 * total_amount)),
+                (int(self.currency.service_fee / 100 * total_amount)),
             ],
-            self.collection.network.wrap_in_checksum(buyer.username),
+            self.collection.network.wrap_in_checksum(buyer_address),
         ]
         signature = sign_message(
             types_list,
@@ -675,40 +704,39 @@ class Token(models.Model):
         if auc:
             buyer_nonce = seller_address
 
-        idOrder= id_order,
+        idOrder= id_order
         SellerBuyer = [
                         self.collection.network.wrap_in_checksum(seller_address), 
-                        self.collection.network.wrap_in_checksum(buyer.username)
+                        self.collection.network.wrap_in_checksum(buyer_address)
                     ]
         tokenToBuy = {
-                        "tokenAddress": self.collection.network.wrap_in_checksum(self.collection.address),
+                        "tokenAddress": self.collection.network.wrap_in_checksum(self.collection.ethereum_address),
                         'id': int(self.internal_id),
-                        'amount': int(token_amount),
+                        'amount': token_amount,
                     }
         tokenToSell = {
                         'tokenAddress': self.collection.network.wrap_in_checksum(address),
                         'id': 0,
-                        'amount': int(price) * int(token_count),
+                        'amount': total_amount,
                     }
-        feeAddresses = [self.collection.network.wrap_in_checksum(self.creator.username),
+        feeAddresses = [self.collection.network.wrap_in_checksum(creator_address),
                         self.collection.network.wrap_in_checksum(fee_address)
                     ]
         feeAmounts = [
-                (int(self.creator_royalty / 100 * float(price) * int(token_count))), 
-                (int(self.currency.service_fee / 100 * float(price) * int(token_count))),                    ]
+                (int(self.creator_royalty / 100 * total_amount)),
+                (int(self.currency.service_fee / 100 * total_amount)),
+        ]
         signature = signature
 
 
         return self.collection.network.contract_call(
                 method_type = 'write',
-                contract_type='token',
-                address=self.collection.address,
-
+                contract_type='exchange',
                 gas_limit = TOKEN_BUY_GAS_LIMIT,
                 nonce_username = buyer_nonce,
                 tx_value = value,
 
-                function_name= 'makeExchangeERC721',
+                function_name= f'makeExchange{self.standart}',
                 input_params=(
                     idOrder,
                     SellerBuyer,
@@ -800,12 +828,19 @@ class Ownership(models.Model):
 
 class Tags(models.Model):
     name = models.CharField(max_length=30, unique=True)
+    icon = models.CharField(max_length=200, blank=True, null=True, default=None)
 
     def __str__(self):
         return self.name
 
     class Meta:
         verbose_name_plural = "Tags"
+
+    @property
+    def ipfs_icon(self):
+        if self.icon:
+            return "https://ipfs.io/ipfs/{ipfs}".format(ipfs=self.icon)
+
 
 class BidQuerySet(models.QuerySet):
     def committed(self):

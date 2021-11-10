@@ -1,3 +1,4 @@
+from src.store.services.ipfs import send_to_ipfs
 from src.store.models import (
     Bid, 
     Collection, 
@@ -6,6 +7,7 @@ from src.store.models import (
     Token,
     TransactionTracker,
 )
+from django import forms
 from django.contrib import admin
 from django.db import models
 from django.forms import CheckboxSelectMultiple
@@ -17,6 +19,30 @@ from django_celery_beat.models import (
     PeriodicTask,
     SolarSchedule,
 )
+
+
+class TagIconForm(forms.ModelForm):
+    set_icon = forms.FileField(required=False)
+
+    def save(self, commit=True):
+        set_icon = self.cleaned_data.get('set_icon', None)
+        icon = send_to_ipfs(set_icon)
+        self.instance.icon = icon
+        return super(TagIconForm, self).save(commit=commit)
+
+    class Meta:
+        model = Tags
+        fields = "__all__"
+
+
+class TagAdmin(admin.ModelAdmin):
+    form = TagIconForm
+    list_display = ('name', 'icon')
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'set_icon', 'icon', ),
+        }),
+    )
 
 
 class TokenStandartFilter(admin.SimpleListFilter):
@@ -102,7 +128,7 @@ class TxTrackerAdmin(admin.ModelAdmin):
     list_display = ('tx_hash', 'token', 'ownership', 'amount')
 
 
-admin.site.register(Tags)
+admin.site.register(Tags, TagAdmin)
 admin.site.register(Ownership, OwnershipAdmin)
 admin.site.register(Token, TokenAdmin)
 admin.site.register(Bid, BidAdmin)
