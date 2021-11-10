@@ -218,6 +218,7 @@ class HandlerMintTransferBurn(HandlerABC):
                 old_owner=token.creator,
                 new_owner=None,
                 method='Listing',
+                tx_hash=tx_hash,
                 amount=token.total_supply,
                 price=price,
             )
