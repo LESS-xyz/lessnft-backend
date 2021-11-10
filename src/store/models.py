@@ -152,17 +152,14 @@ class Collection(models.Model):
         self.save()
 
     def create_token(self, creator, ipfs, signature, amount):
-        '''
-        web3 = self.network.get_web3_connection()
-        tx_params = {
-            'chainId': web3.eth.chainId,
-            'gas': TOKEN_MINT_GAS_LIMIT,
-            'nonce': web3.eth.getTransactionCount(self.network.wrap_in_checksum(creator.username), 'pending'),
-            'gasPrice': web3.eth.gasPrice,
-        }
-        '''
         if self.standart == 'ERC721':
-            #tx_params['value'] = int(self.network.contract_call(
+            value = int(self.network.contract_call(
+                    method_type='read', 
+                    contract_type='erc721fabric',
+                    function_name='getFee',
+                    input_params=(),
+                    input_type=(),
+                    output_types=('uint256',),
             value = self.network.contract_call(
                 method_type='read', 
                 contract_type='erc721fabric',
@@ -173,8 +170,6 @@ class Collection(models.Model):
             )
             print(value)
 
-            #_, contract = self.network.get_erc721main_contract(self.address)
-            #initial_tx = contract.functions.mint(ipfs, signature).buildTransaction(tx_params)
             initial_tx = self.network.contract_call(
                 method_type = 'write',
                 contract_type='erc721main',
@@ -192,7 +187,7 @@ class Collection(models.Model):
                 input_type=('string', 'bytes')
             )
         else:
-            #tx_params['value'] = int(self.network.contract_call(
+
             value = self.network.contract_call(
                     method_type='read', 
                     contract_type='erc1155fabric',
@@ -202,9 +197,6 @@ class Collection(models.Model):
                     output_types=('uint256',),
                 )
 
-
-            #_, contract = self.network.get_erc1155main_contract(self.address)
-            #initial_tx = contract.functions.mint( int(amount), ipfs, signature).buildTransaction(tx_params)
             initial_tx = self.network.contract_call(
                 method_type = 'write',
                 contract_type='erc1155main',
@@ -242,26 +234,8 @@ class Collection(models.Model):
     def create_contract(cls, name, symbol, standart, owner, network):
         baseURI = ''
         signature = sign_message(['address'], [config.SIGNER_ADDRESS])
-        '''
-        web3 = network.get_web3_connection()
-        tx_params = {
-            'chainId': web3.eth.chainId,
-            'gas': COLLECTION_CREATION_GAS_LIMIT,
-            'nonce': web3.eth.getTransactionCount(network.wrap_in_checksum(owner.username), 'pending'),
-            'gasPrice': web3.eth.gasPrice,
-        }
-        '''
+
         if standart == 'ERC721':
-            #_, contract = network.get_erc721fabric_contract()
-            '''
-            return contract.functions.makeERC721(
-                name, 
-                symbol, 
-                baseURI, 
-                config.SIGNER_ADDRESS, 
-                signature
-            ).buildTransaction(tx_params)
-            '''
 
             return network.contract_call(
                 method_type = 'write',
@@ -282,7 +256,6 @@ class Collection(models.Model):
                 send = False
             )
 
-        #_, contract = network.get_erc1155fabric_contract()
         return network.contract_call(
                 method_type = 'write',
                 contract_type='erc1155fabric',
@@ -589,23 +562,7 @@ class Token(models.Model):
         return self.collection.network.get_erc1155main_contract(self.collection.address)
 
     def transfer(self, old_owner, new_owner, amount=None):
-        '''
-        web3, contract = self.get_main_contract()
-        tx_params = {
-            'chainId': web3.eth.chainId,
-            'gas': TOKEN_TRANSFER_GAS_LIMIT,
-            'nonce': web3.eth.getTransactionCount(self.collection.network.wrap_in_checksum(old_owner.username), 'pending'),
-            'gasPrice': web3.eth.gasPrice,
-        }
-        '''
         if self.standart == 'ERC721':
-            '''
-            return contract.functions.transferFrom(
-                self.collection.network.wrap_in_checksum(self.owner.username),
-                self.collection.network.wrap_in_checksum(new_owner),
-                self.internal_id,
-            ).buildTransaction(tx_params)
-            '''
             return self.collection.network.contract_call(
                 method_type = 'write',
                 contract_type='main',
@@ -623,15 +580,6 @@ class Token(models.Model):
                 ),
                 input_type=('string','string', 'uint256')
             )
-        '''
-        return contract.functions.safeTransferFrom(
-            self.collection.network.wrap_in_checksum(old_owner.username),
-            self.collection.network.wrap_in_checksum(new_owner),
-            self.internal_id,
-            int(amount),
-            old_owner.username,
-        ).buildTransaction(tx_params)
-        '''
         return self.collection.network.contract_call(
                 method_type = 'write',
                 contract_type='main',
@@ -655,17 +603,7 @@ class Token(models.Model):
 
 
     def burn(self, user=None, amount=None):
-        '''
-        web3, contract = self.get_main_contract()
-        tx_params = {
-            'chainId': web3.eth.chainId,
-            'gas': TOKEN_MINT_GAS_LIMIT,
-            'nonce': web3.eth.getTransactionCount(self.collection.network.wrap_in_checksum(user.username), 'pending'),
-            'gasPrice': web3.eth.gasPrice,
-        }
-        '''
         if self.standart == "ERC721":
-            #return contract.functions.burn(self.internal_id).buildTransaction(tx_params)
             return self.collection.network.contract_call(
                 method_type = 'write',
                 contract_type='main',
@@ -682,13 +620,6 @@ class Token(models.Model):
                 input_type=('uint256')
             )
 
-        '''
-        return contract.functions.burn(
-            self.collection.network.wrap_in_checksum(user.username),
-            self.internal_id, 
-            int(amount),
-        ).buildTransaction(tx_params)
-        '''
         return self.collection.network.contract_call(
                 method_type = 'write',
                 contract_type='main',
@@ -768,8 +699,6 @@ class Token(models.Model):
             types_list,
             values_list
         )
-        
-        #web3 = self.collection.network.get_web3_connection()
 
         buyer_nonce = buyer.username
         if auc:
