@@ -7,7 +7,7 @@ from src.store.models import Collection, Ownership, Token
 from src.store.serializers import CollectionSearchSerializer, TokenSerializer
 from src.utilities import get_page_slice
 from django.db.models import Count, Q
-
+from django.core.exceptions import ObjectDoesNotExist
 
 class Search:
     def user_search(self, **kwargs):
@@ -94,11 +94,19 @@ class Search:
         )
         # Below are the tokens in the form of a QUERYSET
         if owner:
+            try:
+                owner = AdvUser.objects.get_by_custom_url(owner[0])
+            except ObjectDoesNotExist:
+                owner = None
             tokens = tokens.filter(
                 Q(owner=owner) | Q(owners=owner),
             ).order_by("-id")
 
         if creator:
+            try:
+                creator = AdvUser.objects.get_by_custom_url(creator[0])
+            except ObjectDoesNotExist:
+                creator = None
             tokens = tokens.filter(creator=creator).order_by("-id")
 
         for word in words:

@@ -1,4 +1,6 @@
-from src.accounts.serializers import UserSlimSerializer
+import json
+
+from src.accounts.serializers import BaseAdvUserSerializer, UserSlimSerializer
 from src.activity.models import BidsHistory, TokenHistory, UserStat
 from src.rates.api import get_decimals
 from rest_framework import serializers
@@ -8,7 +10,6 @@ class TokenHistorySerializer(serializers.ModelSerializer):
     id = serializers.SerializerMethodField()
     name = serializers.SerializerMethodField()
     avatar = serializers.SerializerMethodField()
-    amount = serializers.SerializerMethodField()
     currency = serializers.CharField(source='token.currency')
 
     class Meta:
@@ -32,12 +33,11 @@ class TokenHistorySerializer(serializers.ModelSerializer):
     def get_avatar(self, obj):
         return obj.new_owner.avatar
 
-    def get_amount(self, obj):
-        return int(obj.price / get_decimals(obj.token.currency))
-
 
 class UserStatSerializer(serializers.ModelSerializer):
-    user = UserSlimSerializer()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['user'] = BaseAdvUserSerializer(context=self.context)
     price = serializers.SerializerMethodField()
 
     class Meta:
@@ -52,10 +52,13 @@ class UserStatSerializer(serializers.ModelSerializer):
         status = self.context.get("status")
         time_range = self.context.get("time_range")
         stat_status = getattr(obj, status)
-        return getattr(stat_status, time_range)
+        if isinstance(stat_status, str):
+            stat_status = json.loads(stat_status)
+            return stat_status[time_range]
 
 
 class BidsHistorySerializer(serializers.ModelSerializer):
+    user = UserSlimSerializer()
     amount = serializers.SerializerMethodField()
     currency = serializers.CharField(source='token.currency')
 
@@ -64,6 +67,7 @@ class BidsHistorySerializer(serializers.ModelSerializer):
         fields = (
             'id',
             'price',
+            'user',
             'date',
             'currency',
         )

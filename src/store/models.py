@@ -47,6 +47,10 @@ class CollectionQuerySet(models.QuerySet):
         return self.get(Q(id=collection_id) | Q(short_url=short_url))
 
     def user_collections(self, user, network=None):
+        if network:
+            return self.filter(status=Status.COMMITTED, network__name__icontains=network).filter(
+                Q(name__in=[config.COLLECTION_721, config.COLLECTION_1155]) | Q(creator=user)
+            )
         return self.filter(
             Q(name__in=[config.COLLECTION_721, config.COLLECTION_1155]) | Q(creator=user)
         )
@@ -156,15 +160,15 @@ class Collection(models.Model):
         '''
         if self.standart == 'ERC721':
             #tx_params['value'] = int(self.network.contract_call(
-            value = int(self.network.contract_call(
-                    method_type='read', 
-                    contract_type='erc721fabric',
-                    function_name='getFee',
-                    input_params=(),
-                    input_type=(),
-                    output_types=('uint256',),
-                )[0]
+            value = self.network.contract_call(
+                method_type='read', 
+                contract_type='erc721fabric',
+                function_name='getFee',
+                input_params=(),
+                input_type=(),
+                output_types=('uint256',),
             )
+            print(value)
 
             #_, contract = self.network.get_erc721main_contract(self.address)
             #initial_tx = contract.functions.mint(ipfs, signature).buildTransaction(tx_params)
@@ -186,15 +190,14 @@ class Collection(models.Model):
             )
         else:
             #tx_params['value'] = int(self.network.contract_call(
-            value = int(self.network.contract_call(
+            value = self.network.contract_call(
                     method_type='read', 
                     contract_type='erc1155fabric',
                     function_name='getFee',
                     input_params=(),
                     input_type=(),
                     output_types=('uint256',),
-                )[0]
-            )
+                )
 
 
             #_, contract = self.network.get_erc1155main_contract(self.address)
@@ -312,9 +315,9 @@ def collection_created_dispatcher(sender, instance, created, **kwargs):
 post_save.connect(collection_created_dispatcher, sender=Collection)
 
 def validate_nonzero(value):
-    if value == 0:
+    if value < 0:
         raise ValidationError(
-            _('Quantity %(value)s is not allowed'),
+            'Quantity %(value)s is not allowed',
             params={'value': value},
         )
 
@@ -715,6 +718,7 @@ class Token(models.Model):
         value = 0
         if address.lower() == '0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE'.lower():
             value = int(price) * int(token_count)
+        total_amount = int(price) * int(token_count)
         types_list = [
             'bytes32',
             'address',
@@ -735,14 +739,14 @@ class Token(models.Model):
             self.internal_id,
             token_amount,
             self.collection.network.wrap_in_checksum(address),
-            int(price) * int(token_count),
+            total_amount,
             [
                 self.collection.network.wrap_in_checksum(creator_address),
                 self.collection.network.wrap_in_checksum(fee_address),
             ],
             [
-                (int(self.creator_royalty / 100 * float(price) * int(token_count))), 
-                (int(self.currency.service_fee / 100 * float(price) * int(token_count)))
+                (int(self.creator_royalty / 100 * total_amount)),
+                (int(self.currency.service_fee / 100 * total_amount)),
             ],
             self.collection.network.wrap_in_checksum(buyer_address),
         ]
@@ -756,39 +760,8 @@ class Token(models.Model):
         buyer_nonce = buyer.username
         if auc:
             buyer_nonce = seller_address
-        '''
-        tx_params = {
-            'chainId': web3.eth.chainId,
-            'gas': TOKEN_BUY_GAS_LIMIT,
-            'nonce': web3.eth.getTransactionCount(
-                self.collection.network.wrap_in_checksum(buyer_nonce), 'pending'
-            ),
-            'gasPrice': web3.eth.gasPrice,
-        }
 
-        return contract.functions.makeExchangeERC721(
-            idOrder = id_order,
-            SellerBuyer = [self.collection.network.wrap_in_checksum(seller_address), self.collection.network.wrap_in_checksum(buyer.username)],
-            tokenToBuy = {
-                "tokenAddress": self.collection.network.wrap_in_checksum(self.collection.address),
-                'id': int(self.internal_id),
-                'amount': int(token_amount),
-            },
-            tokenToSell = {
-                'tokenAddress': self.collection.network.wrap_in_checksum(address),
-                'id': 0,
-                'amount': int(price) * int(token_count),
-            },
-            feeAddresses = [self.collection.network.wrap_in_checksum(self.creator.username), 
-                            self.collection.network.wrap_in_checksum(master_account.address)],
-            feeAmounts = [
-                (int(self.creator_royalty / 100 * float(price))),
-                (int(self.currency.service_fee / 100 * float(price)))
-            ],
-            signature = signature,
-        ).buildTransaction(tx_params)
-        '''
-        idOrder= id_order,
+        idOrder= id_order
         SellerBuyer = [
                         self.collection.network.wrap_in_checksum(seller_address), 
                         self.collection.network.wrap_in_checksum(buyer_address)
@@ -796,32 +769,31 @@ class Token(models.Model):
         tokenToBuy = {
                         "tokenAddress": self.collection.network.wrap_in_checksum(self.collection.ethereum_address),
                         'id': int(self.internal_id),
-                        'amount': int(token_amount),
+                        'amount': token_amount,
                     }
         tokenToSell = {
                         'tokenAddress': self.collection.network.wrap_in_checksum(address),
                         'id': 0,
-                        'amount': int(price) * int(token_count),
+                        'amount': total_amount,
                     }
         feeAddresses = [self.collection.network.wrap_in_checksum(creator_address),
                         self.collection.network.wrap_in_checksum(fee_address)
                     ]
         feeAmounts = [
-                (int(self.creator_royalty / 100 * float(price) * int(token_count))), 
-                (int(self.currency.service_fee / 100 * float(price) * int(token_count))),                    ]
+                (int(self.creator_royalty / 100 * total_amount)),
+                (int(self.currency.service_fee / 100 * total_amount)),
+        ]
         signature = signature
 
 
         return self.collection.network.contract_call(
                 method_type = 'write',
-                contract_type='token',
-                address=self.collection.network.exchange_address,
-
+                contract_type='exchange',
                 gas_limit = TOKEN_BUY_GAS_LIMIT,
                 nonce_username = buyer_nonce,
                 tx_value = value,
 
-                function_name= 'makeExchangeERC721',
+                function_name= f'makeExchange{self.standart}',
                 input_params=(
                     idOrder,
                     SellerBuyer,
@@ -913,12 +885,19 @@ class Ownership(models.Model):
 
 class Tags(models.Model):
     name = models.CharField(max_length=30, unique=True)
+    icon = models.CharField(max_length=200, blank=True, null=True, default=None)
 
     def __str__(self):
         return self.name
 
     class Meta:
         verbose_name_plural = "Tags"
+
+    @property
+    def ipfs_icon(self):
+        if self.icon:
+            return "https://ipfs.io/ipfs/{ipfs}".format(ipfs=self.icon)
+
 
 class BidQuerySet(models.QuerySet):
     def committed(self):

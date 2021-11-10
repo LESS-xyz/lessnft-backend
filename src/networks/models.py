@@ -221,7 +221,7 @@ class Network(models.Model):
         constant_result = response.json()["constant_result"][0]
         decoded_data = decode_hex(constant_result)
         result = decode_abi(output_types, decoded_data)
-        return result
+        return int(result[0])
 
     def execute_tron_write_method(self, **kwargs) -> 'initial_tx':
         input_params = kwargs.get('input_params')
@@ -230,7 +230,9 @@ class Network(models.Model):
         address = kwargs.get('address')
         contract_type = kwargs.get('contract_type')
         gas_limit = kwargs.get('gas_limit')
-        tx_value = kwargs.get('tx_value', 0)
+        tx_value = kwargs.get('tx_value')
+        if not tx_value:
+            tx_value = 0
         send = kwargs.get('send', False)
         print(contract_type, address)
         address_match = {
@@ -261,6 +263,10 @@ class Network(models.Model):
                 params.append({"type": input_types[i], "value": tron.toBytes(hexstr=input_params[i])})
             else:
                 params.append({"type": input_types[i], "value": input_params[i]})
+
+        print(input_params)
+        print(params)
+
 
         options = {
             'feeLimit': 1000000000,

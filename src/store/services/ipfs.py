@@ -43,7 +43,7 @@ def get_ipfs(token_id, contract) -> dict:
     collection = collection_model.objects.filter(address=contract.address).first()
     return collection.network.contract_call(
             method_type='read',
-            contract_type=f'erc{collection.standart.lower()}main',
+            contract_type=f'{collection.standart.lower()}main',
             address=collection.address,
             function_name='tokenURI',
             input_params=(token_id,),

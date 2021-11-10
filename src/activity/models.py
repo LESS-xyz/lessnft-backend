@@ -72,8 +72,9 @@ class TokenHistory(models.Model):
 
 def token_history_dispatcher(sender, instance, created, **kwargs):
     if instance.price and instance.token:
+        price = instance.price * instance.token.currency.get_decimals
         instance.USD_price = calculate_amount(
-            instance.price, 
+            price,
             instance.token.currency.symbol,
         )[0]
         post_save.disconnect(token_history_dispatcher, sender=sender)
@@ -95,7 +96,7 @@ class BidsHistory(models.Model):
 
 class UserStat(models.Model):
     network = models.ForeignKey('networks.Network', on_delete=models.CASCADE)
-    user = models.OneToOneField('accounts.AdvUser', on_delete=models.CASCADE)
+    user = models.ForeignKey('accounts.AdvUser', on_delete=models.CASCADE)
     seller = models.JSONField(blank=True, null=True, default=None)
     buyer = models.JSONField(blank=True, null=True, default=None)
     follows = models.JSONField(blank=True, null=True, default=None)

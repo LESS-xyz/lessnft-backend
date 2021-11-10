@@ -15,7 +15,7 @@ class DeployMixin:
     def parse_data_deploy(self, event) -> DeployData:
         return DeployData(
             collection_name=event["args"]["name"],
-            address=self.network.wrap_in_checksum(["args"]["newToken"]),
+            address=self.network.wrap_in_checksum(event["args"]["newToken"]),
             deploy_block=event["blockNumber"],
         )
 
@@ -70,6 +70,7 @@ class MintMixin:
         ).get_all_entries()
 
     def parse_data_mint(self, event) -> MintData:
+        print(event)
         token_id = event["args"].get("tokenId")
         if token_id is None:
             token_id = event["args"].get("id")
@@ -78,5 +79,5 @@ class MintMixin:
             new_owner=event["args"]["to"].lower(),
             old_owner=event["args"]["from"].lower(),
             tx_hash=event["transactionHash"].hex(),
-            amount=event["args"]["value"],
+            amount=event["args"].get("value", 1),
         )

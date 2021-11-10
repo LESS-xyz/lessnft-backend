@@ -1,5 +1,6 @@
 import random
 from decimal import Decimal
+from datetime import timedelta
 
 from src.accounts.models import AdvUser
 from src.activity.models import BidsHistory, TokenHistory, UserAction
@@ -34,6 +35,7 @@ from src.utilities import get_page_slice, sign_message
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
 from django.db.models import Count, Q, Sum
+from django.utils import timezone
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -114,7 +116,27 @@ class SearchView(APIView):
     @swagger_auto_schema(
         operation_description="post search pattern",
         manual_parameters=[
-            openapi.Parameter('network', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter(
+                "sort",
+                openapi.IN_QUERY,
+                type=openapi.TYPE_STRING,
+                description="Search by: items, users, collections",
+            ),
+            # openapi.Parameter("tags", openapi.IN_QUERY, type=openapi.TYPE_ARRAY),
+            openapi.Parameter("is_verified", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN),
+            openapi.Parameter("max_price", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
+            openapi.Parameter(
+                "order_by",
+                openapi.IN_QUERY,
+                type=openapi.TYPE_STRING,
+                description="For tokens: date, price, likes. \n For users: created, followers, tokens_created",
+            ),
+            openapi.Parameter("on_sale", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN),
+            openapi.Parameter("currency", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
+            openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("creator", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("owner", openapi.IN_QUERY, type=openapi.TYPE_STRING),
         ],
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
@@ -306,10 +328,10 @@ class GetLikedView(APIView):
         ],
     )
 
-    def get(self, request, address, page):
+    def get(self, request, user_id, page):
         network = request.query_params.get('network', config.DEFAULT_NETWORK)
         try:
-            user = AdvUser.objects.get(username=address)
+            user = AdvUser.objects.get_by_custom_url(user_id)
         except ObjectDoesNotExist:
             return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -410,15 +432,14 @@ class GetView(APIView):
             ownership.save()
 
         # add changes to listing
-        if status:
-            if price != old_price:
-                TokenHistory.objects.create(
-                    token=token,
-                    old_owner=user,
-                    amount=amount,
-                    price=price,
-                    method='Listing',
-                )
+        if price != old_price:
+            TokenHistory.objects.create(
+                token=token,
+                old_owner=user,
+                amount=amount,
+                price=price,
+                method='Listing',
+            )
 
         response_data = TokenFullSerializer(token, context={"user": request.user}).data
         return Response(response_data, status=status.HTTP_200_OK)
@@ -511,18 +532,20 @@ class GetCollectionView(APIView):
         operation_description="get collection info",
         manual_parameters=[
             openapi.Parameter('network', openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter('page', openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
         ],
         responses={200: CollectionSerializer, 400: 'collection not found'},
     )
 
-    def get(self, request, param, page):
-        network = request.query_params.get('network', config.DEFAULT_NETWORK)
+    def get(self, request, param):
+        page = request.query_params.get('page', 1)
         try:
             collection = Collection.objects.committed().get_by_short_url(param)
         except ObjectDoesNotExist:
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        attribute_dict = request.query_params
+        attribute_dict = dict(request.query_params)
+        attribute_dict.pop('network')
         '''
         Creating a dict of token attributes from query parameters in url, i.e.:
         {hair: [black, red, blone]
@@ -538,9 +561,9 @@ class GetCollectionView(APIView):
                 tokens = tokens.filter(**attribute_filter)
 
         # Serializing the list of filtered tokens
-        start, end = get_page_slice(page, len(tokens))
-        token_list = tokens[start:end]
-        response_data = CollectionSerializer(collection, context={"tokens": token_list}).data
+        start, end = get_page_slice(page, len(tokens), items_per_page=5)
+        tokens_count = len(tokens)
+        response_data = CollectionSerializer(collection, context={"tokens": tokens[start:end], "tokens_count": tokens_count}).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -626,7 +649,7 @@ class BuyTokenView(APIView):
 
 @api_view(http_method_names=['GET'])
 def get_tags(request):
-    tag_list = [tag.name for tag in Tags.objects.all()] 
+    tag_list = [{"title": tag.name, "icon": tag.ipfs_icon} for tag in Tags.objects.all()]
     return Response({'tags': tag_list}, status=status.HTTP_200_OK)
 
 
@@ -1114,17 +1137,17 @@ class GetMostBiddedView(APIView):
     '''
     View for get info for token with most bid count.
     '''
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    #permission_classes = [IsAuthenticatedOrReadOnly]
     @swagger_auto_schema(
         operation_description="get hot auction",
         responses={200: TokenFullSerializer, 401: not_found_response},
     )
 
     def get(self, request):
-        token = Token.objects.committed().annotate(bid_count=Count('bid')).order_by('-bid_count').first()
-        if not token:
-            return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
-        response_data = TokenFullSerializer(token, context={"user": request.user}).data
+        tokens = Token.objects.committed().annotate(bid_count=Count('bid')).filter(bid_count__gt=0).order_by('-bid_count')[:5]
+        if not tokens:
+            return Response('token not found', status=status.HTTP_404_NOT_FOUND)
+        response_data = TokenFullSerializer(tokens, many=True, context={"user": request.user}).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -1177,3 +1200,19 @@ class RemoveRejectView(APIView):
             return Response({"error": "Item type should be 'token' or 'collection'"}, status=status.HTTP_400_BAD_REQUEST)
         items[item_type].objects.filter(status=Status.PENDING, id=item_id).delete()
         return Response("success", status=status.HTTP_200_OK)
+
+
+@api_view(http_method_names=['GET'])
+def get_total_count(request):
+        tokens_count = Token.token_objects.committed().count()
+        verified_users_count = AdvUser.objects.filter(is_verificated=True).count()
+        collections_count = Collection.objects.exclude(name__in=(config.COLLECTION_721, config.COLLECTION_1155)).count()
+        time_delta = timezone.now() - timedelta(days=1)
+        users_active_daily = AdvUser.objects.filter(last_login__gte=time_delta).count()
+        response_data = {
+            "total_tokens": tokens_count,
+            "total_collections": collections_count,
+            "verified_users": verified_users_count,
+            "users_active_daily": users_active_daily,
+        }
+        return Response(response_data, status=status.HTTP_200_OK)
