@@ -709,18 +709,6 @@ class MakeBid(APIView):
         amount, _ = calculate_amount(amount, bid.token.currency.symbol)
 
         if allowance < amount * quantity:
-            '''
-            tx_params = {
-                'chainId': web3.eth.chainId,
-                'gas': APPROVE_GAS_LIMIT,
-                'nonce': web3.eth.getTransactionCount(bid.token.collection.network.wrap_in_checksum(user.username), 'pending'),
-                'gasPrice': web3.eth.gasPrice,
-            }
-            initial_tx = token_contract.functions.approve(
-                bid.token.collection.network.wrap_in_checksum(token.collection.network.exchange_address),
-                user_balance,
-            ).buildTransaction(tx_params)
-            '''
 
             initial_tx = bid.token.collection.network.contract_call(
                 method_type = 'write',
