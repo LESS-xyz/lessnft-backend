@@ -206,6 +206,22 @@ class HandlerMintTransferBurn(HandlerABC):
             price=None,
         )
 
+        if token.collection.standart == 'ERC721':
+            price = token.price
+        else:
+            price = token.ownership_set.first().price
+        if price:
+            price = price / token.currency.get_decimals
+        if token.is_selling or token.is_auc_selling:
+            TokenHistory.objects.create(
+                token=token,
+                old_owner=token.creator,
+                new_owner=None,
+                method='Listing',
+                amount=token.total_supply,
+                price=price,
+            )
+
     def burn_event(
         self,
         token: Token,
