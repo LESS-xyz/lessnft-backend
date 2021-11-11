@@ -975,14 +975,21 @@ def get_fee(request):
     return Response(currency.service_fee, status=status.HTTP_200_OK)
 
 
+@swagger_auto_schema(
+    methods=['get'], 
+    manual_parameters=[openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),], 
+    responses={200: TokenSerializer, 404: "Token not found"},
+)
 @api_view(http_method_names=['GET'])
 def get_random_token(request):
     network = request.query_params.get('network', config.DEFAULT_NETWORK)
     token_list = Token.objects.committed().network(network).filter(
         Q(owner__is_verificated=True) | Q(owners__is_verificated=True)
     )
+    if not token_list.exists():
+        return Response("Token not found", status=status.HTTP_404_NOT_FOUND)
     token = random.choice(token_list)
-    response_data = TokenSerializer(token, context={"user": request.user}).data
+    response_data = TokenSerializer(token).data
     return Response(response_data, status=status.HTTP_200_OK)
 
 
