@@ -94,10 +94,10 @@ class ActivitySerializer(serializers.Serializer):
     to_image = serializers.SerializerMethodField()
     to_address = serializers.SerializerMethodField()
     to_name = serializers.SerializerMethodField()
-    method = serializers.CharField(blank=True)
-    date = serializers.DateTimeField(blank=True)
-    id = serializers.IntegerField(blank=True)
-    is_viewed = serializers.BooleanField(blank=True)
+    method = serializers.CharField()
+    date = serializers.DateTimeField()
+    id = serializers.IntegerField()
+    is_viewed = serializers.BooleanField()
 
     def _get_user_from(self, obj):
         try:
@@ -134,7 +134,7 @@ class ActivitySerializer(serializers.Serializer):
     def get_currency(self, obj):
         if hasattr(obj, "currency"):
             currency = obj.currency.symbol if obj.currency else None
-        return currency
+            return currency
 
     def get_amount(self, obj):
         try:
