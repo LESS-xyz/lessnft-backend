@@ -363,6 +363,7 @@ class Token(models.Model):
     tx_hash = models.CharField(max_length=200, null=True, blank=True)
     ipfs = models.CharField(max_length=200, null=True, default=None)
     image = models.CharField(max_length=200, null=True, blank = True, default=None)
+    animation_file = models.CharField(max_length=200, null=True, blank = True, default=None)
     format = models.CharField(max_length=10, null=True, default='image')
     total_supply = models.PositiveIntegerField(validators=[validate_nonzero])
     currency_price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
@@ -396,10 +397,10 @@ class Token(models.Model):
 
     @property
     def animation(self):
-        ipfs = get_ipfs_by_hash(self.ipfs).get("animation_url")
-        if ipfs:
-            return ipfs
-        return None
+        if not self.animation_file:
+            self.animation_file = get_ipfs_by_hash(self.ipfs).get("animation_url")
+            self.save(update_fields=['animation_file'])
+        return self.animation_file
 
     @property
     def price(self):
