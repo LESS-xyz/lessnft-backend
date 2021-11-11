@@ -34,7 +34,7 @@ class BuyMixin:
     def parse_data_buy(self, event) -> BuyData:
         return BuyData(
             buyer=event["args"]["buyer"].lower(),
-            seller=event["args"]["seller"],
+            seller=event["args"]["seller"].lower(),
             price=event["args"]["buyAmount"],
             amount=event["args"]["sellAmount"],
             tx_hash=event["transactionHash"].hex(),
