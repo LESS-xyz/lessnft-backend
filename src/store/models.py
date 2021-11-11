@@ -153,13 +153,6 @@ class Collection(models.Model):
 
     def create_token(self, creator, ipfs, signature, amount):
         if self.standart == 'ERC721':
-            value = int(self.network.contract_call(
-                    method_type='read', 
-                    contract_type='erc721fabric',
-                    function_name='getFee',
-                    input_params=(),
-                    input_type=(),
-                    output_types=('uint256',),
             value = self.network.contract_call(
                 method_type='read', 
                 contract_type='erc721fabric',
