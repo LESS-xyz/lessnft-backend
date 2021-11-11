@@ -25,13 +25,16 @@ class TokenHistorySerializer(serializers.ModelSerializer):
         )
 
     def get_id(self, obj):
-        return obj.new_owner.id
+        if obj.new_owner:
+            return obj.new_owner.id
 
     def get_name(self, obj):
-        return obj.new_owner.get_name()
+        if obj.new_owner:
+            return obj.new_owner.get_name()
 
     def get_avatar(self, obj):
-        return obj.new_owner.avatar
+        if obj.new_owner:
+            return obj.new_owner.avatar
 
 
 class UserStatSerializer(serializers.ModelSerializer):
