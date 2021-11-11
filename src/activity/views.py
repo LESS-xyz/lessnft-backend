@@ -6,6 +6,7 @@ from src.activity.serializers import (
     BidsHistorySerializer,
     TokenHistorySerializer,
     UserStatSerializer,
+    ActivitySerializer
 )
 from src.activity.services.top_users import get_top_users
 from src.settings import config
@@ -24,7 +25,6 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .api import get_activity_response
 from .models import BidsHistory, TokenHistory, UserAction
 from .utils import quick_sort
 
@@ -113,11 +113,12 @@ class ActivityView(APIView):
             ).order_by("-date")
 
         quick_sort(activities)
-        items = get_activity_response(activities)[start:end]
-        response_data = {'total_items': total_items, 'items': items}
-        response_data = get_activity_response(activities)[start:end]
+        items = ActivitySerializer(activities, many=True).data
+        total_items = len(items)
+        response_data = {'total_items': total_items, 'items': items[start:end]}
         return Response(response_data, status=status.HTTP_200_OK)
 
+      
 class NotificationActivityView(APIView):
     """
     View for get user notifications
@@ -177,7 +178,7 @@ class NotificationActivityView(APIView):
         activities.extend(bids)
 
         quick_sort(activities)
-        response_data = get_activity_response(activities)[:end]
+        response_data = ActivitySerializer(activities, many=True).data[:end]
         return Response(response_data, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
@@ -364,7 +365,7 @@ class UserActivityView(APIView):
             activities.extend(bit)
 
         quick_sort(activities)
-        response_data = get_activity_response(activities)[start:end]
+        response_data = ActivitySerializer(activities, many=True).data[start:end]
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -473,7 +474,7 @@ class FollowingActivityView(APIView):
             activities.extend(bit)
 
         quick_sort(activities)
-        response_data = get_activity_response(activities)[start:end]
+        response_data = ActivitySerializer(activities, many=True).data[start:end]
         return Response(response_data, status=status.HTTP_200_OK)
 
 
