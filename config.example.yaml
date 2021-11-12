@@ -11,6 +11,9 @@ ALLOWED_HOSTS:
 
 IPFS_CLIENT: '' #IPFS client address
 
+# SCANNER
+SCANNER_SLEEP: 10
+ORACLE_ADDRESS: ''
 
 SORT_STATUSES:
     recent: '-updated_at'

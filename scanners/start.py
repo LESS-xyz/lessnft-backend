@@ -18,7 +18,7 @@ from scanners.scanners import (
 from src.networks.models import Network
 from src.rates.models import UsdRate
 from src.store.models import Collection
-
+from src.settings import config
 
 if __name__ == "__main__":
     networks = Network.objects.all()
@@ -57,7 +57,18 @@ if __name__ == "__main__":
     ##################################################
     #                  MINT SCANNER                  #
     ##################################################
-    collections = Collection.objects.committed()
+
+    # Tron
+    contract_address = config.ORACLE_ADDRESS
+    network = Network.objects.filter(network_type="tron").first()
+    ScannerAbsolute(
+        network=network,
+        handler=HandlerMintTransferBurn,
+        contract=contract_address,
+    ).start()
+
+    # Ethereum
+    collections = Collection.objects.committed().exclude(network__type="tron")
     for collection in collections:
         ScannerAbsolute(
             network=collection.network,
@@ -68,7 +79,7 @@ if __name__ == "__main__":
 
     while True:
         time.sleep(60)
-        updated_collections = Collection.objects.committed()
+        updated_collections = Collection.objects.committed().exclude(network__type="tron")
         new_collections = list(set(updated_collections) - set(collections))
 
         if new_collections:
@@ -80,4 +91,3 @@ if __name__ == "__main__":
                     contract_type=collection.standart,
                 ).start()
             collections = updated_collections
-
