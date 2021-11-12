@@ -650,7 +650,6 @@ class Token(models.Model):
                 price = self.price
             else:
                 price = Ownership.objects.get(token=self, owner=seller, selling=True).price
-        address = self.currency.address
         address = self.collection.network.get_ethereum_address(self.currency.address)
         creator_address = self.collection.network.get_ethereum_address(self.creator.username)
         buyer_address = self.collection.network.get_ethereum_address(buyer.username)
@@ -703,16 +702,16 @@ class Token(models.Model):
                         self.collection.network.wrap_in_checksum(seller_address), 
                         self.collection.network.wrap_in_checksum(buyer_address)
                     ]
-        tokenToBuy = {
-                        "tokenAddress": self.collection.network.wrap_in_checksum(self.collection.ethereum_address),
-                        'id': int(self.internal_id),
-                        'amount': token_amount,
-                    }
-        tokenToSell = {
-                        'tokenAddress': self.collection.network.wrap_in_checksum(address),
-                        'id': 0,
-                        'amount': total_amount,
-                    }
+        tokenToBuy = [
+                        self.collection.network.wrap_in_checksum(self.collection.ethereum_address),
+                        int(self.internal_id),
+                        token_amount,
+                    ]
+        tokenToSell = [
+                        self.collection.network.wrap_in_checksum(address),
+                        0,
+                        total_amount,
+                    ]
         feeAddresses = [self.collection.network.wrap_in_checksum(creator_address),
                         self.collection.network.wrap_in_checksum(fee_address)
                     ]
@@ -724,13 +723,13 @@ class Token(models.Model):
 
 
         return self.collection.network.contract_call(
-                method_type = 'write',
+                method_type='write',
                 contract_type='exchange',
-                gas_limit = TOKEN_BUY_GAS_LIMIT,
-                nonce_username = buyer_nonce,
-                tx_value = value,
+                gas_limit=TOKEN_BUY_GAS_LIMIT,
+                nonce_username=buyer_nonce,
+                tx_value=value,
 
-                function_name= f'makeExchange{self.standart}',
+                function_name=f'makeExchange{self.standart}',
                 input_params=(
                     idOrder,
                     SellerBuyer,
@@ -742,8 +741,8 @@ class Token(models.Model):
                     ),
                 input_type=('bytes32',
                             'address[2]',
-                            'tuple',
-                            'tuple',
+                            'uint256[3]',
+                            'uint256[3]',
                             'address[]',
                             'uint256[]',
                             'bytes',)
