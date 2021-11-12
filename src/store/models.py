@@ -702,16 +702,49 @@ class Token(models.Model):
                         self.collection.network.wrap_in_checksum(seller_address), 
                         self.collection.network.wrap_in_checksum(buyer_address)
                     ]
-        tokenToBuy = [
-                        self.collection.network.wrap_in_checksum(self.collection.ethereum_address),
-                        int(self.internal_id),
-                        token_amount,
-                    ]
-        tokenToSell = [
-                        self.collection.network.wrap_in_checksum(address),
-                        0,
-                        total_amount,
-                    ]
+        if self.collection.network.network_type == 'tron':
+            tokenToBuy = [
+                            self.collection.network.wrap_in_checksum(self.collection.ethereum_address),
+                            int(self.internal_id),
+                            token_amount,
+                        ]
+            tokenToSell = [
+                            self.collection.network.wrap_in_checksum(address),
+                            0,
+                            total_amount,
+                        ]
+            input_types = (
+                'bytes32',
+                'address[2]',
+                'uint256[3]',
+                'uint256[3]',
+                'address[]',
+                'uint256[]',
+                'bytes',
+            )
+
+        else:
+            tokenToBuy =  {
+                'tokenAddress': self.collection.network.wrap_in_checksum(self.collection.ethereum_address),
+                'id': int(self.internal_id),
+                'amount': token_amount
+            },
+            tokenToSell = {
+                'tokenAddress': self.collection.network.wrap_in_checksum(address),
+                'id': 0,
+                'amount': total_amount
+            },
+            input_types = (
+                'bytes32',
+                'address[2]',
+                'tuple',
+                'tuple',
+                'address[]',
+                'uint256[]',
+                'bytes',
+            )
+
+
         feeAddresses = [self.collection.network.wrap_in_checksum(creator_address),
                         self.collection.network.wrap_in_checksum(fee_address)
                     ]
@@ -739,13 +772,7 @@ class Token(models.Model):
                     feeAmounts,
                     signature,
                     ),
-                input_type=('bytes32',
-                            'address[2]',
-                            'uint256[3]',
-                            'uint256[3]',
-                            'address[]',
-                            'uint256[]',
-                            'bytes',)
+                input_type=input_types
             )
 
 
