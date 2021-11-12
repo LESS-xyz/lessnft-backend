@@ -34,16 +34,6 @@ services:
     command: ["python", "rates_checker.py"]
     networks:
       nft-net:
-  tx_tracker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    depends_on:
-      - db
-    restart: unless-stopped
-    command: ["python", "tx_tracker.py"]
-    networks:
-      nft-net:
   scanner:
     build:
       context: .
