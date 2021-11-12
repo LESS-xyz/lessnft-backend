@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from src.utilities import RedisClient
 from typing import Optional
 from src.accounts.models import AdvUser
+from src.settings import config
 
 
 class HandlerABC(ABC):
@@ -27,8 +28,7 @@ class ScannerABC(ABC):
         self.contract = contract
 
     def sleep(self) -> None:
-        # TODO: from config
-        time.sleep(10)
+        time.sleep(config.SCANNER_SLEEP)
 
     def save_last_block(self, name, block) -> None:
         redis_ = RedisClient()
@@ -80,3 +80,4 @@ class MintData:
     old_owner: str
     tx_hash: str
     amount: int
+    contract: Optional[str, None]

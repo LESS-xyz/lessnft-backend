@@ -100,14 +100,15 @@ class HandlerMintTransferBurn(HandlerABC):
     def save_event(self, event_data):
         data = self.scanner.parse_data_mint(event_data)
 
+        collection_address = data.contract or self.contract.address
         try:
             collection = Collection.objects.get(
                 network=self.network,
-                address=self.contract.address,
+                address=collection_address,
             )
         except Collection.DoesNotExist:
             logger.warning(
-                f"Collection not found. Network: {self.network}, address: {self.contract.address}"
+                f"Collection not found. Network: {self.network}, address: {collection_address}"
             )
             return
         token_id = data.token_id

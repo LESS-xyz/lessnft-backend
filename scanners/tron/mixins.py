@@ -76,13 +76,15 @@ class MintMixin:
         return events
 
     def parse_data_mint(self, event) -> MintData:
-        token_id = event["result"].get("tokenId")
+        result = event["result"]
+        token_id = result.get("tokenId")
         if token_id is None:
-            token_id = event["result"].get("id")
+            token_id = result.get("id")
         return MintData(
             token_id=token_id,
-            new_owner=event["result"]["to"].lower(),
-            old_owner=event["result"]["from"].lower(),
+            new_owner=result["to"].lower(),
+            old_owner=result["from"].lower(),
             tx_hash=event["transaction_id"].hex(),
-            amount=event["result"]["value"],
+            amount=result["value"],
+            contract=result.get("token"),
         )
