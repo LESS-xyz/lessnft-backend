@@ -80,3 +80,4 @@ class MintData:
     old_owner: str
     tx_hash: str
     amount: int
+    contract: Optional[str, None]
