@@ -35,6 +35,8 @@ class Config:
     DEBUG: bool
 
     IPFS_CLIENT: str
+    SCANNER_SLEEP: int 
+    ORACLE_ADDRESS: str
     
     @dataclass
     class SortStatus:

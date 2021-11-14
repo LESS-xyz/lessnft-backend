@@ -68,7 +68,7 @@ if __name__ == "__main__":
     ).start()
 
     # Ethereum
-    collections = Collection.objects.committed().exclude(network__type="tron")
+    collections = Collection.objects.committed().exclude(network__network_type="tron")
     for collection in collections:
         ScannerAbsolute(
             network=collection.network,
@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
     while True:
         time.sleep(60)
-        updated_collections = Collection.objects.committed().exclude(network__type="tron")
+        updated_collections = Collection.objects.committed().exclude(network__network_type="tron")
         new_collections = list(set(updated_collections) - set(collections))
 
         if new_collections:

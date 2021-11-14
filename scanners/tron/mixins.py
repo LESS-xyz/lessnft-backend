@@ -68,7 +68,7 @@ class ApproveMixin:
 
 class MintMixin:
     def get_events_mint(self, last_checked_block, last_network_block):
-        collection_address = self.contract.address
+        collection_address = self.contract
 
         event_name = 'Transfer'
         url = self.build_tronapi_url(last_checked_block, last_network_block, collection_address, event_name)

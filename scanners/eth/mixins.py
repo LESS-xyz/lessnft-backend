@@ -80,4 +80,5 @@ class MintMixin:
             old_owner=event["args"]["from"].lower(),
             tx_hash=event["transactionHash"].hex(),
             amount=event["args"].get("value", 1),
+            contract = None,
         )
