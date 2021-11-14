@@ -1,4 +1,3 @@
-from loguru import logger
 import threading
 from decimal import Decimal
 
@@ -42,14 +41,8 @@ class ScannerAbsolute(threading.Thread):
         name += f"_{self.contract_type}" if self.contract_type else ""
         return name
 
-    @logger.catch
     @never_fall
     def start_polling(self) -> None:
-        logger.add(
-            f"logs/scanner_{self.handler.TYPE}.log",
-            format="{time:DD.MM.YYYY HH:mm:ss} | {level} | {message}",
-            level="DEBUG",
-        )
         while True:
 
             scanner = get_scanner(self.network, self.contract_type, self.contract)
@@ -80,7 +73,7 @@ class HandlerDeploy(HandlerABC):
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_deploy(event_data)
-        logger.debug(f"New event: {data}")
+        self.logger.debug(f"New event: {data}")
 
         collection = Collection.objects.filter(
             name__iexact=data.collection_name,
@@ -107,7 +100,7 @@ class HandlerMintTransferBurn(HandlerABC):
                 address=collection_address,
             )
         except Collection.DoesNotExist:
-            logger.warning(
+            self.logger.warning(
                 f"Collection not found. Network: {self.network}, address: {collection_address}"
             )
             return
@@ -122,11 +115,11 @@ class HandlerMintTransferBurn(HandlerABC):
             is_mint=bool(data.old_owner == self.scanner.EMPTY_ADDRESS.lower()),
         )
         if token is None:
-            logger.warning(f"Token not found")
+            self.logger.warning(f"Token not found")
             return
 
         if data.old_owner == self.scanner.EMPTY_ADDRESS.lower():
-            logger.debug(f"New mint event: {data}")
+            self.logger.debug(f"New mint event: {data}")
             self.mint_event(
                 token=token,
                 token_id=token_id,
@@ -134,7 +127,7 @@ class HandlerMintTransferBurn(HandlerABC):
                 new_owner=new_owner,
             )
         elif data.new_owner == self.scanner.EMPTY_ADDRESS.lower():
-            logger.debug(f"New burn event: {data}")
+            self.logger.debug(f"New burn event: {data}")
             self.burn_event(
                 token=token,
                 tx_hash=data.tx_hash,
@@ -148,7 +141,7 @@ class HandlerMintTransferBurn(HandlerABC):
                 amount=data.amount,
             )
         else:
-            logger.debug(f"New transfer event: {data}")
+            self.logger.debug(f"New transfer event: {data}")
 
             if TokenHistory.objects.filter(tx_hash=data.tx_hash).exists():
                 return
@@ -292,7 +285,7 @@ class HandlerMintTransferBurn(HandlerABC):
             try:
                 ownership = Ownership.objects.get(owner=old_owner, token=token)
             except Ownership.DoesNotExist:
-                logger.warning(
+                self.logger.warning(
                     f"Ownership is not found: owner {old_owner}, token {token}"
                 )
                 return
@@ -320,7 +313,7 @@ class HandlerBuy(HandlerABC):
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_buy(event_data)
-        logger.debug(f"New event: {data}")
+        self.logger.debug(f"New event: {data}")
 
         token = Token.objects.get(
             collection__address=data.collection_address,
@@ -368,7 +361,7 @@ class HandlerBuy(HandlerABC):
             try:
                 owner = Ownership.objects.get(owner=old_owner, token=token)
             except Ownership.DoesNotExist:
-                logger.warning(f"Ownership not found owner {old_owner}, token {token}")
+                self.logger.warning(f"Ownership not found owner {old_owner}, token {token}")
                 return
             owner.quantity = max(owner.quantity - data.amount, 0)
             if owner.quantity:
@@ -411,7 +404,7 @@ class HandlerApproveBet(HandlerABC):
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_approve(event_data)
-        logger.debug(f"New event: {data}")
+        self.logger.debug(f"New event: {data}")
 
         if data.exchange != self.network.exchange_address:
             return

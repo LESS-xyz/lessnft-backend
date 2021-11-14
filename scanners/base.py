@@ -5,6 +5,11 @@ from src.utilities import RedisClient
 from typing import Optional
 from src.accounts.models import AdvUser
 from src.settings import config
+import logging
+
+
+_log_format = f"%(asctime)s - [%(levelname)s] - %(filename)s (line %(lineno)d) - %(message)s"
+_datetime_format = '%d.%m.%Y %H:%M:%S'
 
 
 class HandlerABC(ABC):
@@ -12,9 +17,29 @@ class HandlerABC(ABC):
         self.network = network
         self.scanner = scanner
         self.contract = contract
+        self.logger = self.get_logger(f"scanner_{self.TYPE}_{self.network}")
 
     def get_owner(self, owner_address: str) -> Optional[AdvUser]:
         return AdvUser.objects.filter(username=owner_address).first()
+
+    def get_file_handler(self, name):
+        file_handler = logging.FileHandler(f"logs/{name}.log")
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(logging.Formatter(_log_format, datefmt=_datetime_format))
+        return file_handler
+
+    def get_stream_handler(self):
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.DEBUG)
+        stream_handler.setFormatter(logging.Formatter(_log_format, datefmt=_datetime_format))
+        return stream_handler
+
+    def get_logger(self, name):
+        logger = logging.getLogger(name)
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(self.get_file_handler(name))
+        logger.addHandler(self.get_stream_handler())
+        return logger
 
     @abstractmethod
     def save_event(self) -> None:
