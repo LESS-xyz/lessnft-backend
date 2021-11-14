@@ -11,13 +11,21 @@ import logging
 _log_format = f"%(asctime)s - [%(levelname)s] - %(filename)s (line %(lineno)d) - %(message)s"
 _datetime_format = '%d.%m.%Y %H:%M:%S'
 
+loggers = {}
+
 
 class HandlerABC(ABC):
     def __init__(self, network, scanner, contract=None) -> None:
         self.network = network
         self.scanner = scanner
         self.contract = contract
-        self.logger = self.get_logger(f"scanner_{self.TYPE}_{self.network}")
+
+        logger_name = f"scanner_{self.TYPE}_{self.network}"
+
+        # This is necessary so that records are not duplicated.
+        if not loggers.get(logger_name):
+            loggers[logger_name] = self.get_logger(logger_name)
+        self.logger = loggers.get(logger_name)
 
     def get_owner(self, owner_address: str) -> Optional[AdvUser]:
         return AdvUser.objects.filter(username=owner_address).first()
