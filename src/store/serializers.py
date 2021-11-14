@@ -236,7 +236,7 @@ class TokenSerializer(serializers.ModelSerializer):
         return obj.creator_royalty
 
     def get_tags(self, obj):
-        return [{"value": tag.name, "media": tag.ipfs_media} for tag in obj.tags.all()]
+        return [{"value": tag.name, "media": tag.ipfs_icon} for tag in obj.tags.all()]
 
     def get_network(self, obj):
         network = obj.currency.network

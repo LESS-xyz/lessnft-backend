@@ -112,7 +112,7 @@ class Search:
         for word in words:
             tokens = tokens.filter(name__icontains=word)
 
-        if tags is not None:
+        if tags and tags[0]:
             tags = tags[0].split(",")
             tokens = tokens.filter(tags__name__in=tags).distinct()
 
