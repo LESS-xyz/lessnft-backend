@@ -7,34 +7,21 @@ from rest_framework import serializers
 
 
 class TokenHistorySerializer(serializers.ModelSerializer):
-    id = serializers.SerializerMethodField()
-    name = serializers.SerializerMethodField()
-    avatar = serializers.SerializerMethodField()
-    currency = serializers.CharField(source='token.currency')
+    new_owner = UserSlimSerializer()
+    old_owner = UserSlimSerializer()
 
     class Meta:
         model = TokenHistory
         fields = (
             'id',
-            'name',
-            'avatar',
-            'method',
             'date',
+            'method',
+            'new_owner',
+            'old_owner',
             'price',
-            'currency',
+            'USD_price',
+            'amount',
         )
-
-    def get_id(self, obj):
-        if obj.new_owner:
-            return obj.new_owner.id
-
-    def get_name(self, obj):
-        if obj.new_owner:
-            return obj.new_owner.get_name()
-
-    def get_avatar(self, obj):
-        if obj.new_owner:
-            return obj.new_owner.avatar
 
 
 class UserStatSerializer(serializers.ModelSerializer):
