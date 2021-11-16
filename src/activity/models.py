@@ -103,3 +103,12 @@ class UserStat(models.Model):
 
     def __str__(self):
         return self.user.get_name()
+
+
+class CollectionStat(models.Model):
+    collection = models.ForeignKey('store.Collection', on_delete=models.CASCADE)
+    date = models.DateField()
+    amount = models.DecimalField(max_digits=18, decimal_places=2, default=None, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.collection} {self.date}"

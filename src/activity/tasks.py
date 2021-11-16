@@ -1,5 +1,6 @@
 from celery import shared_task
 from src.activity.services.top_users import update_users_stat
+from src.activity.services.top_collections import update_collection_stat
 from src.networks.models import Network
 
 
@@ -9,3 +10,8 @@ def update_top_users_info():
     networks = Network.objects.all()
     for network in networks:
         update_users_stat(network)
+
+
+@shared_task(name="update_collection_stat_info")
+def update_collection_stat_info():
+    update_collection_stat()

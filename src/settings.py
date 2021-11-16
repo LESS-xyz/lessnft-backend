@@ -1,6 +1,3 @@
-from django.utils import timezone
-from datetime import timedelta
-
 import os
 
 #from .config import *
@@ -166,10 +163,3 @@ SHELL_PLUS = 'ptpython'
 #    'from module.submodule3 import *',
 #    'import module.submodule4',
 #]
-
-PERIODS = {
-    'day': timezone.now() - timedelta(days=1),
-    'week': timezone.now() - timedelta(days=7),
-    'month': timezone.now() - timedelta(days=30),
-    'year': timezone.now() - timedelta(days=365)
-}

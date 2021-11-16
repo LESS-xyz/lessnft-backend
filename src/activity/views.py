@@ -8,7 +8,7 @@ from src.activity.serializers import (
     UserStatSerializer,
     ActivitySerializer
 )
-from src.activity.services.top_users import get_top_users
+from src.activity.services.top_users import get_top_users, get_top_collections
 from src.settings import config
 from src.store.models import Token
 from src.networks.models import Network
@@ -475,6 +475,27 @@ class FollowingActivityView(APIView):
 
         quick_sort(activities)
         response_data = ActivitySerializer(activities, many=True).data[start:end]
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class GetTopCollectionsView(APIView):
+    @swagger_auto_schema(
+        operation_description="get top collections",
+        manual_parameters=[
+            openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter(
+                "sort_period", 
+                openapi.IN_QUERY,
+                required=True,
+                type=openapi.TYPE_STRING, 
+                description="day, week, month",
+            ),
+        ],
+    )
+    def get(self, request):
+        sort_period = request.query_params.get("sort_period", "month")   # day, week, month
+        network = request.query_params.get("network", config.DEFAULT_NETWORK)
+        response_data = get_top_collections(network, sort_period)
         return Response(response_data, status=status.HTTP_200_OK)
 
 

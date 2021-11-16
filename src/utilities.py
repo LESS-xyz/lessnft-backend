@@ -1,9 +1,12 @@
+from django.utils import timezone
+from datetime import timedelta
+
 from eth_account import Account
 from web3 import Web3
 from typing import Tuple
 import redis
 
-from src.settings import config, PERIODS
+from src.settings import config
 
 
 class RedisClient:
@@ -43,7 +46,14 @@ def get_page_slice(page: int, items_length: int = None, items_per_page: int = 50
         end = page * items_per_page 
     return start, end
 
-def get_periods(*args):
+def get_periods(*args, **kwargs):
+    from_date = kwargs.get('from_date') or timezone.now()
+    PERIODS = {
+        'day': from_date - timedelta(days=1),
+        'week': from_date - timedelta(days=7),
+        'month': from_date - timedelta(days=30),
+        'year': from_date - timedelta(days=365)
+    }
     periods = {}
     for key in args:
         periods[key] = PERIODS[key]
