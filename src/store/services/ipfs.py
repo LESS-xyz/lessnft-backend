@@ -35,18 +35,16 @@ def send_to_ipfs(media):
     file_res = client.add(media)
     return file_res["Hash"]
 
-def get_ipfs(token_id, contract) -> dict:
+def get_ipfs(token_id, collection) -> dict:
     """
     return ipfs by token
     """
-    collection_model = apps.get_model('store.Collection')
-    collection = collection_model.objects.filter(address=contract.address).first()
     return collection.network.contract_call(
             method_type='read',
             contract_type=f'{collection.standart.lower()}main',
             address=collection.address,
             function_name='tokenURI',
-            input_params=(token_id,),
+            input_params=(int(token_id),),
             input_type=('uint256',),
             output_types=('string',),
     )

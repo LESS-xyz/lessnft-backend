@@ -259,7 +259,7 @@ class Collection(models.Model):
                 function_name= 'makeERC1155',
                 input_params=(
                     name,
-                    symbol,
+                    baseURI,
                     config.SIGNER_ADDRESS,
                     signature
                 ),
@@ -559,7 +559,7 @@ class Token(models.Model):
         if self.standart == 'ERC721':
             return self.collection.network.contract_call(
                 method_type = 'write',
-                contract_type='main',
+                contract_type='erc721main',
                 address=self.collection.address,
 
                 gas_limit = TOKEN_TRANSFER_GAS_LIMIT,
@@ -568,15 +568,16 @@ class Token(models.Model):
 
                 function_name= 'transferFrom',
                 input_params=(
-                    self.collection.network.wrap_in_checksum(self.owner.username),
-                    self.collection.network.wrap_in_checksum(new_owner), 
+                    self.collection.network.get_ethereum_address(old_owner.username),
+                    self.collection.network.get_ethereum_address(new_owner), 
                     self.internal_id,
                 ),
-                input_type=('string','string', 'uint256')
+                input_type=('string','string', 'uint256'),
+                is1155=False,
             )
         return self.collection.network.contract_call(
                 method_type = 'write',
-                contract_type='main',
+                contract_type='erc1155main',
                 address=self.collection.address,
 
                 gas_limit = TOKEN_TRANSFER_GAS_LIMIT,
@@ -589,9 +590,10 @@ class Token(models.Model):
                     self.collection.network.wrap_in_checksum(new_owner), 
                     self.internal_id,
                     int(amount),
-                    old_owner.username,
+                    '0x00',
                 ),
-                input_type=('string','string', 'uint256', 'uint256', 'string')
+                input_type=('string','string', 'uint256', 'uint256', 'string'),
+                is1155=True,
             )
 
 
@@ -600,7 +602,7 @@ class Token(models.Model):
         if self.standart == "ERC721":
             return self.collection.network.contract_call(
                 method_type = 'write',
-                contract_type='main',
+                contract_type='erc721main',
                 address=self.collection.address,
 
                 gas_limit = TOKEN_MINT_GAS_LIMIT,
@@ -611,12 +613,13 @@ class Token(models.Model):
                 input_params=(
                     self.internal_id,
                 ),
-                input_type=('uint256')
+                input_type=('uint256',),
+                is1155=False,
             )
 
         return self.collection.network.contract_call(
                 method_type = 'write',
-                contract_type='main',
+                contract_type='erc1155main',
                 address=self.collection.address,
 
                 gas_limit = TOKEN_MINT_GAS_LIMIT,
@@ -629,7 +632,8 @@ class Token(models.Model):
                     self.internal_id,
                     int(amount),
                 ),
-                input_type=('string', 'uint256', 'uint256')
+                input_type=('string', 'uint256', 'uint256'),
+                is1155=True,
             )
 
 
@@ -697,7 +701,7 @@ class Token(models.Model):
         if auc:
             buyer_nonce = seller_address
 
-        idOrder= id_order
+        idOrder = id_order
         SellerBuyer = [
                         self.collection.network.wrap_in_checksum(seller_address), 
                         self.collection.network.wrap_in_checksum(buyer_address)
@@ -705,13 +709,13 @@ class Token(models.Model):
         if self.collection.network.network_type == 'tron':
             tokenToBuy = [
                             self.collection.network.wrap_in_checksum(self.collection.ethereum_address),
-                            int(self.internal_id),
+                            self.internal_id,
                             token_amount,
                         ]
             tokenToSell = [
                             self.collection.network.wrap_in_checksum(address),
                             0,
-                            total_amount,
+                            int(total_amount),
                         ]
             input_types = (
                 'bytes32',
@@ -727,13 +731,13 @@ class Token(models.Model):
             tokenToBuy =  {
                 'tokenAddress': self.collection.network.wrap_in_checksum(self.collection.ethereum_address),
                 'id': int(self.internal_id),
-                'amount': token_amount
-            },
+                'amount': int(token_amount),
+            }
             tokenToSell = {
                 'tokenAddress': self.collection.network.wrap_in_checksum(address),
                 'id': 0,
-                'amount': total_amount
-            },
+                'amount': total_amount,
+            }
             input_types = (
                 'bytes32',
                 'address[2]',
@@ -744,16 +748,14 @@ class Token(models.Model):
                 'bytes',
             )
 
-
         feeAddresses = [self.collection.network.wrap_in_checksum(creator_address),
                         self.collection.network.wrap_in_checksum(fee_address)
                     ]
         feeAmounts = [
                 (int(self.creator_royalty / 100 * total_amount)),
-                (int(self.currency.service_fee / 100 * total_amount)),
+                (int(self.currency.service_fee / 100 * total_amount))
         ]
         signature = signature
-
 
         return self.collection.network.contract_call(
                 method_type='write',
@@ -902,7 +904,7 @@ class TransactionTracker(models.Model):
     amount = models.PositiveSmallIntegerField(null=True, blank=True, default=None)
 
     def __str__(self):
-        return self.tx_hash
+        return f"Tracker hash - {self.tx_hash}"
     
     @property
     def item(self):

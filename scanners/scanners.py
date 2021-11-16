@@ -37,7 +37,9 @@ class ScannerAbsolute(threading.Thread):
     @property
     def block_name(self) -> str:
         name = f"{self.handler.TYPE}_{self.network.name}"
-        name += f"_{self.contract}" if self.contract else ""
+        if self.contract:
+            contract = self.contract if type(self.contract) == str else self.contract.address
+            name += f"_{contract}"
         name += f"_{self.contract_type}" if self.contract_type else ""
         return name
 
@@ -49,7 +51,7 @@ class ScannerAbsolute(threading.Thread):
             last_checked_block = scanner.get_last_block(self.block_name)
             last_network_block = scanner.get_last_network_block()
 
-            if last_network_block - last_checked_block < 2:
+            if last_network_block - last_checked_block < 8:
                 scanner.sleep()
                 continue
 
@@ -58,10 +60,16 @@ class ScannerAbsolute(threading.Thread):
                 last_network_block = last_checked_block + 4990
 
             handler = self.handler(self.network, scanner, self.contract)
-            event_list = getattr(scanner, f"get_events_{handler.TYPE}")(
-                last_checked_block,
-                last_network_block,
-            )
+
+            try:
+                event_list = getattr(scanner, f"get_events_{handler.TYPE}")(
+                    last_checked_block,
+                    last_network_block,
+                )
+            except Exception as e:
+                print.error(f'error {e}')
+                event_list = []
+
             if event_list:
                 list(map(handler.save_event, event_list))
             scanner.save_last_block(self.block_name, last_network_block)
@@ -92,12 +100,11 @@ class HandlerMintTransferBurn(HandlerABC):
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_mint(event_data)
-
         collection_address = data.contract or self.contract.address
         try:
             collection = Collection.objects.get(
                 network=self.network,
-                address=collection_address,
+                address__iexact=collection_address,
             )
         except Collection.DoesNotExist:
             self.logger.warning(
@@ -111,7 +118,6 @@ class HandlerMintTransferBurn(HandlerABC):
         token = self.get_buyable_token(
             token_id=token_id,
             collection=collection,
-            smart_contract=self.contract,
             is_mint=bool(data.old_owner == self.scanner.EMPTY_ADDRESS.lower()),
         )
         if token is None:
@@ -165,11 +171,10 @@ class HandlerMintTransferBurn(HandlerABC):
         self,
         token_id: int,
         collection: Collection,
-        smart_contract,
         is_mint: bool,
     ) -> Token:
         if is_mint:
-            ipfs = get_ipfs(token_id, smart_contract)
+            ipfs = get_ipfs(token_id, collection)
             return Token.objects.filter(
                 ipfs=ipfs,
                 collection=collection,
@@ -226,12 +231,12 @@ class HandlerMintTransferBurn(HandlerABC):
     ) -> None:
         if token.standart == "ERC721":
             token.status = Status.BURNED
-            token.first().bid_set.all().delete()
+            token.bid_set.all().delete()
         else:
             token.total_supply = max(token.total_supply - amount, 0)
             if token.total_supply == 0:
                 token.status = Status.BURNED
-                token.first().bid_set.all().delete()
+                token.bid_set.all().delete()
         token.save()
         TokenHistory.objects.get_or_create(
             token=token,
@@ -289,7 +294,7 @@ class HandlerMintTransferBurn(HandlerABC):
                     f"Ownership is not found: owner {old_owner}, token {token}"
                 )
                 return
-            ownership.quantity = max(ownership.quantity - amount, 0)
+            ownership.quantity = max(int(ownership.quantity) - int(amount), 0)
             ownership.save()
             if ownership.quantity <= 0:
                 ownership.delete()
@@ -316,7 +321,7 @@ class HandlerBuy(HandlerABC):
         self.logger.debug(f"New event: {data}")
 
         token = Token.objects.get(
-            collection__address=data.collection_address,
+            collection__address__iexact=data.collection_address,
             internal_id=data.token_id,
         )
 
@@ -355,7 +360,7 @@ class HandlerBuy(HandlerABC):
                 token=token,
                 quantity=data.amount,
             )
-            token.owners.add(owner)
+            token.owners.add(new_owner)
 
         if not token_history.exists():
             try:
@@ -384,7 +389,7 @@ class HandlerBuy(HandlerABC):
         old_owner = self.get_owner(data.seller)
 
         decimals = token.currency.get_decimals
-        price = Decimal(data.price / decimals)
+        price = Decimal(int(data.price) / int(decimals))
 
         TokenHistory.objects.update_or_create(
             tx_hash=data.tx_hash,

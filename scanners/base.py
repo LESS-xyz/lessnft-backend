@@ -28,7 +28,7 @@ class HandlerABC(ABC):
         self.logger = loggers.get(logger_name)
 
     def get_owner(self, owner_address: str) -> Optional[AdvUser]:
-        return AdvUser.objects.filter(username=owner_address).first()
+        return AdvUser.objects.filter(username__iexact=owner_address).first()
 
     def get_file_handler(self, name):
         file_handler = logging.FileHandler(f"logs/{name}.log")

@@ -9,6 +9,7 @@ class Scanner(
     BuyMixin,
     MintMixin,
     ):
+    EMPTY_ADDRESS = 't9yd14nj9j7xab4dbgeix9h8unkkhxuwwb'
 
     def get_tron_instance(self):
         provider = HttpProvider(self.network.endpoint)
@@ -33,3 +34,7 @@ class Scanner(
     def get_last_network_block(self):
         tron = self.get_tron_instance()
         return tron.trx.get_block('latest')['block_header']['raw_data']['number']
+
+    def to_tron_address(self, address):
+        tron = Tron()
+        return tron.address.from_hex(address.replace('0x', '41')).decode()

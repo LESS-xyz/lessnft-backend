@@ -104,7 +104,7 @@ class Network(models.Model):
     def get_ethereum_address(self, address):
         if self.network_type == Types.tron:
             return Web3.toChecksumAddress('0x' + TronAddress.to_hex(address)[2:])
-        return address
+        return Web3.toChecksumAddress(address)
 
     def wrap_in_checksum(self, address: str) -> str:
         """ Wrap address to checksum because calling web3 for tron will return an error """
@@ -203,11 +203,14 @@ class Network(models.Model):
                 print(f'could not get contract address for {contract_type} in {self.name}')
                 raise "backend didn't found contract address"
         address = TronAddress.to_hex(address)
+        function = tron_function_selector(function_name, input_types)
+        if len(input_params) == 1:
+            function = function.replace(',', '')
         payload = {
             #"visible": True,
             "owner_address": config.SIGNER_ADDRESS.replace('0x', '41'),
             "contract_address": address,
-            "function_selector": tron_function_selector(function_name, input_types),
+            "function_selector": function,
             "parameter": input_data,
         }
         print(payload)
@@ -221,7 +224,7 @@ class Network(models.Model):
         constant_result = response.json()["constant_result"][0]
         decoded_data = decode_hex(constant_result)
         result = decode_abi(output_types, decoded_data)
-        return int(result[0])
+        return result[0]
 
     def execute_tron_write_method(self, **kwargs) -> 'initial_tx':
         input_params = kwargs.get('input_params')
@@ -231,6 +234,7 @@ class Network(models.Model):
         contract_type = kwargs.get('contract_type')
         gas_limit = kwargs.get('gas_limit')
         tx_value = kwargs.get('tx_value')
+        is1155 = kwargs.get('is1155')
         if not tx_value:
             tx_value = 0
         send = kwargs.get('send', False)
@@ -281,8 +285,10 @@ class Network(models.Model):
             'function': tron_function_selector(function_name, input_types),
             'fee_limit': 1000000000,
             'options': options,
-            'parameter': params
+            'parameter': params, 
         }
+        if function_name in ('transferFrom', 'safeTransferFrom', 'burn'):
+            initial_tx['is1155'] = is1155
 
         print(params)
 
