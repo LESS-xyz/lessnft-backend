@@ -52,12 +52,10 @@ class Config:
 
     @dataclass
     class UsdRate:
-       # rate: float
         coin_node: str
         symbol: str
         name: str
         image: str
-        #updated_at: str
         address: str
         decimal: int
         network: int
