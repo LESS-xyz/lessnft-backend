@@ -8,7 +8,8 @@ from src.activity.serializers import (
     UserStatSerializer,
     ActivitySerializer
 )
-from src.activity.services.top_users import get_top_users, get_top_collections
+from src.activity.services.top_users import get_top_users
+from src.activity.services.top_collections import get_top_collections
 from src.settings import config
 from src.store.models import Token
 from src.networks.models import Network
@@ -576,8 +577,15 @@ class GetPriceHistory(APIView):
         ).values(period).annotate(avg_price=Avg('price')).values(period, 'avg_price')
 
         listing_history = {h.get(period): h.get('avg_price') for h in listing_history}
+
+        if period=='day':
+            delta = timedelta(hours=1)
+        elif period=='year':
+            delta = timedelta(days=30)
+        else:
+            delta = timedelta(days=1) 
         date_list = [
-            periods[period] + timedelta(days=1) + relativedelta(**{filter_period.delta: days_count})
+            periods[period] + delta + relativedelta(**{filter_period.delta: days_count})
             for days_count in range(filter_period.range)
         ]
         last_value = None

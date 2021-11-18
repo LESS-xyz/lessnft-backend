@@ -137,7 +137,7 @@ admin.site.register(TransactionTracker, TxTrackerAdmin)
 
 admin.site.unregister(SolarSchedule)
 admin.site.unregister(ClockedSchedule)
-admin.site.unregister(PeriodicTask)
-admin.site.unregister(IntervalSchedule)
+# admin.site.unregister(PeriodicTask)
+# admin.site.unregister(IntervalSchedule)
 admin.site.unregister(CrontabSchedule)
 

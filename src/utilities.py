@@ -36,7 +36,7 @@ def sign_message(type, message):
 def get_media_from_ipfs(hash):
     if not hash:
         return None
-    return "https://ipfs.io/ipfs/{ipfs}".format(ipfs=hash)
+    return "https://dev3-ipfs.rocknblock.io/ipfs/{ipfs}".format(ipfs=hash)
 
 
 def get_page_slice(page: int, items_length: int = None, items_per_page: int = 50) -> Tuple[int, int]:

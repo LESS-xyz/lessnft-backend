@@ -233,7 +233,7 @@ class HandlerMintTransferBurn(HandlerABC):
             token.status = Status.BURNED
             token.bid_set.all().delete()
         else:
-            token.total_supply = max(token.total_supply - amount, 0)
+            token.total_supply = max(int(token.total_supply) - int(amount), 0)
             if token.total_supply == 0:
                 token.status = Status.BURNED
                 token.bid_set.all().delete()

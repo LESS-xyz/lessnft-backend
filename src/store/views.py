@@ -325,11 +325,13 @@ class GetLikedView(APIView):
         responses={200: TokenSerializer(many=True), 401: not_found_response},
         manual_parameters=[
             openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
         ],
     )
 
-    def get(self, request, user_id, page):
+    def get(self, request, user_id):
         network = request.query_params.get('network', config.DEFAULT_NETWORK)
+        page = request.query_params.get('page', 1)
         try:
             user = AdvUser.objects.get_by_custom_url(user_id)
         except ObjectDoesNotExist:
@@ -345,9 +347,11 @@ class GetLikedView(APIView):
         if network:
             tokens = [token for token in tokens if network.lower() in token.collection.network.name.lower()]
 
-        start, end = get_page_slice(page, len(tokens))
+        tokens_count = len(tokens)
+        start, end = get_page_slice(int(page), len(tokens))
         token_list = tokens[start:end]
-        response_data = TokenSerializer(token_list, many=True, context={"user": request.user}).data
+        items = TokenSerializer(token_list, many=True, context={"user": request.user}).data
+        response_data = {"total_tokens": tokens_count, "items": items}
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -396,11 +400,10 @@ class GetView(APIView):
         if not is_valid:
             return response
         price = request_data.get('price', None)
-        print(f'price is {price}')
         minimal_bid = request_data.get('minimal_bid', None)
         start_auction = request_data.get('start_auction')
         end_auction = request_data.get('end_auction')
-        selling = request_data.get('selling')
+        selling = request_data.get('selling', True)
         if price:
             request_data.pop('price', None)
             price = Decimal(str(price))
@@ -710,7 +713,7 @@ class MakeBid(APIView):
             address=token.currency.address,
             function_name='allowance',
             input_params=(
-                user.username,
+                token.collection.network.wrap_in_checksum(user.username),
                 bid.token.currency.network.exchange_address
             ),
             input_type=('address', 'address'),
@@ -722,7 +725,7 @@ class MakeBid(APIView):
             contract_type='token',
             address=token.currency.address, 
             function_name='balanceOf',
-            input_params=(user.username,),
+            input_params=(token.collection.network.wrap_in_checksum(user.username),),
             input_type=('address',),
             output_types=('uint256',),
         )

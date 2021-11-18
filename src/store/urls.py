@@ -10,7 +10,7 @@ urlpatterns = [
     path('hot/<int:page>/', GetHotView.as_view()),
     path('hot_collections/', GetHotCollectionsView.as_view()),
     path('search/', SearchView.as_view()),
-    path('liked/<str:user_id>/<int:page>/', GetLikedView.as_view()),
+    path('liked/<str:user_id>/', GetLikedView.as_view()),
     path('transfer/<str:token>/', TransferOwned.as_view()),
     path('collection/<str:param>/', GetCollectionView.as_view()),
     path('<int:id>/', GetView.as_view()),

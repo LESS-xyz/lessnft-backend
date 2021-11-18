@@ -25,7 +25,7 @@ def validate_bid(user, token_id, amount, quantity):
             contract_type='token',
             address=token.currency.address, 
             function_name='balanceOf',
-            input_params=(user.username,),
+            input_params=(token.collection.network.wrap_in_checksum(user.username),),
             input_type=('address',),
             output_types=('uint256',),
     )

@@ -866,7 +866,7 @@ class Tags(models.Model):
 
 class BidQuerySet(models.QuerySet):
     def committed(self):
-        return self.filter(status=Status.COMMITTED)
+        return self.filter(state=Status.COMMITTED)
 
 class BidManager(models.Manager):
     def get_queryset(self):
