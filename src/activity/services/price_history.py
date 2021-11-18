@@ -23,7 +23,7 @@ class PriceHistory:
 
         self.init_params()
 
-        self.filter_period = self.periods[self.range_delta]
+        self.filter_period = self.periods[self.period]
 
     def _history_day(self) -> None:
         self.delta = timedelta(hours=1)
@@ -50,7 +50,7 @@ class PriceHistory:
         self.range = 12 
 
     def init_params(self) -> None:
-        getattr(self, f"_history_{self.period}")
+        getattr(self, f"_history_{self.period}")()
 
     def get_last_value(self, listing_history) -> Optional[float]:
         """ 
@@ -97,7 +97,7 @@ class PriceHistory:
         ).values('period').annotate(avg_price=Avg('price')).values('period', 'avg_price')
         listing_history = {h.get('period'): h.get('avg_price') for h in listing_history}
 
-        last_value = self.get_last_value()
+        last_value = self.get_last_value(listing_history)
 
         response = list()
         for date in self.date_list:
