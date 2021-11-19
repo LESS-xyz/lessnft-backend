@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from celery import shared_task
-from src.store.models import Bid, Status, Token, TransactionTracker
+from src.store.models import Bid, Status, Token, TransactionTracker, Tags
 from src.networks.models import Types
 from src.store.services.auction import end_auction
 from web3.exceptions import TransactionNotFound
@@ -20,6 +20,18 @@ def remove_pending_tokens():
     tokens.delete()
 
 
+@shared_task(name="remove_token_tag_new")
+def remove_token_tag_new():
+    tag = Tags.objects.filter("New").first()
+    if tag is None:
+        return 
+    tokens = Token.objects.filter(
+        updated_at__lte=datetime.today() - timedelta(hours=config.CLEAR_TOKEN_TAG_NEW_TIME),
+    )
+    for token in tokens:
+        token.tags.remove(tag)
+
+
 @shared_task(name="end_auction_checker")
 def end_auction_checker():
     tokens = Token.objects.committed().filter(
@@ -27,6 +39,7 @@ def end_auction_checker():
     )
     for token in tokens:
         end_auction(token)
+
 
 @shared_task(name="incorrect_bid_checker")
 def incorrect_bid_checker():

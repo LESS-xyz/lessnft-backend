@@ -252,6 +252,11 @@ class CreateView(APIView):
         initial_tx = token_collection.create_token(creator, ipfs, signature, amount)
         token = Token()
         token.save_in_db(request, ipfs)
+
+        tag, _ = Tags.objects.get_or_create(name='New')
+        token.tags.add(tag)
+        token.save()
+
         response_data = {'initial_tx': initial_tx, 'token': TokenSerializer(token).data}
         return Response(response_data, status=status.HTTP_200_OK)
 
