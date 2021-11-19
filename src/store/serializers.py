@@ -372,6 +372,7 @@ class UserCollectionSerializer(CollectionSlimSerializer):
             "short_url",
             "creator",
             "status",
+            "is_default",
             "deploy_block",
             "tokens",
         )
@@ -454,7 +455,7 @@ class TokenFullSerializer(TokenSerializer):
         return obj.ownership_set.filter(selling=True).exists() 
 
     def get_history(self, obj):
-        history = obj.tokenhistory_set.exclude(method="Burn").order_by("-id")
+        history = obj.tokenhistory_set.exclude(method__in=["Mint", "Burn"]).order_by("-id")
         return TokenHistorySerializer(history, many=True).data
 
     def get_service_fee(self, obj):

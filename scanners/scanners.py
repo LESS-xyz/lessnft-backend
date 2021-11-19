@@ -46,7 +46,6 @@ class ScannerAbsolute(threading.Thread):
     @never_fall
     def start_polling(self) -> None:
         while True:
-
             scanner = get_scanner(self.network, self.contract_type, self.contract)
             last_checked_block = scanner.get_last_block(self.block_name)
             last_network_block = scanner.get_last_network_block()
@@ -67,7 +66,7 @@ class ScannerAbsolute(threading.Thread):
                     last_network_block,
                 )
             except Exception as e:
-                print.error(f'error {e}')
+                print(f'error {e}')
                 event_list = []
 
             if event_list:
