@@ -33,10 +33,9 @@ class Command(BaseCommand):
                 image=usd_rate.image,
                 address=usd_rate.address,
                 network=Network.objects.get(id=usd_rate.network),
-                fee_discount=usd_rate.fee_discount
+                fee_discount=usd_rate.fee_discount,
+                decimal = usd_rate.decimal
                 )
-            if created and obj.address != '0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE':
-                obj.set_decimals()
 
         """Create Master User object"""
         MasterUser.objects.get_or_create(
