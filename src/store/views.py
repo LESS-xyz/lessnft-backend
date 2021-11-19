@@ -232,7 +232,7 @@ class CreateView(APIView):
         if standart != token_collection.standart:
             return Response({'standart': 'collections type mismatch'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if Token.objects.filter(name=request_data.get('name')):
+        if Token.objects.filter(collection__network=token_collection.network).filter(name=request_data.get('name')):
             return Response({'name': 'name already used'}, status=status.HTTP_400_BAD_REQUEST)
 
         ipfs = create_ipfs(request)

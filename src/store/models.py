@@ -288,7 +288,7 @@ def default_collection_validators(sender, instance, **kwargs):
             is_default=True, network=instance.network, standart=instance.standart
         ).exists()
     ):
-        raise ValidationError("Unique validation error.")
+        raise ValidationError("There can not be two default collections in one networks with same standarts")
 
 
 post_save.connect(collection_created_dispatcher, sender=Collection)
@@ -325,7 +325,7 @@ class TokenManager(models.Manager):
 
 
 class Token(models.Model):
-    name = models.CharField(max_length=200, unique=True)
+    name = models.CharField(max_length=200)
     tx_hash = models.CharField(max_length=200, null=True, blank=True)
     ipfs = models.CharField(max_length=200, null=True, default=None)
     image = models.CharField(max_length=200, null=True, blank = True, default=None)
@@ -814,8 +814,20 @@ def token_save_dispatcher(sender, instance, created, **kwargs):
         instance.save(update_fields=['selling', 'currency_price'])
         post_save.connect(token_save_dispatcher, sender=sender)
 
-post_save.connect(token_save_dispatcher, sender=Token)
+def default_token_validators(sender, instance, **kwargs):
+    matching_token = Token.objects.filter(
+            name=instance.name,
+            collection__network=instance.collection.network
+    )
+    if instance.id:
+        matching_token = matching_token.exclude(id=instance.id)
+    if matching_token.exists():
+        raise ValidationError("Name is occupied")
 
+
+
+post_save.connect(token_save_dispatcher, sender=Token)
+pre_save.connect(default_token_validators, sender=Token)
 
 class Ownership(models.Model):
     token = models.ForeignKey('Token', on_delete=models.CASCADE)
