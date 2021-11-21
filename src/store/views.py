@@ -553,7 +553,7 @@ class GetCollectionView(APIView):
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
         attribute_dict = dict(request.query_params)
-        attribute_dict.pop('network')
+        attribute_dict.pop('network', None)
         '''
         Creating a dict of token attributes from query parameters in url, i.e.:
         {hair: [black, red, blone]

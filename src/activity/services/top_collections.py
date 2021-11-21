@@ -34,6 +34,7 @@ def update_collection_stat():
 
 
 def _get_collections_stat(collections_id, start, end):
+    end += timedelta(days=1)
     return CollectionStat.objects.filter(
         collection_id__in=collections_id,
         date__lte=start,
