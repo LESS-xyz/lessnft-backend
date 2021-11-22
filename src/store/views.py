@@ -554,6 +554,7 @@ class GetCollectionView(APIView):
 
         attribute_dict = dict(request.query_params)
         attribute_dict.pop('network', None)
+        attribute_dict.pop('page', None)
         '''
         Creating a dict of token attributes from query parameters in url, i.e.:
         {hair: [black, red, blone]

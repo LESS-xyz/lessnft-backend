@@ -40,6 +40,7 @@ def get_media_from_ipfs(hash):
 
 
 def get_page_slice(page: int, items_length: int = None, items_per_page: int = 50) -> Tuple[int, int]:
+    page = int(page)
     start = (page - 1) * items_per_page
     end = None
     if not items_length or items_length >= page * items_per_page:

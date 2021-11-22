@@ -22,7 +22,7 @@ def remove_pending_tokens():
 
 @shared_task(name="remove_token_tag_new")
 def remove_token_tag_new():
-    tag = Tags.objects.filter("New").first()
+    tag = Tags.objects.filter(name="New").first()
     if tag is None:
         return 
     tokens = Token.objects.filter(

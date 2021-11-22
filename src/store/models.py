@@ -286,7 +286,7 @@ def default_collection_validators(sender, instance, **kwargs):
         instance.is_default
         and Collection.objects.filter(
             is_default=True, network=instance.network, standart=instance.standart
-        ).exists()
+        ).exclude(id=instance.id).exists()
     ):
         raise ValidationError("There can not be two default collections in one networks with same standarts")
 
