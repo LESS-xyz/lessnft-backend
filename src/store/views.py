@@ -905,12 +905,10 @@ class ReportView(APIView):
         response = request_data.get('token')
 
         if config.CAPTCHA_SECRET:
-            if check_captcha(response):
-                connection = get_email_connection()
-            else:
+            if not check_captcha(response):
                 return Response('you are robot. go away, robot!', status=status.HTTP_400_BAD_REQUEST)
-        else:
-            connection = get_email_connection()
+
+        connection = get_email_connection()
         text = """
                 Page: {page}
                 Message: {message}
