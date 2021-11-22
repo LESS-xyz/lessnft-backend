@@ -32,3 +32,5 @@ eth-keys==0.2.4
 eth-keyfile==0.5.1
 eth-hash==0.3.1
 ecdsa==0.17.0
+pytest-django==4.4.0
+mixer==7.2.0

@@ -9,6 +9,15 @@ class UserActionAdmin(admin.ModelAdmin):
     list_filter = ('method',)
     ordering = ('-date',)
 
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_add_permission(self, request):
+        return False
+
 
 class TokenHistoryAdmin(admin.ModelAdmin):
     model = TokenHistory
@@ -16,10 +25,29 @@ class TokenHistoryAdmin(admin.ModelAdmin):
     list_filter = ('method',)
     ordering = ('-date',)
 
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_add_permission(self, request):
+        return False
+
+
 class BidsHistoryAdmin(admin.ModelAdmin):
     model = BidsHistory
     list_display = ('token', 'user', 'price', 'date')
     ordering = ('-date',)
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_add_permission(self, request):
+        return False
 
 
 admin.site.register(UserAction, UserActionAdmin)

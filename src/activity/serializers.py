@@ -110,12 +110,12 @@ class ActivitySerializer(serializers.Serializer):
     
     def get_token_image(self, obj):
         if obj.token:
-            return obj.token.name
+            return obj.token.image
         return None
     
     def get_token_name(self, obj):
         if obj.token:
-            return obj.token.id
+            return obj.token.name
         return None
 
     def get_currency(self, obj):
@@ -140,7 +140,7 @@ class ActivitySerializer(serializers.Serializer):
     def get_from_id(self, obj):
         user_from = self._get_user_from(obj)
         if user_from:
-            return user_from.id
+            return user_from.custom_url if user_from.custom_url else user_from.id
         return None
     
     def get_from_image(self, obj):
@@ -164,13 +164,13 @@ class ActivitySerializer(serializers.Serializer):
     def get_to_id(self, obj):
         user_to = self._get_user_to(obj)
         if user_to:
-            return user_to.avatar
+            return user_to.custom_url if user_to.custom_url else user_to.id
         return None
     
     def get_to_image(self, obj):
         user_to = self._get_user_to(obj)
         if user_to:
-            return user_to.id
+            return user_to.avatar
         return None
     
     def get_to_address(self, obj):

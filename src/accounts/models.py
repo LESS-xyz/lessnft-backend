@@ -33,7 +33,7 @@ class AdvUserManager(UserManager):
 
 class AdvUser(AbstractUser):
     avatar_ipfs = models.CharField(max_length=200, null=True, default=None)
-    cover_ipfs = models.CharField(max_length=200, null=True, default=None)
+    cover_ipfs = models.CharField(max_length=200, null=True, default=None, blank=True)
     display_name = models.CharField(max_length=50, default=None, null=True, blank=True)
     custom_url = models.CharField(max_length=80, default=None, null=True, blank=True, unique=True)
     bio = models.TextField(default=None, null=True, blank=True)

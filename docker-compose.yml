@@ -24,16 +24,6 @@ services:
     restart: unless-stopped
     networks:
       nft-net:
-  rates_checker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    depends_on:
-      - db
-    restart: unless-stopped
-    command: ["python", "rates_checker.py"]
-    networks:
-      nft-net:
   scanner:
     build:
       context: .

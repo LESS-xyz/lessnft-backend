@@ -1,9 +1,12 @@
+from django.utils import timezone
+from datetime import timedelta
+
 from eth_account import Account
 from web3 import Web3
 from typing import Tuple
 import redis
 
-from src.settings import config, PERIODS
+from src.settings import config
 
 
 class RedisClient:
@@ -33,17 +36,25 @@ def sign_message(type, message):
 def get_media_from_ipfs(hash):
     if not hash:
         return None
-    return "https://ipfs.io/ipfs/{ipfs}".format(ipfs=hash)
+    return "https://dev3-ipfs.rocknblock.io/ipfs/{ipfs}".format(ipfs=hash)
 
 
 def get_page_slice(page: int, items_length: int = None, items_per_page: int = 50) -> Tuple[int, int]:
+    page = int(page)
     start = (page - 1) * items_per_page
     end = None
     if not items_length or items_length >= page * items_per_page:
         end = page * items_per_page 
     return start, end
 
-def get_periods(*args):
+def get_periods(*args, **kwargs):
+    from_date = kwargs.get('from_date') or timezone.now()
+    PERIODS = {
+        'day': from_date - timedelta(days=1),
+        'week': from_date - timedelta(days=7),
+        'month': from_date - timedelta(days=30),
+        'year': from_date - timedelta(days=365)
+    }
     periods = {}
     for key in args:
         periods[key] = PERIODS[key]

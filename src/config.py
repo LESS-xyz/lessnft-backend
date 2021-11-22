@@ -47,7 +47,6 @@ class Config:
 
     @dataclass
     class UsdRate:
-       # rate: float
         coin_node: str
         symbol: str
         name: str
@@ -86,6 +85,10 @@ class Config:
 
     DEFAULT_NETWORK : Optional[str]
     TX_TRACKER_TIMEOUT: int
+
+    REDIS_EXPIRATION_TIME: int
+    CLEAR_TOKEN_TAG_NEW_TIME: int
+
     API_URL: str
 
     RATES_CHECKER_TIMEOUT: int
@@ -99,6 +102,7 @@ class Config:
 
     INTERVALS: List[Intervals]
     PERIODIC_TASKS: List[PeriodicTasks]
+    DEFAULT_COMMISSION: Optional[int]
 
     REDIS_HOST: str
     REDIS_PORT: int

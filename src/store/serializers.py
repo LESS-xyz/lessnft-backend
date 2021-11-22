@@ -15,6 +15,7 @@ from src.store.models import (
     Status, 
     Token,
     TransactionTracker,
+    ViewsTracker,
 )
 from django.db.models import Count, Min, Sum
 from rest_framework import serializers
@@ -372,6 +373,7 @@ class UserCollectionSerializer(CollectionSlimSerializer):
             "short_url",
             "creator",
             "status",
+            "is_default",
             "deploy_block",
             "tokens",
         )
@@ -436,6 +438,7 @@ class TokenFullSerializer(TokenSerializer):
     USD_service_fee = serializers.SerializerMethodField()
     owner_auction = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
+    views = serializers.SerializerMethodField()
 
     class Meta(TokenSerializer.Meta):
         fields = TokenSerializer.Meta.fields + (
@@ -446,6 +449,7 @@ class TokenFullSerializer(TokenSerializer):
             "USD_service_fee",
             "internal_id",
             "owner_auction",
+            "views",
         )
 
     def get_selling(self, obj):
@@ -454,7 +458,7 @@ class TokenFullSerializer(TokenSerializer):
         return obj.ownership_set.filter(selling=True).exists() 
 
     def get_history(self, obj):
-        history = obj.tokenhistory_set.exclude(method="Burn").order_by("-id")
+        history = obj.tokenhistory_set.exclude(method__in=["Mint", "Burn"]).order_by("-id")
         return TokenHistorySerializer(history, many=True).data
 
     def get_service_fee(self, obj):
@@ -495,6 +499,9 @@ class TokenFullSerializer(TokenSerializer):
             return UserAction.objects.filter(method="like", token=obj, user=user).exists()
         return False
 
+    def get_views(self, obj):
+        return ViewsTracker.objects.filter(token=obj).count()
+
 
 class CollectionMetadataSerializer(serializers.ModelSerializer):
 
@@ -519,10 +526,9 @@ class CollectionMetadataSerializer(serializers.ModelSerializer):
         return image
 
     def get_seller_fee_basis_points(self, obj):
-        if obj.name == config.COLLECTION_721 or obj.name == config.COLLECTION_1155:
+        if obj.is_default:
             return 0
-        else:
-            return 1000
+        return 1000
 
     def get_fee_recipient(self, obj):
         fee_recipient = obj.creator.username

@@ -1,8 +1,9 @@
 from django import forms
 from django.contrib import admin
 from django.contrib.auth.models import Group
+from rest_framework.authtoken.models import TokenProxy
 from src.accounts.models import AdvUser, VerificationForm, MasterUser, DefaultAvatar
-from allauth.socialaccount.models import SocialToken, SocialAccount, SocialApp
+from allauth.socialaccount.models import SocialToken, SocialAccount, SocialApp, SocialToken
 from allauth.account.models import EmailAddress
 
 from src.store.services.ipfs import send_to_ipfs
@@ -40,13 +41,32 @@ class VerificationInline(admin.StackedInline):
 class AdvUserAdmin(admin.ModelAdmin):
     model = AdvUser
     inlines = (VerificationInline,)
-    readonly_fields = ('id',)
+    readonly_fields = ('id', 'date_joined', 'last_login')
     list_display = ('username', 'display_name', 'is_verificated')
-    exclude = ('is_superuser', 'first_name', 'last_name', 'user_permissions', 'email')
+    exclude = (
+        'is_superuser', 
+        'first_name', 
+        'is_staff', 
+        'groups', 
+        'last_name', 
+        'user_permissions', 
+        'email',
+        'password',
+    )
 
 class MasterUserAdmin(admin.ModelAdmin):
     model = MasterUser
     list_display = ('address', 'commission', 'network')
+    readonly_fields = ('network', )
+
+    def has_delete_permission(self, request, obj=None):
+        path = request.path
+        if path.startswith('/django-admin/accounts/masteruser/'):
+           return False
+        return True
+
+    def has_add_permission(self, request):
+        return None
 
 
 admin.site.register(MasterUser, MasterUserAdmin)
@@ -57,3 +77,4 @@ admin.site.unregister(SocialToken)
 admin.site.unregister(SocialAccount)
 admin.site.unregister(SocialApp)
 admin.site.unregister(EmailAddress)
+admin.site.unregister(TokenProxy)

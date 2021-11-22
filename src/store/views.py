@@ -19,6 +19,7 @@ from src.store.models import (
     Tags, 
     Token,
     TransactionTracker,
+    ViewsTracker,
 )
 from src.store.serializers import (
     BetSerializer, 
@@ -232,7 +233,7 @@ class CreateView(APIView):
         if standart != token_collection.standart:
             return Response({'standart': 'collections type mismatch'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if Token.objects.filter(name=request_data.get('name')):
+        if Token.objects.filter(collection__network=token_collection.network).filter(name=request_data.get('name')):
             return Response({'name': 'name already used'}, status=status.HTTP_400_BAD_REQUEST)
 
         ipfs = create_ipfs(request)
@@ -252,6 +253,11 @@ class CreateView(APIView):
         initial_tx = token_collection.create_token(creator, ipfs, signature, amount)
         token = Token()
         token.save_in_db(request, ipfs)
+
+        tag, _ = Tags.objects.get_or_create(name='New')
+        token.tags.add(tag)
+        token.save()
+
         response_data = {'initial_tx': initial_tx, 'token': TokenSerializer(token).data}
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -325,11 +331,13 @@ class GetLikedView(APIView):
         responses={200: TokenSerializer(many=True), 401: not_found_response},
         manual_parameters=[
             openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
         ],
     )
 
-    def get(self, request, user_id, page):
+    def get(self, request, user_id):
         network = request.query_params.get('network', config.DEFAULT_NETWORK)
+        page = request.query_params.get('page', 1)
         try:
             user = AdvUser.objects.get_by_custom_url(user_id)
         except ObjectDoesNotExist:
@@ -345,9 +353,11 @@ class GetLikedView(APIView):
         if network:
             tokens = [token for token in tokens if network.lower() in token.collection.network.name.lower()]
 
-        start, end = get_page_slice(page, len(tokens))
+        tokens_count = len(tokens)
+        start, end = get_page_slice(int(page), len(tokens))
         token_list = tokens[start:end]
-        response_data = TokenSerializer(token_list, many=True, context={"user": request.user}).data
+        items = TokenSerializer(token_list, many=True, context={"user": request.user}).data
+        response_data = {"total_tokens": tokens_count, "items": items}
         return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -365,6 +375,10 @@ class GetView(APIView):
             token = Token.objects.committed().get(id=id)
         except ObjectDoesNotExist:
             return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
+
+        if request.user:
+            ViewsTracker.objects.get_or_create(token=token, user_id=request.user.id)
+
         response_data = TokenFullSerializer(token, context={"user": request.user}).data
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -396,11 +410,10 @@ class GetView(APIView):
         if not is_valid:
             return response
         price = request_data.get('price', None)
-        print(f'price is {price}')
         minimal_bid = request_data.get('minimal_bid', None)
         start_auction = request_data.get('start_auction')
         end_auction = request_data.get('end_auction')
-        selling = request_data.get('selling')
+        selling = request_data.get('selling', True)
         if price:
             request_data.pop('price', None)
             price = Decimal(str(price))
@@ -545,7 +558,8 @@ class GetCollectionView(APIView):
             return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
 
         attribute_dict = dict(request.query_params)
-        attribute_dict.pop('network')
+        attribute_dict.pop('network', None)
+        attribute_dict.pop('page', None)
         '''
         Creating a dict of token attributes from query parameters in url, i.e.:
         {hair: [black, red, blone]
@@ -710,7 +724,7 @@ class MakeBid(APIView):
             address=token.currency.address,
             function_name='allowance',
             input_params=(
-                user.username,
+                token.collection.network.wrap_in_checksum(user.username),
                 bid.token.currency.network.exchange_address
             ),
             input_type=('address', 'address'),
@@ -722,7 +736,7 @@ class MakeBid(APIView):
             contract_type='token',
             address=token.currency.address, 
             function_name='balanceOf',
-            input_params=(user.username,),
+            input_params=(token.collection.network.wrap_in_checksum(user.username),),
             input_type=('address',),
             output_types=('uint256',),
         )
@@ -1203,7 +1217,7 @@ class RemoveRejectView(APIView):
 def get_total_count(request):
         tokens_count = Token.token_objects.committed().count()
         verified_users_count = AdvUser.objects.filter(is_verificated=True).count()
-        collections_count = Collection.objects.exclude(name__in=(config.COLLECTION_721, config.COLLECTION_1155)).count()
+        collections_count = Collection.objects.filter(is_default=False).count()
         time_delta = timezone.now() - timedelta(days=1)
         users_active_daily = AdvUser.objects.filter(last_login__gte=time_delta).count()
         response_data = {

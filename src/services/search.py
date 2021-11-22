@@ -86,8 +86,6 @@ class Search:
         if currency is not None:
             currency = currency[0]
 
-        print(page)
-
         tokens = Token.objects.committed().network(network[0]).select_related(
             "currency", 
             "owner",
