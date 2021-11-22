@@ -6,21 +6,16 @@ from enum import Enum
 from typing import List, Optional
 from marshmallow_dataclass import class_schema
 
-
-class NetworkType(Enum):
-    ethereum = 'Ethereum'
-    tron = 'Tron'
-
 @dataclass
 class Network:
     name: str
-    needs_middlware: bool
+    needs_middleware: bool
     native_symbol: str
     endpoint: str
     fabric721_address: str
     fabric1155_address: str
     exchange_address: str
-    network_type: NetworkType = field(metadata={"by_value": True})
+    network_type: str
 
 @dataclass
 class Config:
@@ -64,7 +59,7 @@ class Config:
     @dataclass
     class MasterUser:
         address: str
-        network: int
+        network: int 
         commission: int
     
     @dataclass
@@ -84,19 +79,13 @@ class Config:
     SEARCH_TYPES: SearchType
 
     SIGNER_ADDRESS: str
-    CAPTCHA_SECRET: str
-    CAPTCHA_URL: str
+    CAPTCHA_SECRET: Optional[str]
+    CAPTCHA_URL: Optional[str]
     PRIV_KEY: str
 
-    DEFAULT_NETWORK : str
-    COLLECTION_721: str
-    COLLECTION_1155: str
-
+    DEFAULT_NETWORK : Optional[str]
     TX_TRACKER_TIMEOUT: int
 
-    HOLDERS_CHECK_CHAIN_LENGTH: int
-    HOLDERS_CHECK_COMMITMENT_LENGTH: int
-    HOLDERS_CHECK_TIMEOUT: int
     REDIS_EXPIRATION_TIME: int
     CLEAR_TOKEN_TAG_NEW_TIME: int
 

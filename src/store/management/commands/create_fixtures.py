@@ -15,7 +15,7 @@ class Command(BaseCommand):
         for network in config.NETWORKS:
             Network.objects.get_or_create(
                 name=network.name,
-                needs_middlware=network.needs_middlware,
+                needs_middleware=network.needs_middleware,
                 native_symbol=network.native_symbol,
                 endpoint=network.endpoint,
                 fabric721_address=network.fabric721_address,
@@ -32,16 +32,15 @@ class Command(BaseCommand):
                 name=usd_rate.name,
                 image=usd_rate.image,
                 address=usd_rate.address,
-                network=usd_rate.network,
-                fee_discount=usd_rate.fee_discount
+                network=Network.objects.get(id=usd_rate.network),
+                fee_discount=usd_rate.fee_discount,
+                decimal = usd_rate.decimal
                 )
-            if created:
-                obj.set_decimals()
 
         """Create Master User object"""
         MasterUser.objects.get_or_create(
             address=config.MASTER_USER.address,
-            network=config.MASTER_USER.network,
+            network = Network.objects.get(id=config.MASTER_USER.network),
             commission=config.MASTER_USER.commission
             )
         
@@ -57,6 +56,6 @@ class Command(BaseCommand):
             PeriodicTask.objects.get_or_create(
                 name=periodic_task.name,
                 task=periodic_task.task,
-                interval=periodic_task.interval,
+                interval=IntervalSchedule.objects.get(id=periodic_task.interval),
                 enabled=True
             )
