@@ -310,7 +310,7 @@ class HandlerMintTransferBurn(HandlerABC):
             ownership.quantity = F("quantity") + amount
             ownership.save()
             if created:
-                token.owners.add(ownership)
+                token.owners.add(new_owner)
 
 class HandlerBuy(HandlerABC):
     TYPE = "buy"

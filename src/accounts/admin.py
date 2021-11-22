@@ -50,7 +50,10 @@ class MasterUserAdmin(admin.ModelAdmin):
     readonly_fields = ('network', )
 
     def has_delete_permission(self, request, obj=None):
-        return False
+        path = request.path
+        if path.startswith('/django-admin/accounts/masteruser/'):
+           return False
+        return True
 
     def has_add_permission(self, request):
         return None
