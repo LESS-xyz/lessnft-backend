@@ -1,10 +1,4 @@
-from dateutil.relativedelta import relativedelta
-from datetime import timedelta
-from collections import namedtuple
-
 from src.activity.serializers import (
-    BidsHistorySerializer,
-    TokenHistorySerializer,
     UserStatSerializer,
     ActivitySerializer
 )
@@ -13,9 +7,8 @@ from src.activity.services.top_collections import get_top_collections
 from src.settings import config
 from src.store.models import Token
 from src.networks.models import Network
-from src.utilities import get_page_slice, get_periods
-from django.db.models import Q, Avg
-from django.db.models.functions import TruncMonth, TruncDay, TruncHour
+from src.utilities import get_page_slice
+from django.db.models import Q
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
@@ -28,6 +21,7 @@ from rest_framework.views import APIView
 
 from .models import BidsHistory, TokenHistory, UserAction
 from .utils import quick_sort
+from src.activity.services.price_history import PriceHistory
 
 
 class ActivityView(APIView):
@@ -555,63 +549,14 @@ class GetPriceHistory(APIView):
     )
     def get(self, request, id):
         period = request.query_params.get('period')
-        periods = get_periods('day', 'week', 'month', 'year')
 
         try:
             token = Token.objects.committed().get(id=id)
         except Token.DoesNotExist:
-            return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
+            return Response('token not found', status=status.HTTP_404_NOT_FOUND)
+        
+        if period not in ['day', 'week', 'month', 'year']:
+            return Response('unknown period', status=status.HTTP_400_BAD_REQUEST)
 
-        # TODO: REFACTOR THIS SHIT
-        history = TokenHistory.objects.filter(token=token).filter(date__gte=periods[period])
-        Period = namedtuple('Period', ['func', 'range', 'delta'])
-        filter_periods = {
-            'day': Period(TruncHour, 24, 'hours'),
-            'week': Period(TruncDay, 7, 'days'),
-            'month': Period(TruncDay, 30, 'days'),
-            'year': Period(TruncMonth, 12, 'months'),
-        }
-        filter_period = filter_periods[period]
-        listing_history = TokenHistory.objects.filter(token=token).filter(date__gte=periods[period]).annotate(
-            **{period: filter_period.func('date')}
-        ).values(period).annotate(avg_price=Avg('price')).values(period, 'avg_price')
-
-        listing_history = {h.get(period): h.get('avg_price') for h in listing_history}
-
-        if period=='day':
-            delta = timedelta(hours=1)
-        elif period=='year':
-            delta = timedelta(days=30)
-        else:
-            delta = timedelta(days=1) 
-        date_list = [
-            periods[period] + delta + relativedelta(**{filter_period.delta: days_count})
-            for days_count in range(filter_period.range)
-        ]
-        last_value = None
-        if not listing_history.keys() or (list(listing_history.keys())[0] != periods[period] + timedelta(days=1)):
-            listing = TokenHistory.objects.filter(token=token).filter(date__lte=periods[period]).annotate(
-                **{period: filter_period.func('date')}
-            ).values(period).annotate(avg_price=Avg('price')).values(period, 'avg_price')
-            if listing:
-                last_value = listing[len(listing)-1].get('avg_price')
-
-        chart_response = list()
-        date_replace = {
-            'minute': 0,
-            'second': 0,
-            'microsecond': 0,
-        }
-        if period != 'day':
-            date_replace['hour'] = 0
-        for date in date_list:
-            date = date.replace(**date_replace)
-            avg_price = listing_history.get(date)
-            if avg_price is None:
-                avg_price = last_value
-            else:
-                last_value = avg_price
-            chart_response.append({'date': date, 'avg_price': avg_price})
-
-        return Response(chart_response, status=status.HTTP_200_OK)
-
+        response = PriceHistory(token, period).get_history()
+        return Response(response, status=status.HTTP_200_OK)
