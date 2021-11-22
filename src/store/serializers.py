@@ -15,6 +15,7 @@ from src.store.models import (
     Status, 
     Token,
     TransactionTracker,
+    ViewsTracker,
 )
 from django.db.models import Count, Min, Sum
 from rest_framework import serializers
@@ -437,6 +438,7 @@ class TokenFullSerializer(TokenSerializer):
     USD_service_fee = serializers.SerializerMethodField()
     owner_auction = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
+    views = serializers.SerializerMethodField()
 
     class Meta(TokenSerializer.Meta):
         fields = TokenSerializer.Meta.fields + (
@@ -447,6 +449,7 @@ class TokenFullSerializer(TokenSerializer):
             "USD_service_fee",
             "internal_id",
             "owner_auction",
+            "views",
         )
 
     def get_selling(self, obj):
@@ -495,6 +498,9 @@ class TokenFullSerializer(TokenSerializer):
         if user and not user.is_anonymous:
             return UserAction.objects.filter(method="like", token=obj, user=user).exists()
         return False
+
+    def get_views(self, obj):
+        return ViewsTracker.objects.filter(token=obj).count()
 
 
 class CollectionMetadataSerializer(serializers.ModelSerializer):

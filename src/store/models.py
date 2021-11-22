@@ -912,3 +912,8 @@ class TransactionTracker(models.Model):
         if self.token:
             return self.token
         return self.ownership
+
+
+class ViewsTracker(models.Model):
+    user_id = models.IntegerField(null=True)
+    token = models.ForeignKey('Token', on_delete=models.CASCADE)

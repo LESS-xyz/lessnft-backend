@@ -19,6 +19,7 @@ from src.store.models import (
     Tags, 
     Token,
     TransactionTracker,
+    ViewsTracker,
 )
 from src.store.serializers import (
     BetSerializer, 
@@ -374,6 +375,10 @@ class GetView(APIView):
             token = Token.objects.committed().get(id=id)
         except ObjectDoesNotExist:
             return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
+
+        if request.user:
+            ViewsTracker.objects.get_or_create(token=token, user_id=request.user.id)
+
         response_data = TokenFullSerializer(token, context={"user": request.user}).data
         return Response(response_data, status=status.HTTP_200_OK)
 
