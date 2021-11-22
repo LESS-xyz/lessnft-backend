@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'rest_auth',
     'django_celery_beat',
     'django_extensions',
+    'django_admin_inline_paginator',
 
     'src.accounts',
     'src.store',

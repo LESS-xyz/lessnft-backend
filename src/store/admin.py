@@ -17,6 +17,7 @@ from django_celery_beat.models import (
     SolarSchedule,
 )
 from django.contrib.sites.models import Site
+from django_admin_inline_paginator.admin import TabularInlinePaginated
 
 
 class TagIconForm(forms.ModelForm):
@@ -62,11 +63,11 @@ class TokenStandartFilter(admin.SimpleListFilter):
         return queryset
 
 
-class TokenInline(admin.TabularInline):
+class TokenInline(TabularInlinePaginated):
     model = Token
     readonly_fields = ('id',)
     extra = 0
-
+    per_page = 25
 
 class BidAdmin(admin.ModelAdmin):
     model = Bid

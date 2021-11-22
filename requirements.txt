@@ -1,5 +1,6 @@
 django==3.1.7
 django-allauth
+django-admin-inline-paginator==0.1
 djangorestframework==3.12.2
 django-rest-auth==0.9.1
 django-cors-headers==3.7.0

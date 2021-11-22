@@ -111,8 +111,6 @@ class HandlerMintTransferBurn(HandlerABC):
             )
             return
         token_id = data.token_id
-        new_owner = self.get_owner(data.new_owner)
-        old_owner = self.get_owner(data.old_owner)
 
         token = self.get_buyable_token(
             token_id=token_id,
@@ -125,6 +123,7 @@ class HandlerMintTransferBurn(HandlerABC):
 
         if data.old_owner == self.scanner.EMPTY_ADDRESS.lower():
             self.logger.debug(f"New mint event: {data}")
+            new_owner = self.get_owner(data.new_owner)
             self.mint_event(
                 token=token,
                 token_id=token_id,
@@ -133,6 +132,7 @@ class HandlerMintTransferBurn(HandlerABC):
             )
         elif data.new_owner == self.scanner.EMPTY_ADDRESS.lower():
             self.logger.debug(f"New burn event: {data}")
+            old_owner = self.get_owner(data.old_owner)
             self.burn_event(
                 token=token,
                 tx_hash=data.tx_hash,
@@ -147,6 +147,8 @@ class HandlerMintTransferBurn(HandlerABC):
             )
         else:
             self.logger.debug(f"New transfer event: {data}")
+            new_owner = self.get_owner(data.new_owner)
+            old_owner = self.get_owner(data.old_owner)
 
             if TokenHistory.objects.filter(tx_hash=data.tx_hash).exists():
                 return
@@ -311,6 +313,7 @@ class HandlerMintTransferBurn(HandlerABC):
             ownership.save()
             if created:
                 token.owners.add(new_owner)
+
 
 class HandlerBuy(HandlerABC):
     TYPE = "buy"
