@@ -75,31 +75,31 @@ class Config:
         interval: int
         enabled: bool
 
-    SORT_STATUSES: Optional[SortStatus]
+    SORT_STATUSES: SortStatus
 
-    SEARCH_TYPES: Optional[SearchType]
+    SEARCH_TYPES: SearchType
 
-    SIGNER_ADDRESS: Optional[str]
+    SIGNER_ADDRESS: str
     CAPTCHA_SECRET: Optional[str]
     CAPTCHA_URL: Optional[str]
-    PRIV_KEY: Optional[str]
+    PRIV_KEY: str
 
     DEFAULT_NETWORK : Optional[str]
     COLLECTION_721: Optional[str]
     COLLECTION_1155: Optional[str]
 
-    TX_TRACKER_TIMEOUT: Optional[int]
+    TX_TRACKER_TIMEOUT: int
 
     HOLDERS_CHECK_CHAIN_LENGTH: Optional[int]
     HOLDERS_CHECK_COMMITMENT_LENGTH: Optional[int]
     HOLDERS_CHECK_TIMEOUT: Optional[int]
 
-    API_URL: Optional[str]
+    API_URL: str
 
-    RATES_CHECKER_TIMEOUT: Optional[int]
+    RATES_CHECKER_TIMEOUT: int
 
-    TITLE: Optional[str]
-    DESCRIPTION: Optional[str]
+    TITLE: str
+    DESCRIPTION: str
 
     NETWORKS: List[Network]
     USD_RATES: List[UsdRate]
@@ -108,8 +108,8 @@ class Config:
     INTERVALS: List[Intervals]
     PERIODIC_TASKS: List[PeriodicTasks]
 
-    REDIS_HOST: Optional[str]
-    REDIS_PORT: Optional[int]
+    REDIS_HOST: str
+    REDIS_PORT: int
 
 
 with open(os.path.dirname(__file__) + '/../config.yaml') as f:
