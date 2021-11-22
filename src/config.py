@@ -85,15 +85,7 @@ class Config:
     PRIV_KEY: str
 
     DEFAULT_NETWORK : Optional[str]
-    COLLECTION_721: Optional[str]
-    COLLECTION_1155: Optional[str]
-
     TX_TRACKER_TIMEOUT: int
-
-    HOLDERS_CHECK_CHAIN_LENGTH: Optional[int]
-    HOLDERS_CHECK_COMMITMENT_LENGTH: Optional[int]
-    HOLDERS_CHECK_TIMEOUT: Optional[int]
-
     API_URL: str
 
     RATES_CHECKER_TIMEOUT: int

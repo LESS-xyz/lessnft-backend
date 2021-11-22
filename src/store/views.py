@@ -904,25 +904,28 @@ class ReportView(APIView):
         message = request_data.get('message')
         response = request_data.get('token')
 
-        if check_captcha(response):
-            connection = get_email_connection()
-            text = """
-                    Page: {page}
-                    Message: {message}
-                    """.format(page=page, message=message)
-
-            send_mail(
-                'Report from digital dollar store',
-                text,
-                config.HOST_USER,
-                [config.MAIL],
-                connection=connection,
-            )
-            print('message sent')
-
-            return Response('OK', status=status.HTTP_200_OK)
+        if config.CAPTCHA_SECRET:
+            if check_captcha(response):
+                connection = get_email_connection()
+            else:
+                return Response('you are robot. go away, robot!', status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response('you are robot. go away, robot!', status=status.HTTP_400_BAD_REQUEST)
+            connection = get_email_connection()
+        text = """
+                Page: {page}
+                Message: {message}
+                """.format(page=page, message=message)
+
+        send_mail(
+            'Report from digital dollar store',
+            text,
+            config.HOST_USER,
+            [config.MAIL],
+            connection=connection,
+        )
+        print('message sent')
+
+        return Response('OK', status=status.HTTP_200_OK)
 
 
 class SetCoverView(APIView):
@@ -1024,25 +1027,26 @@ class SupportView(APIView):
         message = request_data.get('message')
         response = request_data.get('token')
 
-        if check_captcha(response):
-            connection = get_email_connection()
-            text = """
-                    Email: {email}
-                    Message: {message}
-                    """.format(email=email, message=message)
+        if config.CAPTCHA_SECRET:
+            if not check_captcha(response):
+                return Response('you are robot. go away, robot!', status=status.HTTP_400_BAD_REQUEST)
 
-            send_mail(
-                'Support form from digital dollar store',
-                text,
-                config.HOST_USER,
-                [config.MAIL],
-                connection=connection,
-            )
-            print('message sent')
+        connection = get_email_connection()
+        text = """
+                Email: {email}
+                Message: {message}
+                """.format(email=email, message=message)
 
-            return Response('OK', status=status.HTTP_200_OK)
-        else:
-            return Response('you are robot. go away, robot!', status=status.HTTP_400_BAD_REQUEST)
+        send_mail(
+            'Support form from digital dollar store',
+            text,
+            config.HOST_USER,
+            [config.MAIL],
+            connection=connection,
+        )
+        print('message sent')
+
+        return Response('OK', status=status.HTTP_200_OK)
 
 
 class TransactionTrackerView(APIView):
