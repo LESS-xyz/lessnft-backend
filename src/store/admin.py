@@ -5,7 +5,6 @@ from src.store.models import (
     Ownership, 
     Tags, 
     Token,
-    TransactionTracker,
 )
 from django import forms
 from django.contrib import admin
@@ -15,10 +14,9 @@ from django.utils.safestring import mark_safe
 from django_celery_beat.models import (
     ClockedSchedule, 
     CrontabSchedule,
-    IntervalSchedule, 
-    PeriodicTask,
     SolarSchedule,
 )
+from django.contrib.sites.models import Site
 
 
 class TagIconForm(forms.ModelForm):
@@ -74,6 +72,15 @@ class BidAdmin(admin.ModelAdmin):
     model = Bid
     list_display = ('token', 'user')
 
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_add_permission(self, request):
+        return False
+
 
 class TokenAdmin(admin.ModelAdmin):
     model = Token
@@ -101,6 +108,9 @@ class TokenAdmin(admin.ModelAdmin):
 
     get_network.short_description = 'Network'
     get_network.admin_order_field = 'collection__network__name'
+
+    def has_add_permission(self, request):
+        return False
 
 
 class CollectionForm(ModelForm):
@@ -133,15 +143,22 @@ class CollectionAdmin(admin.ModelAdmin):
     get_network.short_description = 'Network'
     get_network.admin_order_field = 'collection__network__name'
 
+    def has_add_permission(self, request):
+        return False
+
 
 class OwnershipAdmin(admin.ModelAdmin):
     model = Ownership
     list_display = ('token', 'owner', 'quantity')
 
+    def has_change_permission(self, request, obj=None):
+        return False
 
-class TxTrackerAdmin(admin.ModelAdmin):
-    model = TransactionTracker
-    list_display = ('tx_hash', 'token', 'ownership', 'amount')
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_add_permission(self, request):
+        return False
 
 
 admin.site.register(Tags, TagAdmin)
@@ -149,7 +166,6 @@ admin.site.register(Ownership, OwnershipAdmin)
 admin.site.register(Token, TokenAdmin)
 admin.site.register(Bid, BidAdmin)
 admin.site.register(Collection, CollectionAdmin)
-admin.site.register(TransactionTracker, TxTrackerAdmin)
 
 admin.site.unregister(SolarSchedule)
 admin.site.unregister(ClockedSchedule)
@@ -157,3 +173,4 @@ admin.site.unregister(ClockedSchedule)
 # admin.site.unregister(IntervalSchedule)
 admin.site.unregister(CrontabSchedule)
 
+admin.site.unregister(Site)
