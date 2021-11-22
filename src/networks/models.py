@@ -1,4 +1,4 @@
-
+from django.db.models.signals import post_save
 from typing import TYPE_CHECKING
 
 import requests
@@ -19,6 +19,7 @@ from tronapi.common.account import Address as TronAddress
 from trx_utils import decode_hex
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
+from src.accounts.models import MasterUser
 
 
 if TYPE_CHECKING:
@@ -319,3 +320,11 @@ class Network(models.Model):
     @property
     def check_timeout(self) -> int:
         return 6
+
+
+def collection_created_dispatcher(sender, instance, created, **kwargs):
+    if created:
+        MasterUser.objects.create(network=instance, commission=config.DEFAULT_COMMISSION)
+
+
+post_save.connect(collection_created_dispatcher, sender=Network)

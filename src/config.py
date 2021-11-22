@@ -3,7 +3,7 @@ import os
 import yaml
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List
+from typing import List, Optional
 from marshmallow_dataclass import class_schema
 
 
@@ -113,6 +113,7 @@ class Config:
 
     INTERVALS: List[Intervals]
     PERIODIC_TASKS: List[PeriodicTasks]
+    DEFAULT_COMMISSION: Optional[int]
 
     REDIS_HOST: str
     REDIS_PORT: int

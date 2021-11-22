@@ -47,6 +47,13 @@ class AdvUserAdmin(admin.ModelAdmin):
 class MasterUserAdmin(admin.ModelAdmin):
     model = MasterUser
     list_display = ('address', 'commission', 'network')
+    readonly_fields = ('network', )
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_add_permission(self, request):
+        return None
 
 
 admin.site.register(MasterUser, MasterUserAdmin)
