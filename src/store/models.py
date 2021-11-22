@@ -281,18 +281,7 @@ def collection_created_dispatcher(sender, instance, created, **kwargs):
             instance.save()
 
 
-def default_collection_validators(sender, instance, **kwargs):
-    if (
-        instance.is_default
-        and Collection.objects.filter(
-            is_default=True, network=instance.network, standart=instance.standart
-        ).exclude(id=instance.id).exists()
-    ):
-        raise ValidationError("There can not be two default collections in one networks with same standarts")
-
-
 post_save.connect(collection_created_dispatcher, sender=Collection)
-pre_save.connect(default_collection_validators, sender=Collection)
 
 def validate_nonzero(value):
     if value < 0:

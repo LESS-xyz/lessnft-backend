@@ -10,7 +10,7 @@ from src.store.models import (
 from django import forms
 from django.contrib import admin
 from django.db import models
-from django.forms import CheckboxSelectMultiple
+from django.forms import CheckboxSelectMultiple, ModelForm
 from django.utils.safestring import mark_safe
 from django_celery_beat.models import (
     ClockedSchedule, 
@@ -103,6 +103,21 @@ class TokenAdmin(admin.ModelAdmin):
     get_network.admin_order_field = 'collection__network__name'
 
 
+class CollectionForm(ModelForm):
+    class Meta:
+        models = Collection
+        fields = '__all__'
+
+    def clean(self):
+        data = self.cleaned_data
+        already_exists = Collection.objects.network(data['network']).filter(is_default=True).exclude(name=data['name'])
+        if data['is_default'] and already_exists.exists():
+            raise forms.ValidationError(
+                f"There can be only one default {data['standart']} collection for network {data['network']}"
+            )
+        return self.cleaned_data
+
+
 class CollectionAdmin(admin.ModelAdmin):
     model = Collection
     inlines = (TokenInline,)
@@ -110,6 +125,7 @@ class CollectionAdmin(admin.ModelAdmin):
     list_display = ('name', 'address', 'standart', 'creator', 'get_network')
     list_filter = ('standart',)
     search_fields = ['name', ]
+    form = CollectionForm
 
     def get_network(self, obj):
         return obj.network.name
