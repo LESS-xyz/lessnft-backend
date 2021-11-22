@@ -1210,7 +1210,7 @@ class RemoveRejectView(APIView):
 def get_total_count(request):
         tokens_count = Token.token_objects.committed().count()
         verified_users_count = AdvUser.objects.filter(is_verificated=True).count()
-        collections_count = Collection.objects.exclude(name__in=(config.COLLECTION_721, config.COLLECTION_1155)).count()
+        collections_count = Collection.objects.filter(is_default=False).count()
         time_delta = timezone.now() - timedelta(days=1)
         users_active_daily = AdvUser.objects.filter(last_login__gte=time_delta).count()
         response_data = {

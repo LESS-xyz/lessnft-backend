@@ -520,10 +520,9 @@ class CollectionMetadataSerializer(serializers.ModelSerializer):
         return image
 
     def get_seller_fee_basis_points(self, obj):
-        if obj.name == config.COLLECTION_721 or obj.name == config.COLLECTION_1155:
+        if obj.is_default:
             return 0
-        else:
-            return 1000
+        return 1000
 
     def get_fee_recipient(self, obj):
         fee_recipient = obj.creator.username
