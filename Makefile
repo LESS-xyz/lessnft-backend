@@ -20,6 +20,8 @@ makemigrations:
 migrate:
 	sudo docker-compose exec web ./manage.py migrate
 
+scanner-fbuild:
+	sudo docker-compose up --build -d --force-recreate scanner
 scanner-build:
 	sudo docker-compose up --build -d scanner
 scanner-logs:
