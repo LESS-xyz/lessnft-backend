@@ -208,11 +208,15 @@ class HandlerMintTransferBurn(HandlerABC):
 
         if token.collection.standart == 'ERC721':
             price = token.price
+            if token.minimal_bid:
+                price = token.minimal_bid
         else:
             price = token.ownership_set.first().price
+            if token.ownership_set.first().minimal_bid:
+                price = token.ownership_set.first().minimal_bid
         if price:
             price = price / token.currency.get_decimals
-        if token.is_selling or token.is_auc_selling:
+        if token.is_selling or token.is_auc_selling and price:
             TokenHistory.objects.create(
                 token=token,
                 old_owner=token.creator,

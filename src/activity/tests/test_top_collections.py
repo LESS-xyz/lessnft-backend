@@ -6,7 +6,7 @@ from src.store.models import Status
 
 
 @pytest.mark.django_db
-def test_get_price_history(api, mixer):
+def test_top_collections(api, mixer):
     collection = mixer.blend("store.Collection", status=Status.COMMITTED)
     mixer.blend(
         "activity.CollectionStat", date=date.today(), amount=50, collection=collection

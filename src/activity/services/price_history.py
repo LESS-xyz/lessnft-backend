@@ -72,10 +72,13 @@ class PriceHistory:
     @property
     def date_list(self) -> list:
         """ Return list of periods """
-        return [
+        date_list = [
             self.filter_period + self.delta + relativedelta(**{self.range_delta: days_count})
             for days_count in range(self.range)
         ]
+        if self.period == 'year':
+            date_list = [d.replace(day=1) for d in date_list]
+        return date_list
 
     @property
     def date_replace(self) -> dict:
