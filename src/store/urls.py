@@ -13,8 +13,6 @@ urlpatterns = [
     path('liked/<str:user_id>/', GetLikedView.as_view()),
     path('transfer/<str:token>/', TransferOwned.as_view()),
     path('collection/<str:param>/', GetCollectionView.as_view()),
-    path('<int:id>/', GetView.as_view()),
-    path('<int:token_id>/burn/', TokenBurnView.as_view()),
     path('buy/', BuyTokenView.as_view()),
     path('tags/', get_tags),
     path('max_price/', get_max_price),
@@ -31,5 +29,8 @@ urlpatterns = [
     path('support/', SupportView.as_view()),
     path('metadata/<str:address>/', GetCollectionByAdressView.as_view()),
     path('remove-reject/', RemoveRejectView.as_view()),
+    path('collection-import/', CollectionImportView.as_view()),
     path('get_total_count/', get_total_count),
+    path('<int:id>/', GetView.as_view()),
+    path('<int:token_id>/burn/', TokenBurnView.as_view()),
 ]

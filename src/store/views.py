@@ -32,6 +32,7 @@ from src.store.serializers import (
    TokenSerializer,
 )
 from src.store.services.ipfs import create_ipfs, send_to_ipfs
+from src.store.services.collection_import import CollectionImport
 from src.utilities import get_page_slice, sign_message
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
@@ -1227,3 +1228,41 @@ def get_total_count(request):
             "users_active_daily": users_active_daily,
         }
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class CollectionImportView(APIView):
+    '''
+    View for import contracts
+    '''
+    @swagger_auto_schema(
+        operation_description="Colletion import",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+                properties={
+                    'collection': openapi.Schema(type=openapi.TYPE_STRING),
+                    'network': openapi.Schema(type=openapi.TYPE_STRING),
+                    'standart': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        ),
+        responses={200: "success"},
+    )
+    def post(self, request):
+        collection = request.data.get('collection')
+        network_name = request.data.get('network', '')
+        standart = request.data.get('standart', 'ERC721')
+        network = Network.objects.filter(name__iexact=network_name).first()
+
+        if not network_name or not network:
+            return Response({"error": "Network not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if standart not in ["ERC721", "ERC1155"]:
+            return Response({"error": "Wrong collection standart"}, status=status.HTTP_400_BAD_REQUEST)
+
+        collection_import = CollectionImport(collection, network, standart)
+        is_valid, response = collection_import.is_valid()
+        if not is_valid:
+            return Response({"error": response}, status=status.HTTP_400_BAD_REQUEST)
+
+        collection_import.save_in_db()
+
+        return Response("success", status=status.HTTP_200_OK)
