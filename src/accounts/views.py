@@ -1,5 +1,7 @@
 import random
 
+from src.utilities import PaginateMixin
+
 from src.store.api import get_email_connection
 from src.accounts.models import AdvUser, VerificationForm
 from src.accounts.serializers import (
@@ -237,7 +239,7 @@ class LikeView(APIView):
         return Response('liked', status=status.HTTP_200_OK)
 
   
-class GetUserCollections(APIView):
+class GetUserCollections(APIView, PaginateMixin):
     '''
     View for get collections by user
     '''
@@ -252,11 +254,11 @@ class GetUserCollections(APIView):
     def get(self, request):
         network = request.query_params.get('network', config.DEFAULT_NETWORK)
         collections = Collection.objects.committed().user_collections(request.user, network=network)
-        response_data = UserCollectionSerializer(collections, many=True).data
-        return Response({'collections': response_data}, status=status.HTTP_200_OK)
+        collections = UserCollectionSerializer(collections, many=True).data
+        return Response(self.paginate(request, collections), status=status.HTTP_200_OK)
 
 
-class GetFollowingView(APIView):
+class GetFollowingView(APIView, PaginateMixin):
     '''
     View for getting active tokens of following users
     '''
@@ -265,7 +267,7 @@ class GetFollowingView(APIView):
         responses={200: FollowingSerializer(many=True), 401: not_found_response},
     )
 
-    def get(self, request, address, page):
+    def get(self, request, address):
         try:
             user = AdvUser.objects.get_by_custom_url(address)
         except ObjectDoesNotExist:
@@ -273,11 +275,11 @@ class GetFollowingView(APIView):
 
         follow_queryset = UserAction.objects.filter(method='follow', user=user)
         followed_users = [action.whom_follow for action in follow_queryset]
-        response_data = FollowingSerializer(followed_users, many=True).data
-        return Response(response_data, status=status.HTTP_200_OK)
+        users = FollowingSerializer(followed_users, many=True).data
+        return Response(self.paginate(request, users), status=status.HTTP_200_OK)
 
 
-class GetFollowersView(APIView):
+class GetFollowersView(APIView, PaginateMixin):
     '''
     View for getting active tokens of following users
     '''
@@ -286,7 +288,7 @@ class GetFollowersView(APIView):
         responses={200: FollowingSerializer(many=True), 401: not_found_response},
     )
 
-    def get(self, request, address, page):
+    def get(self, request, address):
         try:
             user = AdvUser.objects.get_by_custom_url(address)
         except ObjectDoesNotExist:
@@ -294,8 +296,8 @@ class GetFollowersView(APIView):
 
         follow_queryset = UserAction.objects.filter(method='follow', whom_follow=user)
         followers_users = [action.user for action in follow_queryset]
-        response_data = FollowingSerializer(followers_users, many=True).data
-        return Response(response_data, status=status.HTTP_200_OK)
+        users = FollowingSerializer(followers_users, many=True).data
+        return Response(self.paginate(request, users), status=status.HTTP_200_OK)
 
 
 class VerificationView(APIView):

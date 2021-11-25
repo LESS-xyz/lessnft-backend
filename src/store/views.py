@@ -32,7 +32,7 @@ from src.store.serializers import (
    TokenSerializer,
 )
 from src.store.services.ipfs import create_ipfs, send_to_ipfs
-from src.utilities import get_page_slice, sign_message
+from src.utilities import get_page_slice, sign_message, PaginateMixin
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
 from django.db.models import Count, Q, Sum
@@ -172,6 +172,7 @@ class SearchView(APIView):
         responses={200: TokenSerializer(many=True)},
     )
     def post(self, request):
+        # TODO: try use PaginateMixin
         request_data = request.data
         words = request_data.get('text', '')
         params = request.query_params
@@ -337,7 +338,6 @@ class GetLikedView(APIView):
 
     def get(self, request, user_id):
         network = request.query_params.get('network', config.DEFAULT_NETWORK)
-        page = request.query_params.get('page', 1)
         try:
             user = AdvUser.objects.get_by_custom_url(user_id)
         except ObjectDoesNotExist:
@@ -353,12 +353,8 @@ class GetLikedView(APIView):
         if network:
             tokens = [token for token in tokens if network.lower() in token.collection.network.name.lower()]
 
-        tokens_count = len(tokens)
-        start, end = get_page_slice(int(page), len(tokens))
-        token_list = tokens[start:end]
-        items = TokenSerializer(token_list, many=True, context={"user": request.user}).data
-        response_data = {"total_tokens": tokens_count, "items": items}
-        return Response(response_data, status=status.HTTP_200_OK)
+        tokens = TokenSerializer(tokens, many=True, context={"user": request.user}).data
+        return Response(self.paginate(request, tokens), status=status.HTTP_200_OK)
 
 
 class GetView(APIView):
@@ -483,7 +479,7 @@ class TokenBurnView(APIView):
         return Response({'initial_tx': token.burn(user, amount)}, status=status.HTTP_200_OK)
 
 
-class GetHotView(APIView):
+class GetHotView(APIView, PaginateMixin):
     '''
     View for getting hot items
     '''
@@ -497,7 +493,7 @@ class GetHotView(APIView):
             openapi.Parameter('network', openapi.IN_QUERY, type=openapi.TYPE_STRING),
         ],
     )
-    def get(self, request, page):
+    def get(self, request):
         sort = request.query_params.get('sort', 'recent')
         tag = request.query_params.get('tag')
         network = request.query_params.get('network', config.DEFAULT_NETWORK)
@@ -509,13 +505,8 @@ class GetHotView(APIView):
             tokens = tokens.order_by(order)
         if sort in ('cheapest', 'highest'):
             tokens = tokens.exclude(price=None).exclude(selling=False)
-        length = tokens.count()
-
-        start, end = get_page_slice(page, len(tokens))
-
-        token_list = tokens[start:end]
-        response_data = TokenFullSerializer(token_list, context={"user": request.user}, many=True).data
-        return Response({'tokens': response_data, 'length': length}, status=status.HTTP_200_OK)
+        tokens = TokenFullSerializer(tokens, context={"user": request.user}, many=True).data
+        return Response(self.paginate(request, tokens), status=status.HTTP_200_OK)
 
 
 class GetHotCollectionsView(APIView):

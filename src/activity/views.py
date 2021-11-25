@@ -7,7 +7,7 @@ from src.activity.services.top_collections import get_top_collections
 from src.settings import config
 from src.store.models import Token
 from src.networks.models import Network
-from src.utilities import get_page_slice
+from src.utilities import PaginateMixin
 from django.db.models import Q
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -24,7 +24,7 @@ from .utils import quick_sort
 from src.activity.services.price_history import PriceHistory
 
 
-class ActivityView(APIView):
+class ActivityView(APIView, PaginateMixin):
     """
     View for get activities and filter by types
     """
@@ -40,9 +40,6 @@ class ActivityView(APIView):
     def get(self, request):
         network = request.query_params.get('network', config.DEFAULT_NETWORK)
         types = request.query_params.get("type")
-        page = int(request.query_params.get("page"))
-
-        start, end = get_page_slice(page)
 
         history_methods = {
             "purchase": "Buy",
@@ -73,7 +70,6 @@ class ActivityView(APIView):
                         "-date"
                     )
                     total_items += items.count()
-                    items = items[:end]
                     activities.extend(items)
             for param, method in action_methods.items():
                 if param in types:
@@ -82,7 +78,6 @@ class ActivityView(APIView):
                         method=method,
                     ).order_by("-date")
                     total_items += items.count()
-                    items = items[:end]
                     activities.extend(items)
             for param, method in bids_methods.items():
                 if param in types:
@@ -91,7 +86,6 @@ class ActivityView(APIView):
                         token__collection__network__name__icontains=network,
                     ).order_by("-date")
                     total_items += items.count()
-                    items = items[:end]
                     activities.extend(items)
 
         else:
@@ -107,11 +101,13 @@ class ActivityView(APIView):
                 token__collection__network__name__icontains=network,
             ).order_by("-date")
 
+            activities.extend(actions)
+            activities.extend(history)
+            activities.extend(bit)
+
         quick_sort(activities)
         items = ActivitySerializer(activities, many=True).data
-        total_items = len(items)
-        response_data = {'total_items': total_items, 'items': items[start:end]}
-        return Response(response_data, status=status.HTTP_200_OK)
+        return Response(self.paginate(request, items), status=status.HTTP_200_OK)
 
       
 class NotificationActivityView(APIView):
@@ -200,24 +196,24 @@ class NotificationActivityView(APIView):
             "Listing",
         ]
         if method == "all":
-            token_history = TokenHistory.objects.filter(
+            TokenHistory.objects.filter(
                 new_owner__username=address,
                 method__in=new_owner_methods,
                 is_viewed=False,
             ).update(is_viewed=True)
 
-            token_history = TokenHistory.objects.filter(
+            TokenHistory.objects.filter(
                 old_owner__username=address,
                 method__in=old_owner_methods,
                 is_viewed=False,
             ).update(is_viewed=True)
 
-            user_actions = UserAction.objects.filter(
+            UserAction.objects.filter(
                 whom_follow__username=address,
                 is_viewed=False,
             ).update(is_viewed=True)
 
-            bids = BidsHistory.objects.filter(
+            BidsHistory.objects.filter(
                 user__username=address,
                 is_viewed=False,
             ).update(is_viewed=True)
@@ -240,7 +236,7 @@ class NotificationActivityView(APIView):
         return Response('Marked as viewed', status=status.HTTP_200_OK)
 
 
-class UserActivityView(APIView):
+class UserActivityView(APIView, PaginateMixin):
     """
     View for get users activities and filter by types
     """
@@ -256,9 +252,6 @@ class UserActivityView(APIView):
     def get(self, request, address):
         network = request.query_params.get('network', config.DEFAULT_NETWORK)
         types = request.query_params.get("type")
-        page = int(request.query_params.get("page"))
-
-        start, end = get_page_slice(page)
 
         old_owner_methods = {
             "sale": "Buy",
@@ -288,7 +281,7 @@ class UserActivityView(APIView):
                         old_owner__username=address,
                         method=method,
                         is_viewed=False,
-                    ).order_by("-date")[:end]
+                    ).order_by("-date")
                     activities.extend(items)
             for param, method in token_methods.items():
                 if param in types:
@@ -297,7 +290,7 @@ class UserActivityView(APIView):
                         token__collection__network__name__icontains=network,
                         method=method,
                         is_viewed=False,
-                    ).order_by("-date")[:end]
+                    ).order_by("-date")
                     activities.extend(items)
             for param, method in action_methods.items():
                 if param in types:
@@ -306,7 +299,7 @@ class UserActivityView(APIView):
                         Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
                         method=method,
                         is_viewed=False,
-                    ).order_by("-date")[:end]
+                    ).order_by("-date")
                     activities.extend(items)
             for param, method in bids_methods.items():
                 if param in types:
@@ -315,7 +308,7 @@ class UserActivityView(APIView):
                         user__username=address,
                         is_viewed=False,
                         method=method,
-                    ).order_by("-date")[:end]
+                    ).order_by("-date")
                     activities.extend(items)
 
         else:
@@ -335,7 +328,7 @@ class UserActivityView(APIView):
                 new_owner__username=address,
                 method__in=new_owner_methods,
                 is_viewed=False,
-            ).order_by("-date")[:end]
+            ).order_by("-date")
             activities.extend(items)
 
             buy = TokenHistory.objects.filter(
@@ -343,28 +336,28 @@ class UserActivityView(APIView):
                 old_owner__username=address,
                 method__in=old_owner_methods,
                 is_viewed=False,
-            ).order_by("-date")[:end]
+            ).order_by("-date")
             activities.extend(buy)
 
             user_actions = UserAction.objects.filter(
                 Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
                 whom_follow__username=address,
                 is_viewed=False,
-            ).order_by("-date")[:end]
+            ).order_by("-date")
             activities.extend(user_actions)
 
             bit = BidsHistory.objects.filter(
                 user__username=address,
                 token__collection__network__name__icontains=network,
-            ).order_by("-date")[:end]
+            ).order_by("-date")
             activities.extend(bit)
 
         quick_sort(activities)
-        response_data = ActivitySerializer(activities, many=True).data[start:end]
-        return Response(response_data, status=status.HTTP_200_OK)
+        items = ActivitySerializer(activities, many=True).data
+        return Response(self.paginate(request, items), status=status.HTTP_200_OK)
 
 
-class FollowingActivityView(APIView):
+class FollowingActivityView(APIView, PaginateMixin):
     """
     View for get user following activities and filter by types
     """
@@ -380,9 +373,6 @@ class FollowingActivityView(APIView):
     def get(self, request, address):
         network = request.query_params.get('network', config.DEFAULT_NETWORK)
         types = request.query_params.get("type")
-        page = int(request.query_params.get("page"))
-
-        start, end = get_page_slice(page)
 
         token_transfer_methods = {
             "purchase": "Buy",
@@ -418,7 +408,7 @@ class FollowingActivityView(APIView):
                         | Q(old_owner__id__in=following_ids),
                         token__collection__network__name__icontains=network,
                         method=method,
-                    ).order_by("-date")[:end]
+                    ).order_by("-date")
                     activities.extend(items)
             for param, method in action_methods.items():
                 if param in types:
@@ -427,14 +417,14 @@ class FollowingActivityView(APIView):
                         Q(user__id__in=following_ids)
                         | Q(whom_follow__id__in=following_ids),
                         method=method,
-                    ).order_by("-date")[:end]
+                    ).order_by("-date")
                     activities.extend(items)
             for param, method in token_methods.items():
                 if param in types:
                     items = TokenHistory.objects.filter(
                         Q(new_owner__id__in=following_ids),
                         method=method,
-                    ).order_by("-date")[:end]
+                    ).order_by("-date")
                     activities.extend(items)
             for param, method in bids_methods.items():
                 if param in types:
@@ -442,14 +432,14 @@ class FollowingActivityView(APIView):
                         user__id__in=following_ids,
                         method=method,
                         token__collection__network__name__icontains=network,
-                    ).order_by("-date")[:end]
+                    ).order_by("-date")
                     activities.extend(items)
 
         else:
             actions = UserAction.objects.filter(
                 Q(user__id__in=following_ids) | Q(whom_follow__id__in=following_ids),
                 Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
-            ).order_by("-date")[:end]
+            ).order_by("-date")
             activities.extend(actions)
             history = (
                 TokenHistory.objects.filter(
@@ -459,18 +449,18 @@ class FollowingActivityView(APIView):
                 )
                 #.exclude(Q(method="Burn") | Q(method="Transfer"))
                 .exclude(method="Burn")
-                .order_by("-date")[:end]
+                .order_by("-date")
             )
             activities.extend(history)
             bit = BidsHistory.objects.filter(
                 user__id__in=following_ids,
                 token__collection__network__name__icontains=network,
-            ).order_by("-date")[:end]
+            ).order_by("-date")
             activities.extend(bit)
 
         quick_sort(activities)
-        response_data = ActivitySerializer(activities, many=True).data[start:end]
-        return Response(response_data, status=status.HTTP_200_OK)
+        items = ActivitySerializer(activities, many=True).data
+        return Response(self.paginate(request, items), status=status.HTTP_200_OK)
 
 
 class GetTopCollectionsView(APIView):
