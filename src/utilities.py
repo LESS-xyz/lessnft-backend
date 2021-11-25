@@ -5,6 +5,7 @@ from eth_account import Account
 from web3 import Web3
 from typing import Tuple
 import redis
+from math import ceil
 
 from src.settings import config
 
@@ -59,3 +60,27 @@ def get_periods(*args, **kwargs):
     for key in args:
         periods[key] = PERIODS[key]
     return periods
+
+
+class PaginateMixin:
+    def _parse_request(self, request):
+        self.page = int(request.query_params.get("page", 1))
+        self.items_per_page = int(request.query_params.get("items_per_page", 10))
+
+    def get_page_slice(self, items_length: int) -> Tuple[int, int]:
+        start = (self.page - 1) * self.items_per_page
+        end = None
+        if not items_length or items_length >= self.page * self.items_per_page:
+            end = self.page * self.items_per_page 
+        return start, end
+
+    def paginate(self, request, items):
+        self._parse_request(request)
+        start, end = self.get_page_slice(len(items))
+        pages = len(items) / self.items_per_page 
+        return {
+            'total': len(items),
+            'results_per_page': self.items_per_page,
+            'total_pages': ceil(pages),
+            'results': items[start:end],
+        }
