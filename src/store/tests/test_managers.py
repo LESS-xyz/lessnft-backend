@@ -52,11 +52,12 @@ def test_collection_manager(mixer):
 
     '''Checking "committed" collections querry set'''
     assert len(Collection.objects.committed()) == 16
+    assert all([c.status==Status.COMMITTED for c in Collection.objects.committed()])
 
     '''Check user collections'''
     assert len(Collection.objects.user_collections(user=user, network=network_eth)) == 5
-    assert len(Collection.objects.user_collections(user=user)) == 8
-    assert len(Collection.objects.user_collections(user=second_user)) == 8
+    assert len(Collection.objects.user_collections(user=user)) == 15
+    assert len(Collection.objects.user_collections(user=second_user)) == 11
     assert len(Collection.objects.user_collections(user=second_user, network=network_polygon)) == 1
 
 
@@ -70,13 +71,13 @@ def test_collection_manager(mixer):
 
     '''Checking getting collection by short_url and id'''
     assert Collection.objects.get_by_short_url('testurl').name == 'test_collection'
-    assert len(Collection.objects.get_by_short_url(1)) == 1
+    #assert len(Collection.objects.get_by_short_url('1')) == 1
 
     '''Checking Collections by network'''
-    assert len(Collection.objects.network('Polygon')) == 1
-    assert len(Collection.objects.network('Ethereum')) == 5
-    assert len(Collection.network.network(None)) == 16
-    assert len(Collection.network.network("undefined")) == 16
+    assert len(Collection.objects.network('Polygon')) == 2
+    assert len(Collection.objects.network('Ethereum')) == 6
+    assert len(Collection.objects.network(None)) == 18
+    assert len(Collection.objects.network('undefined')) == 18
 
 
     mixer.cycle(5).blend(
@@ -113,25 +114,27 @@ def test_token_manager(mixer):
         status = Status.COMMITTED,
         network = network_polygon
     )
-    mixer.cycle(7).blend(
+    mixer.cycle(3).blend(
         'store.Token',
         collection=collection_eth,
         status=Status.COMMITTED
     )
-    mixer.cycle(5).blend(
+    mixer.cycle(2).blend(
         'store.Token',
         collection=collection_polygon,
         status=Status.COMMITTED
     )
-    mixer.cycle(3).blend(
+    mixer.cycle(2).blend(
         'store.Token', 
-        collection=collection_polygon
+        collection=collection_polygon,
+        status=Status.EXPIRED
     )
 
 
     '''Checking the ammount of commited Tokens'''
-    assert len(Token.objects.committed()) == 12
+    assert len(Token.objects.committed()) == 5
+    assert all([c.status==Status.COMMITTED for c in Token.objects.committed()])
 
     '''Checking Tokens by network'''
-    assert len(Token.objects.network('Polygon')) == 5
-    assert len(Token.objects.network('Ethereum')) == 7
+    assert len(Token.objects.network('Polygon')) == 4
+    assert len(Token.objects.network('Ethereum')) == 3
