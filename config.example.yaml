@@ -91,6 +91,6 @@ MASTER_USER:
     network: 1 # Network (get by Network's PK) 
     commission: 3 # User commision
 
-REDIS_HOST: 'redis'
+REDIS_HOST: 'test-redis'
 REDIS_PORT: 6379
 REDIS_EXPIRATION_TIME: 86400 # day in seconds

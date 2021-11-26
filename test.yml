@@ -13,6 +13,7 @@ services:
       - IS_TEST=1
     depends_on:
       - test-db
+      - test-redis
     command: pytest --disable-pytest-warnings
-  redis:
+  test-redis:
     image: redis:5.0
