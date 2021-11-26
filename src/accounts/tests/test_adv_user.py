@@ -4,7 +4,7 @@ from src.accounts.models import AdvUser
 
 
 @pytest.mark.django_db
-def test_collection_manager(mixer):
+def test_adv_user_manager(mixer):
     mixer.blend(
         'accounts.AdvUser', 
         display_name='testuser',

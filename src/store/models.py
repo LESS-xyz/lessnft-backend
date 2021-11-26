@@ -91,7 +91,7 @@ class CollectionManager(models.Manager):
         """ Return non-default collections with committed tokens """
         return self.get_queryset().hot_collections(network)
 
-    def network(self, network=None):
+    def network(self, network):
         """ Return collections filtered by network name """
         return self.get_queryset().network(network)
 
