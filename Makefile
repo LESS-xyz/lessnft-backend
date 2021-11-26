@@ -4,7 +4,7 @@ build:
 	sudo docker-compose up --build -d 
 
 test:
-	sudo docker-compose exec web pytest --disable-pytest-warnings
+	sudo docker-compose -f test.yml up --build --abort-on-container-exit
 
 shell:
 	sudo docker-compose exec web ./manage.py shell_plus

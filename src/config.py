@@ -109,7 +109,12 @@ class Config:
     REDIS_PORT: int
 
 
-with open(os.path.dirname(__file__) + '/../config.yaml') as f:
+config_path = '/../config.yaml'
+if os.getenv("IS_TEST", False):
+    config_path = '/../config.example.yaml'
+
+
+with open(os.path.dirname(__file__) + config_path) as f:
     config_data = yaml.safe_load(f)
 
 config: Config = class_schema(Config)().load(config_data)
