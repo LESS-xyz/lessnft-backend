@@ -65,11 +65,11 @@ def get_periods(*args, **kwargs):
 class PaginateMixin:
     def _parse_request(self, request):
         try:
-            self.page = int(request.query_params.get("page", 1))
+            self.page = int(abs(request.query_params.get("page", 1))) or 1
         except:
             self.page = 1
         try:
-            self.items_per_page = int(request.query_params.get("items_per_page", config.ITEMS_PER_PAGE))
+            self.items_per_page = int(abs(request.query_params.get("items_per_page", config.ITEMS_PER_PAGE))) or int(config.ITEMS_PER_PAGE)
         except:
             self.items_per_page = int(config.ITEMS_PER_PAGE)
 
