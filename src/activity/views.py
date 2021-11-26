@@ -97,13 +97,13 @@ class ActivityView(APIView, PaginateMixin):
             ).exclude(
                 method="Burn"
             ).order_by("-date")
-            bit = BidsHistory.objects.filter(
+            bids = BidsHistory.objects.filter(
                 token__collection__network__name__icontains=network,
             ).order_by("-date")
 
             activities.extend(actions)
             activities.extend(history)
-            activities.extend(bit)
+            activities.extend(bids)
 
         quick_sort(activities)
         items = ActivitySerializer(activities, many=True).data
@@ -346,11 +346,11 @@ class UserActivityView(APIView, PaginateMixin):
             ).order_by("-date")
             activities.extend(user_actions)
 
-            bit = BidsHistory.objects.filter(
+            bids = BidsHistory.objects.filter(
                 user__username=address,
                 token__collection__network__name__icontains=network,
             ).order_by("-date")
-            activities.extend(bit)
+            activities.extend(bids)
 
         quick_sort(activities)
         items = ActivitySerializer(activities, many=True).data
@@ -452,11 +452,11 @@ class FollowingActivityView(APIView, PaginateMixin):
                 .order_by("-date")
             )
             activities.extend(history)
-            bit = BidsHistory.objects.filter(
+            bids = BidsHistory.objects.filter(
                 user__id__in=following_ids,
                 token__collection__network__name__icontains=network,
             ).order_by("-date")
-            activities.extend(bit)
+            activities.extend(bids)
 
         quick_sort(activities)
         items = ActivitySerializer(activities, many=True).data
