@@ -122,6 +122,9 @@ def test_collections_by_short_url(mixer):
     '''Checking getting collection by short_url and id'''
     assert Collection.objects.get_by_short_url('testurl').name == 'test_collection'
     assert Collection.objects.get_by_short_url('testurl2').name == 'test_collection_2'
+    assert Collection.objects.get_by_short_url(Collection.objects.get_by_short_url('testurl').id).name == 'test_collection'
+    assert Collection.objects.get_by_short_url(35).name == 'test_collection'
+    assert Collection.objects.get_by_short_url('36').name == 'test_collection_2'
 
 
 @pytest.mark.django_db
