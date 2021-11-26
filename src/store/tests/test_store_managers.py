@@ -19,18 +19,11 @@ def test_check_commited(mixer):
         status=Status.EXPIRED,
         network=network_eth,
     )
-
     mixer.cycle(5).blend(
         "store.Collection",
         status=Status.COMMITTED,
         network=network_eth,
     )
-    mixer.cycle(3).blend(
-        "store.Collection",
-        status=Status.COMMITTED,
-        is_default=True
-    )
-
     mixer.cycle(7).blend(
         "store.Collection",
         status=Status.COMMITTED,
@@ -43,7 +36,7 @@ def test_check_commited(mixer):
     )
 
     '''Checking "committed" collections querry set'''
-    assert len(Collection.objects.committed()) == 16
+    assert len(Collection.objects.committed()) == 13
     assert all([c.status==Status.COMMITTED for c in Collection.objects.committed()])
 
 
@@ -145,19 +138,12 @@ def test_check_collections_by_network(mixer):
         status=Status.EXPIRED,
         network=network_eth,
     )
-
     mixer.cycle(5).blend(
         "store.Collection",
         status=Status.COMMITTED,
         network=network_eth,
     )
     mixer.cycle(3).blend(
-        "store.Collection",
-        status=Status.COMMITTED,
-        is_default=True
-    )
-
-    mixer.cycle(7).blend(
         "store.Collection",
         status=Status.COMMITTED,
         is_default=True
@@ -171,7 +157,7 @@ def test_check_collections_by_network(mixer):
     '''Checking Collections by network'''
     assert len(Collection.objects.network('Polygon')) == 1
     assert len(Collection.objects.network('Ethereum')) == 6
-    assert len(Collection.objects.network(None)) == 17
+    assert len(Collection.objects.network(None)) == 10
 
 
 @pytest.mark.django_db
