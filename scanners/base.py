@@ -74,11 +74,12 @@ class ScannerABC(ABC):
     def get_last_block(self, name) -> int:
         redis_ = RedisClient()
         last_block_number = redis_.connection.get(name)
-        if last_block_number is None:
+        if not last_block_number:
             last_block_number = self.get_last_network_block()
+            if not last_block_number:
+                return None
             self.save_last_block(name, last_block_number)
         return int(last_block_number)
-
 
     @abstractmethod
     def get_last_network_block(self) -> int:

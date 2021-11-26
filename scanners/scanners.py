@@ -50,6 +50,10 @@ class ScannerAbsolute(threading.Thread):
             last_checked_block = scanner.get_last_block(self.block_name)
             last_network_block = scanner.get_last_network_block()
 
+            if not last_checked_block or not last_network_block:
+                scanner.sleep()
+                continue
+
             if last_network_block - last_checked_block < 8:
                 scanner.sleep()
                 continue
