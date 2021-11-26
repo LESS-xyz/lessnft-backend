@@ -3,7 +3,7 @@ from src.store.models import Status, Collection, Token
 
 
 @pytest.mark.django_db
-def check_commited(mixer):
+def test_check_commited(mixer):
     network_eth = mixer.blend(
         'networks.Network',
         name = 'Ethereum',
@@ -44,12 +44,11 @@ def check_commited(mixer):
 
     '''Checking "committed" collections querry set'''
     assert len(Collection.objects.committed()) == 16
-    assert False
     assert all([c.status==Status.COMMITTED for c in Collection.objects.committed()])
 
 
 @pytest.mark.django_db
-def check_user_collections(mixer):
+def test_check_user_collections(mixer):
     user = mixer.blend('accounts.AdvUser', display_name='testuser')
     second_user = mixer.blend('accounts.AdvUser', display_name='testuser2')
 
@@ -89,13 +88,13 @@ def check_user_collections(mixer):
 
     '''Check user collections'''
     assert len(Collection.objects.user_collections(user=user, network=network_eth)) == 5
-    assert len(Collection.objects.user_collections(user=user)) == 8
+    assert len(Collection.objects.user_collections(user=user)) == 15
     assert len(Collection.objects.user_collections(user=second_user)) == 11
     assert len(Collection.objects.user_collections(user=second_user, network=network_polygon)) == 1
 
 
 @pytest.mark.django_db
-def check_user_collections(mixer):
+def test_collections_by_short_url(mixer):
     network_polygon = mixer.blend(
         'networks.Network',
         name = 'Polygon',
@@ -123,11 +122,10 @@ def check_user_collections(mixer):
     '''Checking getting collection by short_url and id'''
     assert Collection.objects.get_by_short_url('testurl').name == 'test_collection'
     assert Collection.objects.get_by_short_url('testurl2').name == 'test_collection_2'
-    assert len(Collection.objects.get_by_short_url('1')) == 1
 
 
 @pytest.mark.django_db
-def check_collections_by_network(mixer):
+def test_check_collections_by_network(mixer):
     network_eth = mixer.blend(
         'networks.Network',
         name = 'Ethereum',
@@ -169,11 +167,11 @@ def check_collections_by_network(mixer):
     '''Checking Collections by network'''
     assert len(Collection.objects.network('Polygon')) == 1
     assert len(Collection.objects.network('Ethereum')) == 6
-    assert len(Collection.objects.network(None)) == 16
+    assert len(Collection.objects.network(None)) == 17
 
 
 @pytest.mark.django_db
-def check_hot_collections(mixer):
+def test_check_hot_collections(mixer):
     network_eth = mixer.blend(
         'networks.Network',
         name = 'Ethereum',
@@ -191,7 +189,7 @@ def check_hot_collections(mixer):
         collection=collection, 
         status=Status.EXPIRED
     )
-    mixer.cycle(3).blend('store.Token', collection=collection)
+    mixer.cycle(3).blend('store.Token', collection=collection, status=Status.COMMITTED)
 
     '''Checking Hot Collections (non-default collections with committed tokens)'''
     assert len(Collection.objects.hot_collections()) == 1
