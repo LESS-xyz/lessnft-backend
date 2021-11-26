@@ -95,6 +95,7 @@ class Config:
 
     TITLE: str
     DESCRIPTION: str
+    ITEMS_PER_PAGE: int
 
     NETWORKS: List[Network]
     USD_RATES: List[UsdRate]

@@ -39,6 +39,7 @@ API_URL: '' #API Url for rates checker
 
 TITLE: '' #Project name
 DESCRIPTION: '' #Project description
+ITEMS_PER_PAGE: 50 #Default items count on page for pagination
 
 
 #Initial DB fixtures:

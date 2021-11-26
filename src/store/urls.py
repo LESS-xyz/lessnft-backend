@@ -7,7 +7,7 @@ urlpatterns = [
     path('most_bidded/', GetMostBiddedView.as_view()),
     path('related/<int:id>/', GetRelatedView.as_view()),
     path('track_transaction/', TransactionTrackerView.as_view()),
-    path('hot/<int:page>/', GetHotView.as_view()),
+    path('hot/', GetHotView.as_view()),
     path('hot_collections/', GetHotCollectionsView.as_view()),
     path('search/', SearchView.as_view()),
     path('liked/<str:user_id>/', GetLikedView.as_view()),
