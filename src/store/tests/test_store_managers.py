@@ -104,14 +104,14 @@ def test_collections_by_short_url(mixer):
         name = 'Ethereum',
     )
 
-    mixer.blend(
+    polygon_collection = mixer.blend(
         "store.Collection",
         name = 'test_collection',
         status = Status.COMMITTED,
         short_url = 'testurl',
         network = network_polygon 
     )
-    mixer.blend(
+    eth_collection = mixer.blend(
         "store.Collection",
         name = 'test_collection_2',
         status = Status.COMMITTED,
@@ -122,8 +122,10 @@ def test_collections_by_short_url(mixer):
     '''Checking getting collection by short_url and id'''
     assert Collection.objects.get_by_short_url('testurl').name == 'test_collection'
     assert Collection.objects.get_by_short_url('testurl2').name == 'test_collection_2'
-    assert Collection.objects.get_by_short_url(35).name == 'test_collection'
-    assert Collection.objects.get_by_short_url('36').name == 'test_collection_2'
+
+    assert Collection.objects.get_by_short_url(polygon_collection.id).name == 'test_collection'
+    assert Collection.objects.get_by_short_url(str(eth_collection.id)).name == 'test_collection_2'
+
 
 
 @pytest.mark.django_db
