@@ -178,8 +178,9 @@ def test_check_hot_collections(mixer):
 
     '''Checking Hot Collections (non-default collections with committed tokens)'''
     assert len(Collection.objects.hot_collections()) == 2
-    assert not Collection.objects.hot_collections() == 0
+    assert Collection.objects.hot_collections()
     assert all([c.status==Status.COMMITTED or c.status==Status.PENDING for c in Collection.objects.hot_collections()])
+    assert not any([c.status==Status.EXPIRED for c in Collection.objects.hot_collections()])
 
 
 @pytest.mark.django_db
@@ -215,7 +216,7 @@ def test_token_manager(mixer):
 
     '''Checking the ammount of commited Tokens'''
     assert len(Token.objects.committed()) == 5
-    assert all([c.status==Status.COMMITTED for c in Token.objects.committed()])
+    assert all([t.status==Status.COMMITTED for t in Token.objects.committed()])
 
     '''Checking Tokens by network'''
     assert len(Token.objects.network('Polygon')) == 4
