@@ -8,7 +8,7 @@ def test_check_commited(mixer):
     mixer.blend(
         "store.Collection",
         name='expired_collection',
-        status=Status.EXPIRED,
+        status=Status.PENDING,
         network__name='Ethereum',
     )
     mixer.cycle(5).blend(
