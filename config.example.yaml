@@ -1,3 +1,6 @@
+DEBUG: true
+SECRET_KEY: 'Django secret key'
+
 EMAIL_HOST: ''
 MAIL: ''
 HOST_USER: ''
@@ -5,11 +8,9 @@ HOST_PASSWORD: ''
 EMAIL_PORT: 587
 EMAIL_USE_TLS: true
 ALLOWED_HOSTS: 
-  - ''
-  - ''
-  - ''
+  - 'localhost'
 
-IPFS_CLIENT: '' #IPFS client address
+IPFS_CLIENT: 'IPFS client address'
 
 # SCANNER
 SCANNER_SLEEP: 10
@@ -31,56 +32,65 @@ CAPTCHA_URL: ''
 PRIV_KEY: '' #Signer private key
 
 TX_TRACKER_TIMEOUT: 300
-
-REDIS_EXPIRATION_TIME: 86400 # day in seconds
+RATES_CHECKER_TIMEOUT: 300
 CLEAR_TOKEN_TAG_NEW_TIME: 5
 
-API_URL: '' #API Url for rates checker
+DEFAULT_COMMISSION: 5
 
-TITLE: '' #Project name
-DESCRIPTION: '' #Project description
-ITEMS_PER_PAGE: 50 #Default items count on page for pagination
+API_URL: 'API Url for rates checker'
 
+TITLE: 'Project name'
+DESCRIPTION: 'Project description'
+ITEMS_PER_PAGE: 50 # Default items count on page for pagination
+
+INTERVALS:
+  - every: 2
+    period: MINUTES
+  - every: 1
+    period: HOURS
+
+PERIODIC_TASKS:
+  - name: remove_pending
+    task: remove_pending
+    interval: 2
+    enabled: true
+  - name: incorrect_bid_checker
+    task: incorrect_bid_checker
+    interval: 1
+    enabled: true
+  - name: update_top_users
+    task: update_top_users
+    interval: 2
+    enabled: true
+
+DEFAULT_NETWORK: ethereum
 
 #Initial DB fixtures:
 NETWORKS:
-  - pk: #primary key
-    name: #Network name
-    needs_middlware: false
-    native_symbol: '' #Network symbol
-    endpoint: "https:/"
-    fabric721_address: "" #Fabric contracts addresses
-    fabric1155_address: ""
-    exchange_address: ""
-    network_type: ""
+  - name: Ethereum #3
+    needs_middleware: false
+    native_symbol: ETH
+    endpoint: "RPC url"
+    fabric721_address: "0x111222233333444455556666777788889999"
+    fabric1155_address: "0x111222233333444455556666777788889999"
+    exchange_address: "0x111222233333444455556666777788889999"
+    network_type: Ethereum
 
 USD_RATES:
-  - coin_node: ''
-    symbol: '' #Currency symbol
-    name: '' #Currency name
-    image: "https://"
-    address: ""
-    decimal: #Decimal points after 0.
-    network: #Network (get by Network's PK) 
-    fee_discount: 
+  - coin_node: ethereum
+    symbol: weth
+    name: Wrapped Ethereum
+    image: "image url"
+    address: "0x111222233333444455556666777788889999"
+    decimal: 18
+    network: 1
+    fee_discount: 100
 
 MASTER_USER:
-  - address: ""
-    netwrok: #Network (get by Network's PK) 
-    commission: #User commision
+    address: "0x111222233333444455556666777788889999"
+    network: 1 # Network (get by Network's PK) 
+    commission: 3 # User commision
 
-#Celery tasks:
-INTERVALS: #Intervals for a given task
-  - pk: 
-    every: #Periodicity (in periods defined bellow)
-    period: #MINUTES/HOURS etc
-PERIODIC_TASKS:
-  - pk: 
-    name: '' #Name for a task/function
-    task: ''
-    interval: #INTERVAL (get by PK)
-    enabled: true #Set task to enabled (True is deafult)
-
-REDIS_HOST: 
-REDIS_PORT: 
-
+REDIS_HOST: 'test-redis'
+REDIS_PORT: 6379
+REDIS_EXPIRATION_TIME: 86400 # day in seconds
