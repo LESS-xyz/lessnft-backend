@@ -49,8 +49,9 @@ services:
   celery:
     build:
       context: .
-      dockerfile: compose/stage/celery.Dockerfile
+      dockerfile: compose/stage/Dockerfile
     image: celery:3.1
+    entrypoint: ''
     command: "celery -A src worker -l info"
     depends_on:
       - redis
@@ -60,8 +61,9 @@ services:
   celery_beat:
     build:
       context: .
-      dockerfile: compose/stage/celery.Dockerfile
+      dockerfile: compose/stage/Dockerfile
     image: celery:3.1
+    entrypoint: ''
     command: "celery -A src beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     depends_on:
       - redis
