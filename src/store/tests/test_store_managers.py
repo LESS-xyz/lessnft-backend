@@ -1,7 +1,7 @@
 import pytest
 from src.store.models import Status, Collection, Token
 from django.core.exceptions import ObjectDoesNotExist
-
+from django.contrib.auth.models import AnonymousUser
 
 @pytest.mark.django_db
 def test_check_commited(mixer):
@@ -41,7 +41,7 @@ def test_check_user_collections(mixer):
         'networks.Network',
         name = 'Ethereum',
     )
-    network_polygon= mixer.blend(
+    network_polygon = mixer.blend(
         'networks.Network',
         name = 'Polygon',
     )
@@ -70,6 +70,7 @@ def test_check_user_collections(mixer):
         network=network_polygon,
         creator=second_user
     )
+    anonim = AnonymousUser()
 
     '''Check user collections'''
     assert len(Collection.objects.user_collections(user=user, network=network_eth)) == 5
@@ -77,6 +78,10 @@ def test_check_user_collections(mixer):
     assert len(Collection.objects.user_collections(user=second_user)) == 11
     assert len(Collection.objects.user_collections(user=second_user, network=network_polygon)) == 1
     assert not Collection.objects.user_collections(user=None, network=network_polygon)
+    try:
+        Collection.objects.user_collections(user=anonim)
+    except AssertionError:
+        assert True
 
 
 @pytest.mark.django_db
@@ -98,7 +103,6 @@ def test_collections_by_short_url(mixer):
 
     '''Checking getting collection by short_url and id'''
     assert Collection.objects.get_by_short_url('testurl').name == 'test_collection'
-    assert not Collection.objects.get_by_short_url('testurl').name == 'test_collection_2'
     assert Collection.objects.get_by_short_url('testurl2').name == 'test_collection_2'
     try:
         Collection.objects.get_by_short_url('testurl3')
@@ -156,13 +160,14 @@ def test_check_hot_collections(mixer):
         status=Status.COMMITTED,
         is_default=True
     )
-    pending_collection = mixer.blend(
-        "store.Collection",
-        status=Status.PENDING,
-        network__name='Ethereum'
-    )
     mixer.blend(
         "store.Collection",
+        status=Status.COMMITTED,
+        network__name='Ethereum'
+    )
+    pending_tokens_collection = mixer.blend(
+        "store.Collection",
+        name='pending_collection',
         status=Status.COMMITTED,
         network__name='Ethereum'
     )
@@ -174,13 +179,13 @@ def test_check_hot_collections(mixer):
     )
     mixer.cycle(3).blend('store.Token', collection=collection, status=Status.COMMITTED)
     mixer.cycle(3).blend('store.Token', collection=default_collection, status=Status.COMMITTED)
-    mixer.cycle(3).blend('store.Token', collection=pending_collection, status=Status.COMMITTED)
+    mixer.cycle(3).blend('store.Token', collection=pending_tokens_collection, status=Status.PENDING)
 
     '''Checking Hot Collections (non-default collections with committed tokens)'''
-    assert len(Collection.objects.hot_collections()) == 2
+    assert len(Collection.objects.hot_collections()) == 1
     assert Collection.objects.hot_collections()
     assert all([c.status==Status.COMMITTED or c.status==Status.PENDING for c in Collection.objects.hot_collections()])
-    assert not any([c.status==Status.EXPIRED for c in Collection.objects.hot_collections()])
+    assert not any([c.name=='pending_collection' for c in Collection.objects.hot_collections()])
 
 
 @pytest.mark.django_db

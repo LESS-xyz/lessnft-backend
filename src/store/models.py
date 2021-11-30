@@ -6,6 +6,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Tuple, Union
 
+from django.contrib.auth.models import AnonymousUser
+
 from src.accounts.models import AdvUser, DefaultAvatar
 from src.consts import (
     COLLECTION_CREATION_GAS_LIMIT, 
@@ -48,6 +50,8 @@ class CollectionQuerySet(models.QuerySet):
         return self.get(Q(id=collection_id) | Q(short_url=short_url))
 
     def user_collections(self, user, network=None):
+        if user:
+            assert user.is_authenticated, "Getting collections for an unauthenticated user"
         if network is None or network == "undefined":
             return self.filter(status=Status.COMMITTED).filter(Q(is_default=True) | Q(creator=user))
         return self.filter(
