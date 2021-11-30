@@ -32,7 +32,8 @@ from src.store.serializers import (
    TokenSerializer,
 )
 from src.store.services.ipfs import create_ipfs, send_to_ipfs
-from src.store.services.collection_import import CollectionImport
+from src.store.services.collection_import import CollectionImport, OpenSeaImport
+from .tasks import import_opensea_collection
 from src.utilities import get_page_slice, sign_message
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
@@ -1247,7 +1248,7 @@ class CollectionImportView(APIView):
         responses={200: "success"},
     )
     def post(self, request):
-        collection = request.data.get('collection')
+        collection_address = request.data.get('collection')
         network_name = request.data.get('network', '')
         standart = request.data.get('standart', 'ERC721')
         network = Network.objects.filter(name__iexact=network_name).first()
@@ -1258,11 +1259,14 @@ class CollectionImportView(APIView):
         if standart not in ["ERC721", "ERC1155"]:
             return Response({"error": "Wrong collection standart"}, status=status.HTTP_400_BAD_REQUEST)
 
-        collection_import = CollectionImport(collection, network, standart)
-        is_valid, response = collection_import.is_valid()
-        if not is_valid:
-            return Response({"error": response}, status=status.HTTP_400_BAD_REQUEST)
+        collection_import = OpenSeaImport(collection_address, network)
 
-        collection_import.save_in_db()
+        collection = collection_import.get_collection_data()
+        # TODO: if not collection
+
+        if not collection.get('stats').get('count', 0):
+            return Response({"error": "Collection hasn't tokens"}, status=status.HTTP_400_BAD_REQUEST)
+
+        import_opensea_collection.delay(collection_address, network_name, collection)
 
         return Response("success", status=status.HTTP_200_OK)

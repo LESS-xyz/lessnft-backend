@@ -105,7 +105,7 @@ class Collection(models.Model):
     description = models.TextField(null=True, blank=True)
     standart = models.CharField(max_length=10, choices=[('ERC721', 'ERC721'), ('ERC1155', 'ERC1155')])
     short_url = models.CharField(max_length=30, default=None, null=True, blank=True, unique=True)
-    creator = models.ForeignKey('accounts.AdvUser', on_delete=models.PROTECT)
+    creator = models.ForeignKey('accounts.AdvUser', on_delete=models.PROTECT, null=True, default=None)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     deploy_block = models.IntegerField(null=True, default=None)
     network = models.ForeignKey('networks.Network', on_delete=models.CASCADE)

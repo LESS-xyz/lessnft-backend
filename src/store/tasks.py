@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
 
 from celery import shared_task
+from src.celery import app
+from src.store.services.collection_import import OpenSeaImport
 from src.store.models import Bid, Status, Token, TransactionTracker, Tags
-from src.networks.models import Types
+from src.networks.models import Types, Network
 from src.store.services.auction import end_auction
 from web3.exceptions import TransactionNotFound
 from tronapi import HttpProvider, Tron
@@ -114,3 +116,10 @@ def transaction_tracker():
                     tx.item.selling = True
                     tx.item.save()
                 tx.delete()
+
+
+@app.task()
+def import_opensea_collection(collection_address, network_name, collection):
+    network = Network.objects.filter(name__iexact=network_name).first()
+    opensea_import = OpenSeaImport(collection_address, network)
+    opensea_import.save_in_db(collection)
