@@ -48,7 +48,7 @@ class OpenSeaImport:
         return None
 
     def save_in_db(self, collection):
-        collection_model = self.save_collection(collection)
+        collection_model, _ = self.save_collection(collection)
         self.save_tokens(collection_model)
 
     def _get_user(self, user):
@@ -110,17 +110,18 @@ class OpenSeaImport:
             Token.objects.bulk_create(token_models)
 
     def save_collection(self, collection):
-        # TODO: get_or_create
-        new_collection = Collection()
-        new_collection.name = collection.get('name')
-        new_collection.description = collection.get('description')
-        new_collection.symbol = collection.get('primary_asset_contracts')[0].get("symbol")
-        new_collection.address = self.collection_address
-        new_collection.network = self.network
-        new_collection.avatar_ipfs = collection.get('image_url') # TODO: if not avatart set default?
-        new_collection.standart = collection.get('primary_asset_contracts')[0].get("schema_name")
-        new_collection.save()
-        return new_collection
+        new_collection, created = Collection.objects.get_or_create(
+            address=self.collection_address, 
+            network=self.network,
+        )
+        if created:
+            new_collection.name = collection.get('name')
+            new_collection.description = collection.get('description')
+            new_collection.symbol = collection.get('primary_asset_contracts')[0].get("symbol")
+            new_collection.avatar_ipfs = collection.get('image_url')
+            new_collection.standart = collection.get('primary_asset_contracts')[0].get("schema_name")
+            new_collection.save()
+        return new_collection, created
 
 
 class CollectionImport:
