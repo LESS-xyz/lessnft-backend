@@ -48,10 +48,17 @@ class OpenSeaImport:
         return None
 
     def save_in_db(self, collection):
-        collection_model, _ = self.save_collection(collection)
+        """ 
+        Parse collection data and create 
+        collection and tokens if not exists 
+        """
+        collection_model, _ = self.get_or_save_collection(collection)
         self.save_tokens(collection_model)
 
     def _get_user(self, user):
+        """
+        Parse user data and get or create user by username
+        """
         if not user['user']:
             return None
         try:
@@ -65,6 +72,9 @@ class OpenSeaImport:
         return adv_user
 
     def create_token(self, token, collection):
+        """
+        Parse token data and return Token instance
+        """
         if not token.get('creator'):
             return None
         standart = token.get('asset_contract').get('schema_name')
@@ -81,13 +91,35 @@ class OpenSeaImport:
             status=Status.PENDING,
             total_supply = 1, # TODO: refactor hardcode
             owner=self._get_user(token.get('owner')),
-            # currency = ???
             # owners = ???
             creator=self._get_user(token.get('creator')),
             creator_royalty=token['asset_contract'].get('dev_seller_fee_basis_points', 0) /100,
             description=token.get("description"),
             collection=collection,
         )
+
+    def get_valid_tokens(self, tokens, collection):
+        """
+        Return list of tokens without exists or
+        invalid tokens (token hasn't name)
+        """
+        internal_ids =  [t.get("token_id") for t in tokens]
+        internal_ids = list(Token.objects.filter(
+            collection=collection, 
+            internal_id__in=internal_ids,
+        ).values_list("internal_id", flat=True))
+
+        is_valid = lambda token: int(token.get("token_id")) not in internal_ids and token.get('name')
+
+        return [token for token in tokens if is_valid(token)]
+
+    def get_tokens_models(self, tokens, collection):
+        """
+        Check if token exists and valid
+        and return list of Token instance
+        """
+        tokens = self.get_valid_tokens(tokens, collection)
+        return [self.create_token(token, collection) for token in tokens]
     
     def save_tokens(self, collection):
         logger.info(f"Save tokens of {collection}")
@@ -106,10 +138,11 @@ class OpenSeaImport:
                 logger.info(f"All tokens of {collection} saved")
                 return 
             offset += 1
-            token_models = [self.create_token(t, collection) for t in tokens if self.create_token(t, collection) is not None]
+            token_models = self.get_tokens_models(tokens, collection)
             Token.objects.bulk_create(token_models)
 
-    def save_collection(self, collection):
+    def get_or_save_collection(self, collection):
+        """ parse data and get or create collection by network and address """
         new_collection, created = Collection.objects.get_or_create(
             address=self.collection_address, 
             network=self.network,
