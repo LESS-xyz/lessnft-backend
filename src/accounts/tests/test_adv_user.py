@@ -16,5 +16,6 @@ def test_adv_user_manager(mixer):
     assert AdvUser.objects.get_by_custom_url(str(adv_user.id)).display_name == 'testuser'
     try:
         AdvUser.objects.get_by_custom_url('Fake')
+        assert False
     except ObjectDoesNotExist:
         assert True
