@@ -70,10 +70,8 @@ class OpenSeaImport:
         standart = token.get('asset_contract').get('schema_name')
         traits = token.get('traits')
         details = {trait.get('trait_type'): trait.get('value') for trait in traits}
-        # TODO: refactor
-        name = token.get('name') or 'NAME NOT FOUND'
         return Token(
-            name=name,
+            name=token.get('name'),
             internal_id=token.get('token_id'),
             image=token.get('image_url'),
             animation_file=token.get('animation_url'),
@@ -96,11 +94,14 @@ class OpenSeaImport:
         limit = 50
         offset = 0
         while True:
-            tokens = self.api.assets(
+            response = self.api.assets(
                 self.collection_address, 
                 offset=offset * limit, 
                 limit=limit,
-            ).json().get('assets')
+            )
+            if response.status_code != 200:
+                return
+            tokens = response.json().get("assets")
             if not tokens:
                 logger.info(f"All tokens of {collection} saved")
                 return 
