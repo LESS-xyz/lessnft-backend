@@ -1,3 +1,4 @@
+import logging
 from django.db.models import Q
 
 from src.accounts.models import AdvUser
@@ -23,7 +24,7 @@ class PatchSerializer(serializers.ModelSerializer):
         fields = ('display_name', 'custom_url', 'bio', 'twitter', 'instagram', 'facebook', 'site')
 
     def update(self, instance, validated_data):
-        print('started patch')
+        logging.info('started patch')
         for attr, value in validated_data.items():
             if attr != 'bio' and value:
                 my_filter = {attr: value}
@@ -46,14 +47,13 @@ class MetamaskLoginSerializer(SocialLoginSerializer):
         signature = attrs["signed_msg"]
         message = attrs["msg"]
 
-        print(
+        logging.info(
             "metamask login, address",
             address,
             "message",
             message,
             "signature",
             signature,
-            flush=True,
         )
         if valid_metamask_message(address, message, signature):
             metamask_user = AdvUser.objects.filter(username__iexact=address).first()

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 
 from celery import shared_task
@@ -8,6 +9,7 @@ from web3.exceptions import TransactionNotFound
 from tronapi import HttpProvider, Tron
 from src.settings import config
 
+logger = logging.getLogger('celery')
 
 @shared_task(name="remove_pending_tokens")
 def remove_pending_tokens():
@@ -16,7 +18,7 @@ def remove_pending_tokens():
         status__in=(Status.PENDING, Status.FAILED),
         updated_at__lte=expiration_date,
     )
-    print(f"Pending {len(tokens)} tokens")
+    logger.info(f"Pending {len(tokens)} tokens")
     tokens.delete()
 
 
@@ -76,11 +78,11 @@ def check_ethereum_transactions(tx):
     w3 = tx.token.collection.network.get_web3_connection()
     try:
         transaction = w3.eth.getTransactionReceipt(tx.tx_hash)
-        print(f"Transaction status success - {bool(transaction.get('status'))}")
+        logger.info(f"Transaction status success - {bool(transaction.get('status'))}")
         return bool(transaction.get('status'))
 
     except TransactionNotFound:
-        print("Transaction not yet mined")
+        logger.info("Transaction not yet mined")
         return "not found"
 
 def check_tron_transactions(tx):
@@ -93,11 +95,11 @@ def check_tron_transactions(tx):
         )
     try:
         transaction = tron.trx.get_transaction(tx.tx_hash)
-        print(f"Transaction status success - {transaction['ret'][0]['contractRet']}")
+        logger.info(f"Transaction status success - {transaction['ret'][0]['contractRet']}")
         return transaction['ret'][0]['contractRet']
 
     except ValueError:
-        print("Transaction not yet mined")
+        logger.info("Transaction not yet mined")
         return "not found"
 
 @shared_task(name="transaction_tracker")

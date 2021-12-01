@@ -1,3 +1,5 @@
+import logging
+
 from django.db.models.signals import post_save
 from typing import TYPE_CHECKING
 
@@ -124,6 +126,7 @@ class Network(models.Model):
         input_types: tuple, #tuple of function param types (i.e. ('address', 'uint256')) for stupid tron
         input_params: tuple, #tuple of function param values
         output_types: tuple, #tuple of output param types if necessary (for stupid tron)
+        is1155: boolean, #boolean for frontend to determine contract standart
         }
         """
         return getattr(self, f'execute_{self.network_type}_{method_type}_method')(**kwargs)
@@ -179,7 +182,6 @@ class Network(models.Model):
             initial_tx = getattr(contract.functions, function_name)().buildTransaction(tx_params)
         if send:
             signed_tx = web3.eth.account.sign_transaction(initial_tx, config.PRIV_KEY)
-            print(signed_tx.rawTransaction)
             tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
             return tx_hash.hex()
         return initial_tx
@@ -201,7 +203,7 @@ class Network(models.Model):
         if not address:
             address = getattr(self, address_match.get(contract_type))
             if not address:
-                print(f'could not get contract address for {contract_type} in {self.name}')
+                logging.error(f'could not get contract address for {contract_type} in {self.name}')
                 raise "backend didn't found contract address"
         address = TronAddress.to_hex(address)
         function = tron_function_selector(function_name, input_types)
@@ -214,14 +216,14 @@ class Network(models.Model):
             "function_selector": function,
             "parameter": input_data,
         }
-        print(payload)
+        logging.info(payload)
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/json"
         }
         url = self.endpoint + "/wallet/triggerconstantcontract"
         response = requests.post(url, json=payload, headers=headers)
-        print(response.json())
+        logging.info(response.json())
         constant_result = response.json()["constant_result"][0]
         decoded_data = decode_hex(constant_result)
         result = decode_abi(output_types, decoded_data)
@@ -239,7 +241,7 @@ class Network(models.Model):
         if not tx_value:
             tx_value = 0
         send = kwargs.get('send', False)
-        print(contract_type, address)
+        logging.info(f"{contract_type}, {address}")
         address_match = {
             'exchange': 'exchange_address',
             'erc721fabric': 'fabric721_address',
@@ -248,7 +250,7 @@ class Network(models.Model):
         if not address:
             address = getattr(self, address_match.get(contract_type))
             if not address:
-                print(f'could not get contract address for {contract_type} in {self.name}')
+                logging.info(f'could not get contract address for {contract_type} in {self.name}')
                 raise "backend didn't found contract address"
         provider = HttpProvider(self.endpoint)
         tron = Tron(
@@ -259,18 +261,16 @@ class Network(models.Model):
         )
         tron.private_key = config.PRIV_KEY
         signer_address = tron.address.from_private_key(tron.private_key).base58
-        print(signer_address)
         tron.default_address = signer_address
         params = []
         for i in range(len(input_params)):
             if input_types[i] in ('bytes', 'bytes32') and send:
-                print(f'encoding {input_params[i]} to bytes')
                 params.append({"type": input_types[i], "value": tron.toBytes(hexstr=input_params[i])})
             else:
                 params.append({"type": input_types[i], "value": input_params[i]})
 
-        print(input_params)
-        print(params)
+        logging.info(input_params)
+        logging.info(params)
 
 
         options = {
@@ -291,7 +291,7 @@ class Network(models.Model):
         if function_name in ('transferFrom', 'safeTransferFrom', 'burn'):
             initial_tx['is1155'] = is1155
 
-        print(params)
+        logging.info(params)
 
         if send:
             initial_tx = tron.transaction_builder.trigger_smart_contract(
@@ -301,17 +301,10 @@ class Network(models.Model):
                 call_value=0,
                 parameters=params
             )['transaction']
-            print(
-                address, 
-                tron_function_selector(function_name, input_types),
-                params,
-            )
-            print(initial_tx)
             signed = tron.trx.sign(initial_tx)
             tx_hash = tron.trx.broadcast(signed)['txid']
-            print(tx_hash)
             return tx_hash
-        print(initial_tx)
+        logging.info(initial_tx)
         return initial_tx
 
     """

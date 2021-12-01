@@ -70,7 +70,6 @@ class MintMixin:
         ).get_all_entries()
 
     def parse_data_mint(self, event) -> MintData:
-        print(event)
         token_id = event["args"].get("tokenId")
         if token_id is None:
             token_id = event["args"].get("id")

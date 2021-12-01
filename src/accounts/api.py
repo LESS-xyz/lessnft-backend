@@ -1,3 +1,4 @@
+import logging
 from random import choice
 from string import ascii_letters
 
@@ -13,7 +14,6 @@ def generate_metamask_message(request):
 
     generated_message = ''.join(choice(ascii_letters) for ch in range(30))
     request.session['metamask_message'] = generated_message
-
     return Response(generated_message)
 
 

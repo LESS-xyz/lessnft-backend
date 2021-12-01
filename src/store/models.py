@@ -1,4 +1,5 @@
 import json
+import logging
 import random
 import secrets
 from collections import Counter
@@ -165,7 +166,7 @@ class Collection(models.Model):
                 input_type=(),
                 output_types=('uint256',),
             )
-            print(value)
+            logging.info("fee: {value}")
 
             initial_tx = self.network.contract_call(
                 method_type = 'write',
@@ -217,7 +218,7 @@ class Collection(models.Model):
 
     @classmethod
     def collection_is_unique(cls, name, symbol, short_url, network) -> Tuple[bool, Union[Response, None]]:
-        print(name, network)
+        logging.info("{name}, {network}")
         network = Network.objects.get(name__icontains=network)
         if Collection.objects.filter(name=name).filter(network=network):
             return False, Response({'name': 'this collection name is occupied'}, status=status.HTTP_400_BAD_REQUEST)
@@ -797,9 +798,6 @@ def token_save_dispatcher(sender, instance, created, **kwargs):
             try:
                 minimal_price = \
                 Ownership.objects.filter(token=instance).filter(selling=True).exclude(price=None).order_by('price')[0].price
-                for i in Ownership.objects.filter(token=instance).filter(selling=True).exclude(price=None).order_by('price'):
-                    print(i.__dict__)
-                print(minimal_price)
             except:
                 minimal_price = None
             instance.currency_price = minimal_price

@@ -1,3 +1,4 @@
+import logging
 import random
 from decimal import Decimal
 from datetime import timedelta
@@ -292,7 +293,7 @@ class CreateCollectionView(APIView):
         short_url = request.data.get('short_url')
         standart = request.data.get('standart')
         network = request.query_params.get('network', config.DEFAULT_NETWORK)
-        print(network)
+        logging.info(network)
         owner = request.user
 
         is_unique, response = Collection.collection_is_unique(name, symbol, short_url, network)
@@ -303,7 +304,7 @@ class CreateCollectionView(APIView):
             return Response('invalid collection type', status=status.HTTP_400_BAD_REQUEST)
         
         network = Network.objects.filter(name__icontains=network)
-        print(network.first().name)
+        logging.info(network.first().name)
         if not network:
             return Response('invalid network name', status=status.HTTP_400_BAD_REQUEST)
 
@@ -312,12 +313,12 @@ class CreateCollectionView(APIView):
         collection = Collection()
 
         media = request.FILES.get('avatar')
-        print(media)
+        logging.info(media)
         if media:
             ipfs = send_to_ipfs(media)
         else:
             ipfs = None
-        print(ipfs)
+        logging.info(ipfs)
         collection.save_in_db(request, ipfs)
         response_data = {'initial_tx': initial_tx, 'collection': CollectionSlimSerializer(collection).data}
         return Response(response_data, status=status.HTTP_200_OK)
@@ -427,7 +428,7 @@ class GetView(APIView):
             request_data['end_auction'] = end_auction
             serializer = TokenPatchSerializer(token, data=request_data, partial=True)
 
-            print(f"PatchSerializer valid - {serializer.is_valid()}")
+            logging.info(f"PatchSerializer valid - {serializer.is_valid()}")
             if serializer.is_valid():
                 serializer.save()
         else:
@@ -797,7 +798,7 @@ class VerificateBetView(APIView):
         responses={200: BetSerializer, 400: 'verificate bet not found'},
     )
     def get(self, request, token_id):
-        print('virificate!')
+        logging.info('verificate!')
         token = Token.objects.get(id=token_id)
         bets = Bid.objects.filter(token=token).order_by('-amount')
         max_bet = bets.first()
@@ -813,19 +814,19 @@ class VerificateBetView(APIView):
         check_valid = validate_bid(user, token_id, amount, quantity)
 
         if check_valid == 'OK':
-            print('all ok!')
+            logging.info('all ok!')
             return Response(BetSerializer(max_bet).data, status=status.HTTP_200_OK)
         else:
-            print('not ok(')
+            logging.info('not ok(')
             max_bet.delete()
-            print(bets)
+            logging.info(bets)
             for bet in bets:
                 user = bet.user
                 amount = bet.amount
                 quantity = bet.quantity
                 check_valid = validate_bid(user, token_id, amount, quantity)
                 if check_valid == 'OK':
-                    print('again ok!')
+                    logging.info('again ok!')
                     return Response(
                         {
                             'invalid_bet': BetSerializer(max_bet).data,
@@ -926,7 +927,7 @@ class ReportView(APIView):
             [config.MAIL],
             connection=connection,
         )
-        print('message sent')
+        logging.info('message sent')
 
         return Response('OK', status=status.HTTP_200_OK)
 
@@ -1047,7 +1048,7 @@ class SupportView(APIView):
             [config.MAIL],
             connection=connection,
         )
-        print('message sent')
+        logging.info('message sent')
 
         return Response('OK', status=status.HTTP_200_OK)
 

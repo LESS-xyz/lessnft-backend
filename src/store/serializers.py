@@ -1,3 +1,4 @@
+import logging
 from collections import Counter
 from decimal import Decimal
 
@@ -36,7 +37,7 @@ class TokenPatchSerializer(serializers.ModelSerializer):
         )
 
     def update(self, instance, validated_data):
-        print('started patch')
+        logging.info('started patch')
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()

@@ -20,6 +20,7 @@ services:
     volumes:
       - ./src/:/code/src/
       - ./static/:/code/static/
+      - ./logs:/code/logs/
     command: python manage.py runserver 0.0.0.0:8000
     restart: unless-stopped
     networks:
@@ -56,6 +57,8 @@ services:
     depends_on:
       - redis
     restart: always
+    volumes:
+      - ./logs:/code/logs/
     networks:
       nft-net:
   celery_beat:

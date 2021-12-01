@@ -1,3 +1,4 @@
+import logging
 import random
 
 from src.utilities import PaginateMixin
@@ -42,18 +43,7 @@ class MetamaskLogin(SocialLoginView):
     serializer_class = MetamaskLoginSerializer
 
     def login(self):
-
         self.user = self.serializer.validated_data['user']
-        metamask_address = self.serializer.validated_data['address']
-
-        try:
-            user = AdvUser.objects.get(username__iexact=metamask_address)
-        except ObjectDoesNotExist:
-            print('try create user', flush=True)
-            self.user = AdvUser(username=metamask_address, password=set_unusable_password())
-            self.user.save()
-            print('user_created', flush=True)
-
         return super().login()
 
 
@@ -346,7 +336,7 @@ class VerificationView(APIView):
             [config.MAIL],
             connection=connection,
         )
-        print('message sent')
+        logging.info('message sent')
 
         return Response('Verification request sent', status=status.HTTP_200_OK)
 
