@@ -119,7 +119,8 @@ class OpenSeaImport:
         and return list of Token instance
         """
         tokens = self.get_valid_tokens(tokens, collection)
-        return [self.create_token(token, collection) for token in tokens]
+        token_models = [self.create_token(token, collection) for token in tokens]
+        return [token for token in token_models if token]
     
     def save_tokens(self, collection):
         logger.info(f"Save tokens of {collection}")
@@ -139,6 +140,7 @@ class OpenSeaImport:
                 return 
             offset += 1
             token_models = self.get_tokens_models(tokens, collection)
+            if token_models:
             Token.objects.bulk_create(token_models)
 
     def get_or_save_collection(self, collection):
