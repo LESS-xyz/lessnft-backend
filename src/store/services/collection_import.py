@@ -141,7 +141,7 @@ class OpenSeaImport:
             offset += 1
             token_models = self.get_tokens_models(tokens, collection)
             if token_models:
-            Token.objects.bulk_create(token_models)
+                Token.objects.bulk_create(token_models)
 
     def get_or_save_collection(self, collection):
         """ parse data and get or create collection by network and address """
