@@ -32,7 +32,7 @@ from src.store.serializers import (
    TokenSerializer,
 )
 from src.store.services.ipfs import create_ipfs, send_to_ipfs
-from src.store.services.collection_import import CollectionImport, OpenSeaImport
+from src.store.services.collection_import import OpenSeaImport
 from .tasks import import_opensea_collection
 from src.utilities import get_page_slice, sign_message
 from django.core.exceptions import ObjectDoesNotExist
@@ -1236,36 +1236,32 @@ class CollectionImportView(APIView):
     View for import contracts
     '''
     @swagger_auto_schema(
-        operation_description="Colletion import",
+        operation_description="Import 721 ethereum collection from opensea",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
                 properties={
                     'collection': openapi.Schema(type=openapi.TYPE_STRING),
-                    'network': openapi.Schema(type=openapi.TYPE_STRING),
-                    'standart': openapi.Schema(type=openapi.TYPE_STRING),
             }
         ),
         responses={200: "success"},
     )
     def post(self, request):
         collection_address = request.data.get('collection')
-        network_name = request.data.get('network', '')
-        standart = request.data.get('standart', 'ERC721')
+        network_name = 'ethereum'
         network = Network.objects.filter(name__iexact=network_name).first()
-
-        if not network_name or not network:
-            return Response({"error": "Network not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        if standart not in ["ERC721", "ERC1155"]:
-            return Response({"error": "Wrong collection standart"}, status=status.HTTP_400_BAD_REQUEST)
 
         collection_import = OpenSeaImport(collection_address, network)
 
         collection = collection_import.get_collection_data()
-        # TODO: if not collection
+        if not collection:
+            return Response({"error": "Collection not found"}, status=status.HTTP_400_BAD_REQUEST)
 
         if not collection.get('stats').get('count', 0):
-            return Response({"error": "Collection hasn't tokens"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Collection error"}, status=status.HTTP_400_BAD_REQUEST)
+
+        standart = collection.get('primary_asset_contracts')[0].get("schema_name")
+        if standart not in ["ERC1155", "ERC721"]:
+            return Response({"error": "Bad collection standart"}, status=status.HTTP_400_BAD_REQUEST)
 
         import_opensea_collection.delay(collection_address, network_name, collection)
 
