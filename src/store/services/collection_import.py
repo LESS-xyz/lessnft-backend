@@ -3,6 +3,8 @@ import logging
 from web3.exceptions import ContractLogicError
 from src.store.models import Collection, Token, Status
 from src.accounts.models import AdvUser
+from dataclasses import dataclass, fields
+from typing import Optional
 
 
 URL = 'https://api.opensea.io/api/v1/'
@@ -71,56 +73,19 @@ class OpenSeaImport:
             )
         return adv_user
 
-    def create_token(self, token, collection):
-        """
-        Parse token data and return Token instance
-        """
-        if not token.get('creator'):
-            return None
-        standart = token.get('asset_contract').get('schema_name')
-        traits = token.get('traits')
-        details = {trait.get('trait_type'): trait.get('value') for trait in traits}
-        return Token(
-            name=token.get('name'),
-            internal_id=token.get('token_id'),
-            image=token.get('image_url'),
-            animation_file=token.get('animation_url'),
-            ipfs=token.get('token_metadata'),
-            details=details,
-            format='animation' if token.get('animation_url') else 'image', 
-            status=Status.PENDING,
-            total_supply = 1, # TODO: refactor hardcode
-            owner=self._get_user(token.get('owner')),
-            # owners = ???
-            creator=self._get_user(token.get('creator')),
-            creator_royalty=token['asset_contract'].get('dev_seller_fee_basis_points', 0) /100,
-            description=token.get("description"),
-            collection=collection,
-        )
-
-    def get_valid_tokens(self, tokens, collection):
-        """
-        Return list of tokens without exists or
-        invalid tokens (token hasn't name)
-        """
-        internal_ids =  [t.get("token_id") for t in tokens]
-        internal_ids = list(Token.objects.filter(
-            collection=collection, 
-            internal_id__in=internal_ids,
-        ).values_list("internal_id", flat=True))
-
-        is_valid = lambda token: int(token.get("token_id")) not in internal_ids and token.get('name')
-
-        return [token for token in tokens if is_valid(token)]
-
     def get_tokens_models(self, tokens, collection):
         """
         Check if token exists and valid
         and return list of Token instance
         """
-        tokens = self.get_valid_tokens(tokens, collection)
-        token_models = [self.create_token(token, collection) for token in tokens]
-        return [token for token in token_models if token]
+        tokens = [TokenData(**token) for token in tokens]
+        internal_ids = [token.token_id for token in tokens]
+        internal_ids = list(Token.objects.filter(
+            collection=collection, 
+            internal_id__in=internal_ids,
+        ).values_list("internal_id", flat=True))
+
+        return [token.get_token_model(collection) for token in tokens if token.is_valid and token.token_id not in internal_ids]
     
     def save_tokens(self, collection):
         logger.info(f"Save tokens of {collection}")
@@ -242,3 +207,78 @@ class CollectionImport:
     #     self.short_url = request.data.get('short_url')
     #     self.creator = request.user
     #     self.save()
+
+
+@dataclass(init=False)
+class TokenData:
+    token_id: int
+    name: str
+    image_url: str
+    animation_url: str
+    token_metadata: str
+    description: str
+    traits: dict
+    owner: Optional[dict]
+    creator: Optional[dict]
+    asset_contract: dict
+
+    def __init__(self, **kwargs):
+        names = set([f.name for f in fields(self)])
+        for k, v in kwargs.items():
+            if k in names:
+                setattr(self, k, v)
+
+    @property
+    def details(self):
+        return {trait.get('trait_type'): trait.get('value') for trait in self.traits}
+
+    @property
+    def owner_user(self):
+        return self.get_user(self.owner)
+
+    @property
+    def creator_user(self):
+        return self.get_user(self.creator)
+    
+    @property
+    def format(self):
+        return 'animation' if self.animation_url else 'image'
+    
+    @property
+    def is_valid(self):
+        return self.name and self.creator_user
+    
+    @property
+    def creator_royalty(self):
+        return self.asset_contract.get('dev_seller_fee_basis_points', 0) /100
+
+    def get_user(self, user):
+        if user and user.get('user'):
+            try:
+                adv_user = AdvUser.objects.get(username__iexact=user['address'])
+            except AdvUser.DoesNotExist:
+                adv_user = AdvUser.objects.create_user(
+                    username=user['address'], 
+                    display_name=user['user']['username'],
+                    avatar_ipfs=user['profile_img_url'],
+                )
+            return adv_user
+
+    def get_token_model(self, collection):
+        return Token(
+            name=self.name,
+            internal_id=self.token_id,
+            image=self.image_url,
+            animation_file=self.animation_url,
+            ipfs=self.token_metadata,
+            details=self.details,
+            format=self.format, 
+            status=Status.PENDING,
+            total_supply = 1,
+            owner=self.owner_user,
+            creator=self.creator_user,
+            creator_royalty=self.creator_royalty,
+            description=self.description,
+            collection=collection,
+        )
+
