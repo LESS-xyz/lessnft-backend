@@ -46,9 +46,10 @@ ITEMS_PER_PAGE: 50 # Default items count on page for pagination
 INTERVALS:
   - every: 2
     period: MINUTES
+    pk: 1
   - every: 1
     period: HOURS
-
+    pk: 2
 PERIODIC_TASKS:
   - name: remove_pending
     task: remove_pending
@@ -87,9 +88,9 @@ USD_RATES:
     fee_discount: 100
 
 MASTER_USER:
-    address: "0x111222233333444455556666777788889999"
-    network: ethereum # Network name 
-    commission: 3 # User commision
+    - address: "0x111222233333444455556666777788889999"
+      network: ethereum # Network name 
+      commission: 3 # User commision
 
 REDIS_HOST: 'test-redis'
 REDIS_PORT: 6379
