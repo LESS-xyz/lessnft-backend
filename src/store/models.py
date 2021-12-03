@@ -403,8 +403,8 @@ class Token(models.Model):
 
         if details:
             rarity_attributes = {'Rarity points': 0}
-            total_tokens = Token.token_objects.filter(collection=self.collection).count()
-            token_details = Token.token_objects.filter(collection=self.collection).values_list('details', flat=True)
+            total_tokens = Token.objects.filter(collection=self.collection).count()
+            token_details = Token.objects.filter(collection=self.collection).values_list('details', flat=True)
 
             for attribute, value in details.items():
                 value_ammount = Counter(x[attribute] for x in token_details if attribute in x)
@@ -474,7 +474,7 @@ class Token(models.Model):
                 if not ownership:
                     return False, Response({'error': 'user is not owner or token is not on sell'})
             except AdvUser.DoesNotExist:
-                return False, Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
+                return False, Response({'error': 'user not found'}, status=status.HTTP_404_NOT_FOUND)
 
         return True, None
 
