@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 
+from django.utils import timezone
 from celery import shared_task
 from src.store.models import Bid, Status, Token, TransactionTracker, Tags
 from src.networks.models import Types
@@ -104,6 +105,16 @@ def check_tron_transactions(tx):
 
 @shared_task(name="transaction_tracker")
 def transaction_tracker():
+    #delete expired blockers
+    now = timezone.now()
+    delta = timedelta(seconds=config.TX_TRACKER_TIMEOUT)
+    expired_tx_list = TransactionTracker.objects.filter(tx_hash__isnull=True).filter(created_at__lt=now-delta)
+    id_list = expired_tx_list.values_list('token__id', flat=True)
+    tokens = Token.objects.filter(id__in=id_list)
+    tokens.update(selling=True)
+    expired_tx_list.delete()
+
+    # check transactions
     for type in Types._member_names_:
         tx_list = TransactionTracker.objects.filter(token__collection__network__network_type=type)
         for tx in tx_list:

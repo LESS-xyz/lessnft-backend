@@ -2,6 +2,7 @@ import threading
 from decimal import Decimal
 
 from src.accounts.models import AdvUser
+from src.rates.models import UsdRate
 from src.activity.models import BidsHistory, TokenHistory
 from src.store.models import Collection, Status, Token, Ownership, Bid
 from src.store.services.ipfs import get_ipfs
@@ -212,10 +213,12 @@ class HandlerMintTransferBurn(HandlerABC):
 
         if token.collection.standart == 'ERC721':
             price = token.price
+            currency = token.currency
             if token.minimal_bid:
                 price = token.minimal_bid
         else:
             price = token.ownership_set.first().price
+            currency = token.ownership_set.first().currency
             if token.ownership_set.first().minimal_bid:
                 price = token.ownership_set.first().minimal_bid
         if price:
@@ -229,6 +232,7 @@ class HandlerMintTransferBurn(HandlerABC):
                 tx_hash=tx_hash,
                 amount=token.total_supply,
                 price=price,
+                currency=currency,
             )
 
     def burn_event(
@@ -401,6 +405,10 @@ class HandlerBuy(HandlerABC):
         decimals = token.currency.get_decimals
         price = Decimal(int(data.price) / int(decimals))
 
+        currency = UsdRate.objects.filter(
+            network=token.collection.networks,
+            address=data.address,
+        )
         TokenHistory.objects.update_or_create(
             tx_hash=data.tx_hash,
             defaults={
@@ -410,6 +418,7 @@ class HandlerBuy(HandlerABC):
                 "token": token,
                 "new_owner": new_owner,
                 "old_owner": old_owner,
+                "currency": currency,
             },
         )
 

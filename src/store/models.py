@@ -6,9 +6,6 @@ from collections import Counter
 from datetime import datetime
 from decimal import Decimal
 from typing import Tuple, Union
-
-from django.contrib.auth.models import AnonymousUser
-
 from src.accounts.models import AdvUser, DefaultAvatar
 from src.consts import (
     COLLECTION_CREATION_GAS_LIMIT, 
@@ -24,7 +21,7 @@ from src.utilities import get_media_from_ipfs, sign_message
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.db import models
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, OuterRef, Q, Sum
 from django.db.models.signals import post_save, pre_save
 from rest_framework import status
 from rest_framework.response import Response
@@ -631,7 +628,7 @@ class Token(models.Model):
             )
 
 
-    def buy_token(self, token_amount, buyer, seller=None, price=None, auc=False):
+    def buy_token(self, token_amount, buyer, seller=None, price=None, auc=False, bid=None):
         fee_address = self.collection.network.get_ethereum_address(self.currency.fee_address)
 
         id_order = '0x%s' % secrets.token_hex(32)
@@ -751,6 +748,20 @@ class Token(models.Model):
         ]
         signature = signature
 
+        # create tx tracker instance
+        if self.standart == 'ERC721':
+            TransactionTracker.objects.create(token=self, bid=bid)
+        else:
+            ownership = Ownership.objects.filter(token_id=self.id, owner__username=seller_address).first()
+            owner_amount = TransactionTracker.objects.aggregate(total_amount=Sum('amount'))
+            owner_amount = owner_amount['total_amount'] or 0
+            if owner_amount and ownership.quantity <= owner_amount + int(token_amount):
+                ownership.selling = False
+                ownership.save()
+            TransactionTracker.objects.create(token=self, ownership=ownership, amount=token_amount, bid=bid)
+        self.selling = False
+        self.save()
+
         return self.collection.network.contract_call(
                 method_type='write',
                 contract_type='exchange',
@@ -825,6 +836,7 @@ class Ownership(models.Model):
     owner = models.ForeignKey('accounts.AdvUser', on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(null=True)
     selling = models.BooleanField(default=False)
+    currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None, blank=True)
     currency_price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
     currency_minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
 
@@ -904,7 +916,9 @@ class TransactionTracker(models.Model):
     tx_hash = models.CharField(max_length=200, null=True, blank=True)
     token = models.ForeignKey('Token', on_delete=models.CASCADE, null=True, blank=True, default=None)
     ownership = models.ForeignKey('Ownership', on_delete=models.CASCADE, null=True, blank=True, default=None)
+    bid = models.ForeignKey('Bid', on_delete=models.CASCADE, null=True, blank=True, default=None)
     amount = models.PositiveSmallIntegerField(null=True, blank=True, default=None)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Tracker hash - {self.tx_hash}"
