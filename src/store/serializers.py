@@ -67,7 +67,7 @@ class OwnershipSerializer(serializers.ModelSerializer):
         return obj.owner.url
 
     def get_currency(self, obj):
-        return CurrencySerializer(obj.token.currency).data
+        return CurrencySerializer(obj.currency).data
 
     def get_price(self, obj):
         return obj.currency_price

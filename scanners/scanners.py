@@ -229,6 +229,7 @@ class HandlerMintTransferBurn(HandlerABC):
                 tx_hash=tx_hash,
                 amount=token.total_supply,
                 price=price,
+                currency=token.currency,
             )
 
     def burn_event(
@@ -410,6 +411,7 @@ class HandlerBuy(HandlerABC):
                 "token": token,
                 "new_owner": new_owner,
                 "old_owner": old_owner,
+                "currency": token.currency,
             },
         )
 

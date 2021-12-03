@@ -6,9 +6,6 @@ from collections import Counter
 from datetime import datetime
 from decimal import Decimal
 from typing import Tuple, Union
-
-from django.contrib.auth.models import AnonymousUser
-
 from src.accounts.models import AdvUser, DefaultAvatar
 from src.consts import (
     COLLECTION_CREATION_GAS_LIMIT, 
@@ -839,6 +836,7 @@ class Ownership(models.Model):
     owner = models.ForeignKey('accounts.AdvUser', on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(null=True)
     selling = models.BooleanField(default=False)
+    currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None, blank=True)
     currency_price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
     currency_minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
 

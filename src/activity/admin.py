@@ -21,7 +21,7 @@ class UserActionAdmin(admin.ModelAdmin):
 
 class TokenHistoryAdmin(admin.ModelAdmin):
     model = TokenHistory
-    list_display = ('token', 'amount', 'old_owner', 'method', 'date', 'price')
+    list_display = ('token', 'amount', 'old_owner', 'method', 'date', 'price', 'currency')
     list_filter = ('method',)
     ordering = ('-date',)
 

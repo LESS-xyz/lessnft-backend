@@ -15,8 +15,6 @@ def validate_bid(user, token_id, amount, quantity):
     amount = amount * token.currency.get_decimals
     if not token.is_auc_selling:
         return 'token is not set on action'
-    if token.get_highest_bid() and token.get_highest_bid() > amount:
-        return 'Your bid is too low'
     if token.total_supply < quantity:
         return 'Token quantity is lower'
 

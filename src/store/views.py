@@ -411,17 +411,24 @@ class GetView(APIView):
         start_auction = request_data.get('start_auction')
         end_auction = request_data.get('end_auction')
         selling = request_data.get('selling', True)
-        if price:
+        currency = request_data.get('currency')
+
+        if price: # instance sale
             request_data.pop('price', None)
             price = Decimal(str(price))
-        else:
-            request_data['currency'] = f'w{token.collection.network.native_symbol}'.lower()
+        elif currency != f'w{token.collection.network.native_symbol}'.lower(): # auction sale
+            return Response({"error": "Invalid currency"}, status=status.HTTP_400_BAD_REQUEST)
+
         request_data['currency_price'] = price 
         if minimal_bid:
             request_data.pop('minimal_bid')
             minimal_bid = Decimal(str(minimal_bid))
         request_data['currency_minimal_bid'] = minimal_bid
         
+        currency = UsdRate.objects.filter(name=currency, network=token.collection.network).first()
+        if not currency:
+            return Response({"error": "Currency not found"}, status=status.HTTP_404_NOT_FOUND)
+
         if token.standart == "ERC721":
             old_price = token.currency_price
             amount = 1
@@ -438,6 +445,7 @@ class GetView(APIView):
             old_price = ownership.currency_price
             amount = ownership.quantity
             ownership.selling = selling
+            ownership.currency = currency
             ownership.currency_price = price
             ownership.currency_minimal_bid = minimal_bid
             ownership.full_clean()
@@ -448,6 +456,7 @@ class GetView(APIView):
             TokenHistory.objects.create(
                 token=token,
                 old_owner=user,
+                currency=currency,
                 amount=amount,
                 price=price,
                 method='Listing',
@@ -684,13 +693,25 @@ class MakeBid(APIView):
         token_id = request_data.get('token_id')
         amount = Decimal(str(request_data.get('amount')))
         quantity = int(request_data.get('quantity'))
-        token = Token.objects.get(id=token_id)
+        try:
+            token = Token.objects.get(id=token_id)
+        except:
+            return Response(
+                {'error': 'Token not found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
         user = request.user
 
-        if token.currency.address == "0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE":
+        network = token.collection.network
+        currency = UsdRate.objects.filter(
+            name=f"w{network.native_symbol}".lower(), 
+            network=network,
+        ).first()
+        if not currency:
             return Response(
-                {'error': 'You cannot bet on native currencies'},
-                status=status.HTTP_400_BAD_REQUEST,
+                {'error': 'Currency not found'},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         #returns OK if valid, or error message
@@ -700,7 +721,7 @@ class MakeBid(APIView):
             return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
 
         #create new bid or update old one
-        bid, created = Bid.objects.get_or_create(user=user, token=Token.objects.get(id=token_id))
+        bid, created = Bid.objects.get_or_create(user=user, token=token)
 
         if not created and bid.amount >= amount:
             return Response({'error': 'you cannot lower your bid'}, status=status.HTTP_400_BAD_REQUEST)
@@ -712,39 +733,37 @@ class MakeBid(APIView):
 
 
         #construct approve tx if not approved yet:
-        allowance = bid.token.currency.network.contract_call(
+        allowance = network.contract_call(
             method_type='read',
             contract_type='token',
-            address=token.currency.address,
+            address=currency.address,
             function_name='allowance',
             input_params=(
                 token.collection.network.wrap_in_checksum(user.username),
-                bid.token.currency.network.exchange_address
+                network.exchange_address
             ),
             input_type=('address', 'address'),
             output_types=('uint256',),
         )
 
-        user_balance = bid.token.currency.network.contract_call(
+        user_balance = network.contract_call(
             method_type='read', 
             contract_type='token',
-            address=token.currency.address, 
+            address=currency.address, 
             function_name='balanceOf',
-            input_params=(token.collection.network.wrap_in_checksum(user.username),),
+            input_params=(network.wrap_in_checksum(user.username),),
             input_type=('address',),
             output_types=('uint256',),
         )
 
-
-
-        amount, _ = calculate_amount(amount, bid.token.currency.symbol)
+        amount, _ = calculate_amount(amount, currency.symbol)
 
         if allowance < amount * quantity:
 
-            initial_tx = bid.token.collection.network.contract_call(
+            initial_tx = network.contract_call(
                 method_type = 'write',
                 contract_type='token',
-                address=token.currency.address,
+                address=currency.address,
 
                 gas_limit = APPROVE_GAS_LIMIT,
                 nonce_username = user.username,
@@ -752,7 +771,7 @@ class MakeBid(APIView):
 
                 function_name= 'approve',
                 input_params=(
-                    bid.token.collection.network.wrap_in_checksum(token.collection.network.exchange_address),
+                    network.wrap_in_checksum(network.exchange_address),
                     user_balance,
                 ),
                 input_type=('address', 'uint256')
