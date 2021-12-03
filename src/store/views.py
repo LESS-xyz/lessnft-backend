@@ -414,6 +414,8 @@ class GetView(APIView):
         if price:
             request_data.pop('price', None)
             price = Decimal(str(price))
+        else:
+            request_data['currency'] = f'w{token.collection.network.native_symbol}'.lower()
         request_data['currency_price'] = price 
         if minimal_bid:
             request_data.pop('minimal_bid')
@@ -1072,13 +1074,22 @@ class TransactionTrackerView(APIView):
         token_id = request.data.get("token")
         tx_hash = request.data.get("tx_hash")
         amount = request.data.get("amount")
+        bid_id = request.data.get("bid_id")
 
         token = Token.objects.filter(id=token_id).first()
-
         if not token:
             return Response({"error": "token not found"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if token.standart == "ERC1155":
+        bid = None
+        if bid_id:
+            bid = Bid.objects.filter(id=bid_id).first()
+            if not bid:
+                return Response({"error": "bid not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+        if token.standart == "ERC721":
+            tracker = TransactionTracker.objects.filter(token=token, bid=bid).first()
+        else:
             owner_url = request.data.get("ownership")
             user = AdvUser.objects.get_by_custom_url(owner_url)
             ownership = Ownership.objects.filter(token_id=token_id, owner=user).first()
@@ -1087,13 +1098,12 @@ class TransactionTrackerView(APIView):
             if owner_amount and ownership.quantity <= owner_amount + int(amount):
                 ownership.selling = False
                 ownership.save()
-            TransactionTracker.objects.create(token=token, ownership=ownership, tx_hash=tx_hash, amount=amount)
-            return Response({"success": "trancsaction is tracked"}, status=status.HTTP_200_OK)
-        token.selling = False
-        token.save()
-        TransactionTracker.objects.create(token=token, tx_hash=tx_hash)
-        return Response({"success": "trancsaction is tracked"}, status=status.HTTP_200_OK)
-
+            tracker = TransactionTracker.objects.filter(token=token, ownership=ownership, amount=amount, bid=bid).first()
+        if tracker:
+            tracker.tx_hash = tx_hash
+            tracker.save()
+            return Response({"success": "transaction is tracked"}, status=status.HTTP_200_OK)
+        return Response({'tracker not found'}, status=status.HTTP_404_NOT_FOUND)
 
 class GetCollectionByAdressView(APIView):
     '''
