@@ -116,7 +116,7 @@ class SearchView(APIView):
     searching has simple 'contains' logic.
     '''
     @swagger_auto_schema(
-        operation_description="post search pattern",
+        operation_description="get search pattern",
         manual_parameters=[
             openapi.Parameter(
                 "sort",
@@ -138,50 +138,18 @@ class SearchView(APIView):
             openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
             openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("creator", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("text", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("owner", openapi.IN_QUERY, type=openapi.TYPE_STRING),
         ],
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            manual_parameters=[
-                openapi.Parameter(
-                    "sort", 
-                    openapi.IN_QUERY, 
-                    type=openapi.TYPE_STRING, 
-                    description="Search by: items, users, collections",
-                ),
-                # openapi.Parameter("tags", openapi.IN_QUERY, type=openapi.TYPE_ARRAY),
-                openapi.Parameter("is_verified", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN),
-                openapi.Parameter("max_price", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
-                openapi.Parameter(
-                    "order_by", 
-                    openapi.IN_QUERY, 
-                    type=openapi.TYPE_STRING,
-                    description="For tokens: date, price, likes. \n For users: created, followers, tokens_created",
-                ),
-                openapi.Parameter("on_sale", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN),
-                openapi.Parameter("currency", openapi.IN_QUERY, type=openapi.TYPE_STRING),
-                openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
-                openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
-                openapi.Parameter("creator", openapi.IN_QUERY, type=openapi.TYPE_STRING),
-                openapi.Parameter("owner", openapi.IN_QUERY, type=openapi.TYPE_STRING),
-            ],
-            properties={
-                'text': openapi.Schema(type=openapi.TYPE_STRING),
-                'page': openapi.Schema(type=openapi.TYPE_NUMBER)
-            }
-        ),
         responses={200: TokenSerializer(many=True)},
     )
-    def post(self, request):
+    def get(self, request):
         # TODO: try use PaginateMixin
-        request_data = request.data
-        words = request_data.get('text', '')
         params = request.query_params
         sort = params.get('type', 'items')
 
         sort_type = getattr(config.SEARCH_TYPES, sort)
         token_count, search_result = getattr(Search(), f"{sort_type}_search")(
-            words=words, 
             user=request.user, 
             **params,
         )
