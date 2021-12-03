@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 
-from django.conf import timezone
+from django.utils import timezone
 from celery import shared_task
 from src.store.models import Bid, Status, Token, TransactionTracker, Tags
 from src.networks.models import Types
