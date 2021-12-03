@@ -116,7 +116,7 @@ class SearchView(APIView):
     searching has simple 'contains' logic.
     '''
     @swagger_auto_schema(
-        operation_description="post search pattern",
+        operation_description="get search pattern",
         manual_parameters=[
             openapi.Parameter(
                 "sort",
