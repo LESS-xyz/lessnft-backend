@@ -34,7 +34,7 @@ class ActivityView(APIView, PaginateMixin):
         manual_parameters=[
             openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("type", openapi.IN_QUERY, type=openapi.TYPE_STRING),
-            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
+            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_STRING),
         ],
     )
     def get(self, request):
@@ -246,7 +246,7 @@ class UserActivityView(APIView, PaginateMixin):
         manual_parameters=[
             openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("type", openapi.IN_QUERY, type=openapi.TYPE_STRING),
-            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
+            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_STRING),
         ],
     )
     def get(self, request, address):
@@ -367,7 +367,7 @@ class FollowingActivityView(APIView, PaginateMixin):
         manual_parameters=[
             openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("type", openapi.IN_QUERY, type=openapi.TYPE_STRING),
-            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
+            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_STRING),
         ],
     )
     def get(self, request, address):
