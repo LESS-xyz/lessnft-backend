@@ -83,12 +83,12 @@ USD_RATES:
     image: "image url"
     address: "0x111222233333444455556666777788889999"
     decimal: 18
-    network: 1
+    network: ethereum
     fee_discount: 100
 
 MASTER_USER:
     address: "0x111222233333444455556666777788889999"
-    network: 1 # Network (get by Network's PK) 
+    network: ethereum # Network name 
     commission: 3 # User commision
 
 REDIS_HOST: 'test-redis'
