@@ -59,10 +59,11 @@ class HandlerABC(ABC):
 
 
 class ScannerABC(ABC):
-    def __init__(self, network, contract_type=None, contract=None):
+    def __init__(self, network, contract_type=None, contract=None, block=None):
         self.network = network
         self.contract_type = contract_type
         self.contract = contract
+        self.block = block
 
     def sleep(self) -> None:
         time.sleep(config.SCANNER_SLEEP)
@@ -75,7 +76,7 @@ class ScannerABC(ABC):
         redis_ = RedisClient()
         last_block_number = redis_.connection.get(name)
         if last_block_number is None:
-            last_block_number = self.get_last_network_block()
+            last_block_number = self.block or self.get_last_network_block()
             self.save_last_block(name, last_block_number)
         return int(last_block_number)
 

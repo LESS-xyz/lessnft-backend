@@ -35,6 +35,7 @@ class Status(models.TextChoices):
     COMMITTED = 'Committed'
     BURNED = 'Burned'
     EXPIRED = 'Expired'
+    SYNCED = 'Synced'
 
 
 class CollectionQuerySet(models.QuerySet):
@@ -132,10 +133,8 @@ class Collection(models.Model):
     def ethereum_address(self):
         return self.network.get_ethereum_address(self.address)
 
-
     def __str__(self):
         return self.name
-
 
     def save_in_db(self, request, avatar):
         self.name = request.data.get('name')

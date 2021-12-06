@@ -24,12 +24,14 @@ class ScannerAbsolute(threading.Thread):
         handler: object,
         contract_type: str = None,
         contract: object = None,
+        block: int = None,
     ) -> None:
         super().__init__()
         self.network = network
         self.handler = handler
         self.contract_type = contract_type  # ERC721/ ERC1155
         self.contract = contract
+        self.block = block 
 
     def run(self):
         self.start_polling()

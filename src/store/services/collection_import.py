@@ -55,6 +55,8 @@ class OpenSeaImport:
         """
         collection_model, _ = self.get_or_save_collection(collection)
         self.save_tokens(collection_model)
+        collection_model.status = Status.SYNCED
+        collection_model.save()
 
     def _get_user(self, user):
         """
@@ -119,6 +121,7 @@ class OpenSeaImport:
             new_collection.symbol = collection.get('primary_asset_contracts')[0].get("symbol")
             new_collection.avatar_ipfs = collection.get('image_url')
             new_collection.standart = collection.get('primary_asset_contracts')[0].get("schema_name")
+            new_collection.deploy_block = self.network.get_last_block()
             new_collection.save()
         return new_collection, created
 

@@ -95,12 +95,8 @@ class Network(models.Model):
             return self._get_contract_by_abi(WETH_ABI, address)
         return Address(address)
 
-    def get_last_confirmed_block(self) -> int:
-        web3 = self.get_web3_connection()
-        last_block = web3.eth.block_number
-        confirmation_blocks = 6
-        last_block_confirmed = last_block - confirmation_blocks
-        return last_block_confirmed
+    def get_last_block(self) -> int:
+        return self.get_web3_connection().eth.block_number
 
     def get_ethereum_address(self, address):
         if self.network_type == Types.tron:
