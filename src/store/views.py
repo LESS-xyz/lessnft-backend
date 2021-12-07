@@ -1,3 +1,4 @@
+import logging
 import random
 from decimal import Decimal
 from datetime import timedelta
@@ -33,8 +34,8 @@ from src.store.serializers import (
 )
 from src.store.services.ipfs import create_ipfs, send_to_ipfs
 from src.store.services.collection_import import OpenSeaImport
-from .tasks import import_opensea_collection
-from src.utilities import get_page_slice, sign_message
+from src.store.tasks import import_opensea_collection
+from src.utilities import get_page_slice, sign_message, PaginateMixin
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
 from django.db.models import Count, Q, Sum
@@ -117,7 +118,7 @@ class SearchView(APIView):
     searching has simple 'contains' logic.
     '''
     @swagger_auto_schema(
-        operation_description="post search pattern",
+        operation_description="get search pattern",
         manual_parameters=[
             openapi.Parameter(
                 "sort",
@@ -139,49 +140,18 @@ class SearchView(APIView):
             openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
             openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("creator", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("text", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("owner", openapi.IN_QUERY, type=openapi.TYPE_STRING),
         ],
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            manual_parameters=[
-                openapi.Parameter(
-                    "sort", 
-                    openapi.IN_QUERY, 
-                    type=openapi.TYPE_STRING, 
-                    description="Search by: items, users, collections",
-                ),
-                # openapi.Parameter("tags", openapi.IN_QUERY, type=openapi.TYPE_ARRAY),
-                openapi.Parameter("is_verified", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN),
-                openapi.Parameter("max_price", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
-                openapi.Parameter(
-                    "order_by", 
-                    openapi.IN_QUERY, 
-                    type=openapi.TYPE_STRING,
-                    description="For tokens: date, price, likes. \n For users: created, followers, tokens_created",
-                ),
-                openapi.Parameter("on_sale", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN),
-                openapi.Parameter("currency", openapi.IN_QUERY, type=openapi.TYPE_STRING),
-                openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
-                openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
-                openapi.Parameter("creator", openapi.IN_QUERY, type=openapi.TYPE_STRING),
-                openapi.Parameter("owner", openapi.IN_QUERY, type=openapi.TYPE_STRING),
-            ],
-            properties={
-                'text': openapi.Schema(type=openapi.TYPE_STRING),
-                'page': openapi.Schema(type=openapi.TYPE_NUMBER)
-            }
-        ),
         responses={200: TokenSerializer(many=True)},
     )
-    def post(self, request):
-        request_data = request.data
-        words = request_data.get('text', '')
+    def get(self, request):
+        # TODO: try use PaginateMixin
         params = request.query_params
         sort = params.get('type', 'items')
 
         sort_type = getattr(config.SEARCH_TYPES, sort)
         token_count, search_result = getattr(Search(), f"{sort_type}_search")(
-            words=words, 
             user=request.user, 
             **params,
         )
@@ -219,7 +189,7 @@ class CreateView(APIView):
                 'cover': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_BINARY),
                 'format': openapi.Schema(type=openapi.TYPE_STRING),
             }),
-        responses={200: create_response},
+        responses={200: create_response, 404: 'Collection not found'},
     )
     def post(self, request):
         request_data = request.data
@@ -230,7 +200,7 @@ class CreateView(APIView):
         try:
             token_collection = Collection.objects.committed().get_by_short_url(token_collection_id)
         except:
-            return Response({'error': 'Collection not found'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Collection not found'}, status=status.HTTP_404_NOT_FOUND)
 
         if standart != token_collection.standart:
             return Response({'standart': 'collections type mismatch'}, status=status.HTTP_400_BAD_REQUEST)
@@ -293,7 +263,7 @@ class CreateCollectionView(APIView):
         short_url = request.data.get('short_url')
         standart = request.data.get('standart')
         network = request.query_params.get('network', config.DEFAULT_NETWORK)
-        print(network)
+        logging.info(network)
         owner = request.user
 
         is_unique, response = Collection.collection_is_unique(name, symbol, short_url, network)
@@ -302,23 +272,23 @@ class CreateCollectionView(APIView):
 
         if standart not in ["ERC721", "ERC1155"]:
             return Response('invalid collection type', status=status.HTTP_400_BAD_REQUEST)
-        
+
         network = Network.objects.filter(name__icontains=network)
-        print(network.first().name)
+        logging.info(network.first().name)
         if not network:
-            return Response('invalid network name', status=status.HTTP_400_BAD_REQUEST)
+            return Response('invalid network name', status=status.HTTP_404_NOT_FOUND)
 
         initial_tx = Collection.create_contract(name, symbol, standart, owner, network.first())
 
         collection = Collection()
 
         media = request.FILES.get('avatar')
-        print(media)
+        logging.info(media)
         if media:
             ipfs = send_to_ipfs(media)
         else:
             ipfs = None
-        print(ipfs)
+        logging.info(ipfs)
         collection.save_in_db(request, ipfs)
         response_data = {'initial_tx': initial_tx, 'collection': CollectionSlimSerializer(collection).data}
         return Response(response_data, status=status.HTTP_200_OK)
@@ -330,7 +300,7 @@ class GetLikedView(APIView):
     '''
     @swagger_auto_schema(
         operation_description="get tokens liked by address",
-        responses={200: TokenSerializer(many=True), 401: not_found_response},
+        responses={200: TokenSerializer(many=True), 404: not_found_response},
         manual_parameters=[
             openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
@@ -339,11 +309,10 @@ class GetLikedView(APIView):
 
     def get(self, request, user_id):
         network = request.query_params.get('network', config.DEFAULT_NETWORK)
-        page = request.query_params.get('page', 1)
         try:
             user = AdvUser.objects.get_by_custom_url(user_id)
         except ObjectDoesNotExist:
-            return Response({'error': not_found_response}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': not_found_response}, status=status.HTTP_404_NOT_FOUND)
 
         # get users associated with the model UserAction
         ids = user.followers.all().values_list('user')
@@ -355,12 +324,8 @@ class GetLikedView(APIView):
         if network:
             tokens = [token for token in tokens if network.lower() in token.collection.network.name.lower()]
 
-        tokens_count = len(tokens)
-        start, end = get_page_slice(int(page), len(tokens))
-        token_list = tokens[start:end]
-        items = TokenSerializer(token_list, many=True, context={"user": request.user}).data
-        response_data = {"total_tokens": tokens_count, "items": items}
-        return Response(response_data, status=status.HTTP_200_OK)
+        tokens = TokenSerializer(tokens, many=True, context={"user": request.user}).data
+        return Response(self.paginate(request, tokens), status=status.HTTP_200_OK)
 
 
 class GetView(APIView):
@@ -370,13 +335,13 @@ class GetView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
     @swagger_auto_schema(
         operation_description="get token info",
-        responses={200: TokenFullSerializer, 401: not_found_response},
+        responses={200: TokenFullSerializer, 404: "token not found"},
     )
     def get(self, request, id):
         try:
             token = Token.objects.committed().get(id=id)
         except ObjectDoesNotExist:
-            return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'token not found'}, status=status.HTTP_404_NOT_FOUND)
 
         if request.user:
             ViewsTracker.objects.get_or_create(token=token, user_id=request.user.id)
@@ -397,7 +362,7 @@ class GetView(APIView):
                 'end_auction': openapi.Schema(type=openapi.FORMAT_DATETIME),
             },
         ),
-        responses={200: TokenFullSerializer, 401: not_found_response, 400: "this token doesn't belong to you"},
+        responses={200: TokenFullSerializer, 404: "token not found", 400: "this token doesn't belong to you"},
     )
     def patch(self, request, id):
         request_data = request.data.copy()
@@ -406,7 +371,7 @@ class GetView(APIView):
         try:
             token = Token.objects.committed().get(id=id)
         except ObjectDoesNotExist:
-            return Response({'error': not_found_response}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error: token not found'}, status=status.HTTP_404_NOT_FOUND)
         
         is_valid, response = token.is_valid(user)
         if not is_valid:
@@ -416,15 +381,24 @@ class GetView(APIView):
         start_auction = request_data.get('start_auction')
         end_auction = request_data.get('end_auction')
         selling = request_data.get('selling', True)
-        if price:
+        currency = request_data.get('currency')
+
+        if price: # instance sale
             request_data.pop('price', None)
             price = Decimal(str(price))
+        elif currency != f'w{token.collection.network.native_symbol}'.lower(): # auction sale
+            return Response({"error": "Invalid currency"}, status=status.HTTP_400_BAD_REQUEST)
+
         request_data['currency_price'] = price 
         if minimal_bid:
             request_data.pop('minimal_bid')
             minimal_bid = Decimal(str(minimal_bid))
         request_data['currency_minimal_bid'] = minimal_bid
         
+        currency = UsdRate.objects.filter(name=currency, network=token.collection.network).first()
+        if not currency:
+            return Response({"error": "Currency not found"}, status=status.HTTP_404_NOT_FOUND)
+
         if token.standart == "ERC721":
             old_price = token.currency_price
             amount = 1
@@ -433,7 +407,7 @@ class GetView(APIView):
             request_data['end_auction'] = end_auction
             serializer = TokenPatchSerializer(token, data=request_data, partial=True)
 
-            print(f"PatchSerializer valid - {serializer.is_valid()}")
+            logging.info(f"PatchSerializer valid - {serializer.is_valid()}")
             if serializer.is_valid():
                 serializer.save()
         else:
@@ -441,6 +415,7 @@ class GetView(APIView):
             old_price = ownership.currency_price
             amount = ownership.quantity
             ownership.selling = selling
+            ownership.currency = currency
             ownership.currency_price = price
             ownership.currency_minimal_bid = minimal_bid
             ownership.full_clean()
@@ -451,6 +426,7 @@ class GetView(APIView):
             TokenHistory.objects.create(
                 token=token,
                 old_owner=user,
+                currency=currency,
                 amount=amount,
                 price=price,
                 method='Listing',
@@ -473,11 +449,14 @@ class TokenBurnView(APIView):
             properties={
                 'amount': openapi.Schema(type=openapi.TYPE_NUMBER),
             }),
-        responses={200: transfer_tx},
+        responses={200: transfer_tx, 404: 'token does not exist'},
     )
     def post(self, request, token_id):
         user = request.user
-        token = Token.objects.committed().get(id=token_id)
+        try:
+            token = Token.objects.committed().get(id=token_id)
+        except ObjectDoesNotExist:
+            return Response({'token does not exist'}, status=status.HTTP_404_NOT_FOUND)
         amount = request.data.get("amount")
         is_valid, res = token.is_valid(user=user)
         if not is_valid:
@@ -485,21 +464,20 @@ class TokenBurnView(APIView):
         return Response({'initial_tx': token.burn(user, amount)}, status=status.HTTP_200_OK)
 
 
-class GetHotView(APIView):
+class GetHotView(APIView, PaginateMixin):
     '''
     View for getting hot items
     '''
 
     @swagger_auto_schema(
         operation_description="get hot tokens",
-        responses={200: TokenFullSerializer(many=True)},
+        responses={200: TokenFullSerializer(many=True), 404: 'Token not found'},
         manual_parameters=[
             openapi.Parameter('sort', openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter('tag', openapi.IN_QUERY, type=openapi.TYPE_STRING),
-            openapi.Parameter('network', openapi.IN_QUERY, type=openapi.TYPE_STRING),
         ],
     )
-    def get(self, request, page):
+    def get(self, request):
         sort = request.query_params.get('sort', 'recent')
         tag = request.query_params.get('tag')
         network = request.query_params.get('network', config.DEFAULT_NETWORK)
@@ -511,13 +489,8 @@ class GetHotView(APIView):
             tokens = tokens.order_by(order)
         if sort in ('cheapest', 'highest'):
             tokens = tokens.exclude(price=None).exclude(selling=False)
-        length = tokens.count()
-
-        start, end = get_page_slice(page, len(tokens))
-
-        token_list = tokens[start:end]
-        response_data = TokenFullSerializer(token_list, context={"user": request.user}, many=True).data
-        return Response({'tokens': response_data, 'length': length}, status=status.HTTP_200_OK)
+        tokens = TokenFullSerializer(tokens, context={"user": request.user}, many=True).data
+        return Response(self.paginate(request, tokens), status=status.HTTP_200_OK)
 
 
 class GetHotCollectionsView(APIView):
@@ -557,7 +530,8 @@ class GetCollectionView(APIView):
         try:
             collection = Collection.objects.committed().get_by_short_url(param)
         except ObjectDoesNotExist:
-            return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'collection not found'}, status=status.HTTP_404_NOT_FOUND)
+
 
         attribute_dict = dict(request.query_params)
         attribute_dict.pop('network', None)
@@ -596,13 +570,21 @@ class TransferOwned(APIView):
                 'address': openapi.Schema(type=openapi.TYPE_STRING),
                 'amount': openapi.Schema(type=openapi.TYPE_NUMBER)
             }),
-        responses={200: transfer_tx, 400: "you can not transfer tokens that don't belong to you"},
+        responses={
+            200: transfer_tx, 
+            400: "you can not transfer tokens that don't belong to you", 
+            404: 'token not found',
+        },
     )
     def post(self, request, token):
         address = request.data.get("address")
         amount = request.data.get("amount")
         user = request.user
-        transferring_token = Token.objects.get(id=token)
+        try:
+            transferring_token = Token.objects.get(id=token)
+        except ObjectDoesNotExist:
+            return Response({'error': 'token not found'}, status=status.HTTP_404_NOT_FOUND)
+
 
         is_valid, response = transferring_token.is_valid(user=user)
         if not is_valid:
@@ -626,7 +608,7 @@ class BuyTokenView(APIView):
                 'tokenAmount': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'sellerId': openapi.Schema(type=openapi.TYPE_STRING),
             }),
-        responses={200:buy_token_response, 400:"you cant buy token"}
+        responses={200:buy_token_response, 400:"you cant buy token", 404:"token with given id was not found"}
     )
     def post(self, request):
         buyer = request.user
@@ -641,7 +623,10 @@ class BuyTokenView(APIView):
 
         token_id = int(token_id)
         token_amount = int(token_amount)
-        tradable_token = Token.objects.get(id=token_id)
+        try:
+            tradable_token = Token.objects.get(id=token_id)
+        except ObjectDoesNotExist:
+            Response({"error": "token with given id was not found"}, status=status.HTTP_404_NOT_FOUND)
 
         is_valid, response = tradable_token.is_valid_for_buy(token_amount, seller_id)
         if not is_valid:
@@ -653,11 +638,11 @@ class BuyTokenView(APIView):
                 seller = AdvUser.objects.get_by_custom_url(seller_id)
                 ownership = Ownership.objects.filter(token__id=token_id, owner=seller).filter(selling=True)
                 if not ownership:
-                    return Response({'error': 'user is not owner or token is not on sell'})
+                    return Response({'error': 'user is not owner or token is not on sell'}, status=status.HTTP_404_NOT_FOUND)
             else:
                 seller = None
         except ObjectDoesNotExist:
-            return Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'user not found'}, status=status.HTTP_404_NOT_FOUND)
 
         buy = tradable_token.buy_token(token_amount, buyer, seller)
         return Response({'initial_tx': buy}, status=status.HTTP_200_OK)
@@ -684,7 +669,11 @@ class MakeBid(APIView):
                 'amount': openapi.Schema(type=openapi.TYPE_NUMBER),
                 'quantity': openapi.Schema(type=openapi.TYPE_NUMBER)
             }),
-        responses={400:"you cant buy token"}
+        responses={
+            400: "you cant buy token", 
+            400: "You cannot bet on native currencies",
+            404: "token not found",
+        }
     )
 
     def post(self, request):
@@ -692,13 +681,24 @@ class MakeBid(APIView):
         token_id = request_data.get('token_id')
         amount = Decimal(str(request_data.get('amount')))
         quantity = int(request_data.get('quantity'))
-        token = Token.objects.get(id=token_id)
+        try:
+            token = Token.objects.get(id=token_id)
+        except ObjectDoesNotExist:
+            return Response(
+                {'error': 'Token not found'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         user = request.user
 
-        if token.currency.address == "0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE":
+        network = token.collection.network
+        currency = UsdRate.objects.filter(
+            name=f"w{network.native_symbol}".lower(), 
+            network=network,
+        ).first()
+        if not currency:
             return Response(
-                {'error': 'You cannot bet on native currencies'},
-                status=status.HTTP_400_BAD_REQUEST,
+                {'error': 'Currency not found'},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         #returns OK if valid, or error message
@@ -708,7 +708,7 @@ class MakeBid(APIView):
             return Response({'error': result}, status=status.HTTP_400_BAD_REQUEST)
 
         #create new bid or update old one
-        bid, created = Bid.objects.get_or_create(user=user, token=Token.objects.get(id=token_id))
+        bid, created = Bid.objects.get_or_create(user=user, token=token)
 
         if not created and bid.amount >= amount:
             return Response({'error': 'you cannot lower your bid'}, status=status.HTTP_400_BAD_REQUEST)
@@ -720,39 +720,37 @@ class MakeBid(APIView):
 
 
         #construct approve tx if not approved yet:
-        allowance = bid.token.currency.network.contract_call(
+        allowance = network.contract_call(
             method_type='read',
             contract_type='token',
-            address=token.currency.address,
+            address=currency.address,
             function_name='allowance',
             input_params=(
                 token.collection.network.wrap_in_checksum(user.username),
-                bid.token.currency.network.exchange_address
+                network.exchange_address
             ),
             input_type=('address', 'address'),
             output_types=('uint256',),
         )
 
-        user_balance = bid.token.currency.network.contract_call(
+        user_balance = network.contract_call(
             method_type='read', 
             contract_type='token',
-            address=token.currency.address, 
+            address=currency.address, 
             function_name='balanceOf',
-            input_params=(token.collection.network.wrap_in_checksum(user.username),),
+            input_params=(network.wrap_in_checksum(user.username),),
             input_type=('address',),
             output_types=('uint256',),
         )
 
-
-
-        amount, _ = calculate_amount(amount, bid.token.currency.symbol)
+        amount, _ = calculate_amount(amount, currency.symbol)
 
         if allowance < amount * quantity:
 
-            initial_tx = bid.token.collection.network.contract_call(
+            initial_tx = network.contract_call(
                 method_type = 'write',
                 contract_type='token',
-                address=token.currency.address,
+                address=currency.address,
 
                 gas_limit = APPROVE_GAS_LIMIT,
                 nonce_username = user.username,
@@ -760,7 +758,7 @@ class MakeBid(APIView):
 
                 function_name= 'approve',
                 input_params=(
-                    bid.token.collection.network.wrap_in_checksum(token.collection.network.exchange_address),
+                    network.wrap_in_checksum(network.exchange_address),
                     user_balance,
                 ),
                 input_type=('address', 'uint256')
@@ -789,7 +787,7 @@ def get_bids(request, token_id):
     try:
         token = Token.objects.committed().get(id=token_id)
     except ObjectDoesNotExist:
-        return Response({'error': 'token not found'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'token not found'}, status=status.HTTP_404_NOT_FOUND)
     if token.is_auc_selling:
         return Response({'error': 'token is not set on auction'}, status=status.HTTP_400_BAD_REQUEST)
     user = request.user
@@ -797,6 +795,7 @@ def get_bids(request, token_id):
         return Response({'error': 'you can get bids list only for owned tokens'}, status=status.HTTP_400_BAD_REQUEST)
 
     bids = Bid.objects.filter(token=token)
+
     response_data = BidSerializer(bids, many=True).data
     return Response(response_data, status=status.HTTP_200_OK)
 
@@ -805,11 +804,13 @@ class VerificateBetView(APIView):
 
     @swagger_auto_schema(
         operation_description="verificate bet",
-        responses={200: BetSerializer, 400: 'verificate bet not found'},
+        responses={200: BetSerializer, 404: 'token or bid not found'},
     )
     def get(self, request, token_id):
-        print('virificate!')
-        token = Token.objects.get(id=token_id)
+        try:
+            token = Token.objects.get(id=token_id)
+        except ObjectDoesNotExist:
+            return Response({'error': 'token not found'}, status=status.HTTP_404_NOT_FOUND)
         bets = Bid.objects.filter(token=token).order_by('-amount')
         max_bet = bets.first()
         if not max_bet:
@@ -824,19 +825,19 @@ class VerificateBetView(APIView):
         check_valid = validate_bid(user, token_id, amount, quantity)
 
         if check_valid == 'OK':
-            print('all ok!')
+            logging.info('all ok!')
             return Response(BetSerializer(max_bet).data, status=status.HTTP_200_OK)
         else:
-            print('not ok(')
+            logging.info('not ok(')
             max_bet.delete()
-            print(bets)
+            logging.info(bets)
             for bet in bets:
                 user = bet.user
                 amount = bet.amount
                 quantity = bet.quantity
                 check_valid = validate_bid(user, token_id, amount, quantity)
                 if check_valid == 'OK':
-                    print('again ok!')
+                    logging.info('again ok!')
                     return Response(
                         {
                             'invalid_bet': BetSerializer(max_bet).data,
@@ -862,13 +863,13 @@ class AuctionEndView(APIView):
             properties={
                 'token': openapi.Schema(type=openapi.TYPE_STRING)
             }),
-        responses={200:buy_token_response, 400: 'cant sell token'}
+        responses={200:buy_token_response, 400: 'cant sell token', 404: 'no active bids'}
     )
     def post(self, request, token_id):
 
         bet = Bid.objects.filter(token__id=token_id).order_by('-amount').first()
         if not bet:
-            return {'error': 'no active bids'}
+            return Response({'error': 'no active bids'}, status=status.HTTP_NOT_FOUND_404)
 
         token = bet.token
         buyer = bet.user
@@ -877,7 +878,7 @@ class AuctionEndView(APIView):
         seller = request.user
         if token.standart == 'ERC721':
             if seller != token.owner:
-                return Response({'error': 'user is not owner or token is not on sell'})
+                return Response({'error': 'user is not owner or token is not on sell'}, status=status.HTTP_BAD_REQUEST_400)
         else:
             ownership = Ownership.objects.filter(
                 token=token, 
@@ -886,7 +887,7 @@ class AuctionEndView(APIView):
                 currency_minimal_bid__isnull=False,
             ).first()
             if not ownership:
-                return Response({'error': 'user is not owner or token is not on sell'})
+                return Response({'error': 'user is not owner or token is not on sell'}, status=status.HTTP_BAD_REQUEST_400)
 
         if token.standart == 'ERC721':
             token_amount = 0
@@ -937,7 +938,7 @@ class ReportView(APIView):
             [config.MAIL],
             connection=connection,
         )
-        print('message sent')
+        logging.info('message sent')
 
         return Response('OK', status=status.HTTP_200_OK)
 
@@ -962,7 +963,7 @@ class SetCoverView(APIView):
         try:
             collection = Collection.objects.committed().get_by_short_url(collection_id)
         except ObjectDoesNotExist:
-            return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'collection not found'}, status=status.HTTP_404_NOT_FOUND)
         if collection.creator != user:
             return Response({'error': 'you can set covers only for your collections'}, status=status.HTTP_400_BAD_REQUEST)
         media = request.FILES.get('cover')
@@ -976,14 +977,18 @@ class SetCoverView(APIView):
 @api_view(http_method_names=['GET'])
 def get_fee(request):
     currency_symbol = request.query_params.get('currency')
-    currency = UsdRate.objects.get(symbol=currency_symbol)
+    try:
+        currency = UsdRate.objects.get(symbol=currency_symbol)
+    except ObjectDoesNotExist:
+        return Response({'error': 'currency rate not found'}, status=status.HTTP_404_NOT_FOUND)
+    
     return Response(currency.service_fee, status=status.HTTP_200_OK)
 
 
 @swagger_auto_schema(
     methods=['get'], 
     manual_parameters=[openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),], 
-    responses={200: TokenSerializer, 404: "Token not found"},
+    responses={200: TokenSerializer, 404: "Tokens not found"},
 )
 @api_view(http_method_names=['GET'])
 def get_random_token(request):
@@ -992,7 +997,7 @@ def get_random_token(request):
         Q(owner__is_verificated=True) | Q(owners__is_verificated=True)
     )
     if not token_list.exists():
-        return Response("Token not found", status=status.HTTP_404_NOT_FOUND)
+        return Response("Tokens not found", status=status.HTTP_404_NOT_FOUND)
     token = random.choice(token_list)
     response_data = TokenSerializer(token).data
     return Response(response_data, status=status.HTTP_200_OK)
@@ -1002,6 +1007,8 @@ def get_random_token(request):
 def get_favorites(request):
     network = request.query_params.get('network', config.DEFAULT_NETWORK)
     token_list = Token.objects.committed().network(network).filter(is_favorite=True).order_by("-updated_at")
+    if not token_list.exists():
+        return Response("Tokens not found", status=status.HTTP_404_NOT_FOUND)
     tokens = TokenFullSerializer(token_list, many=True, context={"user": request.user}).data
     response_data = [token for token in tokens if token.get("available")]
     return Response(response_data, status=status.HTTP_200_OK)
@@ -1013,6 +1020,8 @@ def get_hot_bids(request):
     bids = Bid.objects.filter(state=Status.COMMITTED).filter(
         token__collection__network__name__icontains=network
         ).distinct('token')[:6]
+    if not bids.exists():
+        return Response("No bids found", status=status.HTTP_404_NOT_FOUND)
     token_list = [bid.token for bid in bids]
     response_data = TokenFullSerializer(token_list, context={"user": request.user}, many=True).data
     return Response(response_data, status=status.HTTP_200_OK)
@@ -1058,7 +1067,7 @@ class SupportView(APIView):
             [config.MAIL],
             connection=connection,
         )
-        print('message sent')
+        logging.info('message sent')
 
         return Response('OK', status=status.HTTP_200_OK)
 
@@ -1082,28 +1091,39 @@ class TransactionTrackerView(APIView):
         token_id = request.data.get("token")
         tx_hash = request.data.get("tx_hash")
         amount = request.data.get("amount")
+        bid_id = request.data.get("bid_id")
 
         token = Token.objects.filter(id=token_id).first()
-
         if not token:
-            return Response({"error": "token not found"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "token with given id not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        if token.standart == "ERC1155":
+        bid = None
+        if bid_id:
+            bid = Bid.objects.filter(id=bid_id).first()
+            if not bid:
+                return Response({"error": "bid not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+        if token.standart == "ERC721":
+            tracker = TransactionTracker.objects.filter(token=token, bid=bid).first()
+        else:
             owner_url = request.data.get("ownership")
-            user = AdvUser.objects.get_by_custom_url(owner_url)
+            try:
+                user = AdvUser.objects.get_by_custom_url(owner_url)
+            except ObjectDoesNotExist:
+                return Response({"error": "wrong owner url"}, status=status.HTTP_404_NOT_FOUND)
             ownership = Ownership.objects.filter(token_id=token_id, owner=user).first()
             owner_amount = TransactionTracker.objects.aggregate(total_amount=Sum('amount'))
             owner_amount = owner_amount['total_amount'] or 0
             if owner_amount and ownership.quantity <= owner_amount + int(amount):
                 ownership.selling = False
                 ownership.save()
-            TransactionTracker.objects.create(token=token, ownership=ownership, tx_hash=tx_hash, amount=amount)
-            return Response({"success": "trancsaction is tracked"}, status=status.HTTP_200_OK)
-        token.selling = False
-        token.save()
-        TransactionTracker.objects.create(token=token, tx_hash=tx_hash)
-        return Response({"success": "trancsaction is tracked"}, status=status.HTTP_200_OK)
-
+            tracker = TransactionTracker.objects.filter(token=token, ownership=ownership, amount=amount, bid=bid).first()
+        if tracker:
+            tracker.tx_hash = tx_hash
+            tracker.save()
+            return Response({"success": "transaction is tracked"}, status=status.HTTP_200_OK)
+        return Response({'tracker not found'}, status=status.HTTP_404_NOT_FOUND)
 
 class GetCollectionByAdressView(APIView):
     '''
@@ -1111,14 +1131,14 @@ class GetCollectionByAdressView(APIView):
     '''
     @swagger_auto_schema(
         operation_description="get collection metadata by adress",
-        responses={200: CollectionMetadataSerializer, 400: 'collection not found'},
+        responses={200: CollectionMetadataSerializer, 404: 'collection not found'},
     )
 
     def get(self, request, address):
         try:
             collection = Collection.objects.committed().get(address__iexact=address)
         except ObjectDoesNotExist:
-            return Response({'error': 'collection not found'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'collection not found'}, status=status.HTTP_404_NOT_FOUND)
 
         response_data = CollectionMetadataSerializer(collection).data
         return Response(response_data, status=status.HTTP_200_OK)
@@ -1153,13 +1173,13 @@ class GetMostBiddedView(APIView):
     #permission_classes = [IsAuthenticatedOrReadOnly]
     @swagger_auto_schema(
         operation_description="get hot auction",
-        responses={200: TokenFullSerializer, 401: not_found_response},
+        responses={200: TokenFullSerializer, 404: 'tokens not found'},
     )
 
     def get(self, request):
         tokens = Token.objects.committed().annotate(bid_count=Count('bid')).filter(bid_count__gt=0).order_by('-bid_count')[:5]
         if not tokens:
-            return Response('token not found', status=status.HTTP_404_NOT_FOUND)
+            return Response('tokens not found', status=status.HTTP_404_NOT_FOUND)
         response_data = TokenFullSerializer(tokens, many=True, context={"user": request.user}).data
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -1172,14 +1192,13 @@ class GetRelatedView(APIView):
 
     @swagger_auto_schema(
         operation_description="get related",
-        responses={200: TokenSerializer, 401: not_found_response},
+        responses={200: TokenSerializer, 404: 'token not found'},
     )
     def get(self, request, id):
         try:
             token = Token.objects.committed().get(id=id)
-
         except ObjectDoesNotExist:
-            return Response('token not found', status=status.HTTP_401_UNAUTHORIZED)
+            return Response('token not found', status=status.HTTP_404_NOT_FOUND)
         all_related = Token.objects.committed().filter(collection=token.collection)
         random_related = random.choices(all_related, k=4)
         response_data = TokenSerializer(random_related, many=True, context={"user": request.user}).data

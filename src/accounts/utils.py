@@ -1,5 +1,4 @@
-from rest_framework.exceptions import ValidationError
-
+import logging
 from web3 import Web3
 '''
 from eth_utils.hexadecimal import add_0x_prefix
@@ -9,7 +8,7 @@ from eth_account import Account
 
 from tronapi import Tron
 from tronapi.common.account import Account
-
+from rest_framework.exceptions import ValidationError
 from ethereum.utils import ecrecover_to_pub, sha3
 from eth_utils.hexadecimal import encode_hex, decode_hex, add_0x_prefix
 from eth_account.messages import defunct_hash_message
@@ -32,8 +31,7 @@ def valid_metamask_message(address, message, signature):
         message_hash = encode_defunct(text=message)
         signer_address = Account.recover_message(message_hash, vrs=(v, r, s))
         '''
-        print(signer_address)
-        print(address)
+        logging.info(f"matching {signer_address}, {address}")
 
         if signer_address.lower() != address.lower():
             raise ValidationError({'result': 'Incorrect signature'}, code=400)
@@ -47,8 +45,7 @@ def valid_metamask_message(address, message, signature):
         tron_address = '41' + signer_address[2:]
         signer_address = tron.address.from_hex(tron_address).decode()
 
-        print(signer_address)
-        print(address)
+        logging.info(f"matching {signer_address}, {address}")
 
         if signer_address.lower() != address.lower():
             raise ValidationError({'result': 'Incorrect signature'}, code=400)

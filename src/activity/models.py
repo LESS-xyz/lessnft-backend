@@ -68,6 +68,7 @@ class TokenHistory(models.Model):
     USD_price = models.DecimalField(max_digits=18, decimal_places=2, default=None, blank=True, null=True)
     is_viewed = models.BooleanField(default=False)
     amount = models.PositiveIntegerField(default=None, blank=True, null=True)
+    currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None, blank=True)
 
 
 def token_history_dispatcher(sender, instance, created, **kwargs):
@@ -91,6 +92,7 @@ class BidsHistory(models.Model):
     user = models.ForeignKey('accounts.AdvUser', on_delete=models.CASCADE)
     price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, decimal_places=18, default=None, blank=True, null=True)
     method = models.CharField(choices=[('Bet', 'Bet')], default='Bet', max_length=3)
+    currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None, blank=True)
     is_viewed = models.BooleanField(default=False)
 
 

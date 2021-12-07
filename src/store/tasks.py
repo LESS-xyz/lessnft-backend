@@ -1,5 +1,7 @@
+import logging
 from datetime import datetime, timedelta
 
+from django.utils import timezone
 from celery import shared_task
 from src.celery import app
 from src.store.services.collection_import import OpenSeaImport
@@ -10,6 +12,7 @@ from web3.exceptions import TransactionNotFound
 from tronapi import HttpProvider, Tron
 from src.settings import config
 
+logger = logging.getLogger('celery')
 
 @shared_task(name="remove_pending_tokens")
 def remove_pending_tokens():
@@ -18,7 +21,7 @@ def remove_pending_tokens():
         status__in=(Status.PENDING, Status.FAILED),
         updated_at__lte=expiration_date,
     )
-    print(f"Pending {len(tokens)} tokens")
+    logger.info(f"Pending {len(tokens)} tokens")
     tokens.delete()
 
 
@@ -78,11 +81,11 @@ def check_ethereum_transactions(tx):
     w3 = tx.token.collection.network.get_web3_connection()
     try:
         transaction = w3.eth.getTransactionReceipt(tx.tx_hash)
-        print(f"Transaction status success - {bool(transaction.get('status'))}")
+        logger.info(f"Transaction status success - {bool(transaction.get('status'))}")
         return bool(transaction.get('status'))
 
     except TransactionNotFound:
-        print("Transaction not yet mined")
+        logger.info("Transaction not yet mined")
         return "not found"
 
 def check_tron_transactions(tx):
@@ -95,15 +98,25 @@ def check_tron_transactions(tx):
         )
     try:
         transaction = tron.trx.get_transaction(tx.tx_hash)
-        print(f"Transaction status success - {transaction['ret'][0]['contractRet']}")
+        logger.info(f"Transaction status success - {transaction['ret'][0]['contractRet']}")
         return transaction['ret'][0]['contractRet']
 
     except ValueError:
-        print("Transaction not yet mined")
+        logger.info("Transaction not yet mined")
         return "not found"
 
 @shared_task(name="transaction_tracker")
 def transaction_tracker():
+    #delete expired blockers
+    now = timezone.now()
+    delta = timedelta(seconds=config.TX_TRACKER_TIMEOUT)
+    expired_tx_list = TransactionTracker.objects.filter(tx_hash__isnull=True).filter(created_at__lt=now-delta)
+    id_list = expired_tx_list.values_list('token__id', flat=True)
+    tokens = Token.objects.filter(id__in=id_list)
+    tokens.update(selling=True)
+    expired_tx_list.delete()
+
+    # check transactions
     for type in Types._member_names_:
         tx_list = TransactionTracker.objects.filter(token__collection__network__network_type=type)
         for tx in tx_list:

@@ -1,11 +1,11 @@
 import json
+import logging
 import random
 import secrets
 from collections import Counter
 from datetime import datetime
 from decimal import Decimal
 from typing import Tuple, Union
-
 from src.accounts.models import AdvUser, DefaultAvatar
 from src.consts import (
     COLLECTION_CREATION_GAS_LIMIT, 
@@ -21,7 +21,7 @@ from src.utilities import get_media_from_ipfs, sign_message
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.db import models
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, OuterRef, Q, Sum
 from django.db.models.signals import post_save, pre_save
 from rest_framework import status
 from rest_framework.response import Response
@@ -51,6 +51,8 @@ class CollectionQuerySet(models.QuerySet):
         return self.get(Q(id=collection_id) | Q(short_url=short_url))
 
     def user_collections(self, user, network=None):
+        if user:
+            assert user.is_authenticated, "Getting collections for an unauthenticated user"
         if network is None or network == "undefined":
             return self.filter(status=Status.COMMITTED).filter(Q(is_default=True) | Q(creator=user))
         return self.filter(
@@ -166,7 +168,7 @@ class Collection(models.Model):
                 input_type=(),
                 output_types=('uint256',),
             )
-            print(value)
+            logging.info("fee: {value}")
 
             initial_tx = self.network.contract_call(
                 method_type = 'write',
@@ -218,7 +220,7 @@ class Collection(models.Model):
 
     @classmethod
     def collection_is_unique(cls, name, symbol, short_url, network) -> Tuple[bool, Union[Response, None]]:
-        print(name, network)
+        logging.info("{name}, {network}")
         network = Network.objects.get(name__icontains=network)
         if Collection.objects.filter(name=name).filter(network=network):
             return False, Response({'name': 'this collection name is occupied'}, status=status.HTTP_400_BAD_REQUEST)
@@ -406,8 +408,8 @@ class Token(models.Model):
 
         if details:
             rarity_attributes = {'Rarity points': 0}
-            total_tokens = Token.token_objects.filter(collection=self.collection).count()
-            token_details = Token.token_objects.filter(collection=self.collection).values_list('details', flat=True)
+            total_tokens = Token.objects.filter(collection=self.collection).count()
+            token_details = Token.objects.filter(collection=self.collection).values_list('details', flat=True)
 
             for attribute, value in details.items():
                 value_ammount = Counter(x[attribute] for x in token_details if attribute in x)
@@ -477,7 +479,7 @@ class Token(models.Model):
                 if not ownership:
                     return False, Response({'error': 'user is not owner or token is not on sell'})
             except AdvUser.DoesNotExist:
-                return False, Response({'error': 'user not found'}, status=status.HTTP_400_BAD_REQUEST)
+                return False, Response({'error': 'user not found'}, status=status.HTTP_404_NOT_FOUND)
 
         return True, None
 
@@ -630,9 +632,11 @@ class Token(models.Model):
                 is1155=True,
             )
 
-
-    def buy_token(self, token_amount, buyer, seller=None, price=None, auc=False):
-        fee_address = self.collection.network.get_ethereum_address(self.currency.fee_address)
+    def buy_token(self, token_amount, buyer, seller=None, price=None, auc=False, bid=None):
+        currency = self.currency
+        if self.standart == "ERC1155":
+            currency = self.ownership_set.filter(owner=seller).first().currency
+        fee_address = self.collection.network.get_ethereum_address(currency.fee_address)
 
         id_order = '0x%s' % secrets.token_hex(32)
         token_count = token_amount
@@ -648,7 +652,7 @@ class Token(models.Model):
                 price = self.price
             else:
                 price = Ownership.objects.get(token=self, owner=seller, selling=True).price
-        address = self.collection.network.get_ethereum_address(self.currency.address)
+        address = self.collection.network.get_ethereum_address(currency.address)
         creator_address = self.collection.network.get_ethereum_address(self.creator.username)
         buyer_address = self.collection.network.get_ethereum_address(buyer.username)
         value = 0
@@ -682,7 +686,7 @@ class Token(models.Model):
             ],
             [
                 (int(self.creator_royalty / 100 * total_amount)),
-                (int(self.currency.service_fee / 100 * total_amount)),
+                (int(currency.service_fee / 100 * total_amount)),
             ],
             self.collection.network.wrap_in_checksum(buyer_address),
         ]
@@ -747,9 +751,23 @@ class Token(models.Model):
                     ]
         feeAmounts = [
                 (int(self.creator_royalty / 100 * total_amount)),
-                (int(self.currency.service_fee / 100 * total_amount))
+                (int(currency.service_fee / 100 * total_amount))
         ]
         signature = signature
+
+        # create tx tracker instance
+        if self.standart == 'ERC721':
+            TransactionTracker.objects.create(token=self, bid=bid)
+        else:
+            ownership = Ownership.objects.filter(token_id=self.id, owner__username=seller_address).first()
+            owner_amount = TransactionTracker.objects.aggregate(total_amount=Sum('amount'))
+            owner_amount = owner_amount['total_amount'] or 0
+            if owner_amount and ownership.quantity <= owner_amount + int(token_amount):
+                ownership.selling = False
+                ownership.save()
+            TransactionTracker.objects.create(token=self, ownership=ownership, amount=token_amount, bid=bid)
+        self.selling = False
+        self.save()
 
         return self.collection.network.contract_call(
                 method_type='write',
@@ -770,8 +788,6 @@ class Token(models.Model):
                     ),
                 input_type=input_types
             )
-
-
 
     def get_owner_auction(self):
         owners_auction = self.ownership_set.filter(currency_price=None, selling=True)
@@ -798,9 +814,6 @@ def token_save_dispatcher(sender, instance, created, **kwargs):
             try:
                 minimal_price = \
                 Ownership.objects.filter(token=instance).filter(selling=True).exclude(price=None).order_by('price')[0].price
-                for i in Ownership.objects.filter(token=instance).filter(selling=True).exclude(price=None).order_by('price'):
-                    print(i.__dict__)
-                print(minimal_price)
             except:
                 minimal_price = None
             instance.currency_price = minimal_price
@@ -828,6 +841,7 @@ class Ownership(models.Model):
     owner = models.ForeignKey('accounts.AdvUser', on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(null=True)
     selling = models.BooleanField(default=False)
+    currency = models.ForeignKey('rates.UsdRate', on_delete=models.PROTECT, null=True, default=None, blank=True)
     currency_price = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
     currency_minimal_bid = models.DecimalField(max_digits=MAX_AMOUNT_LEN, default=None, blank=True, null=True, decimal_places=18)
 
@@ -907,7 +921,9 @@ class TransactionTracker(models.Model):
     tx_hash = models.CharField(max_length=200, null=True, blank=True)
     token = models.ForeignKey('Token', on_delete=models.CASCADE, null=True, blank=True, default=None)
     ownership = models.ForeignKey('Ownership', on_delete=models.CASCADE, null=True, blank=True, default=None)
+    bid = models.ForeignKey('Bid', on_delete=models.CASCADE, null=True, blank=True, default=None)
     amount = models.PositiveSmallIntegerField(null=True, blank=True, default=None)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Tracker hash - {self.tx_hash}"

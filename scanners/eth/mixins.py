@@ -37,6 +37,7 @@ class BuyMixin:
             seller=event["args"]["seller"].lower(),
             price=event["args"]["buyAmount"],
             amount=event["args"]["sellAmount"],
+            currency_address=event["args"]["buyTokenAddress"],
             tx_hash=event["transactionHash"].hex(),
             token_id=event["args"]["sellId"],
             collection_address=event["args"]["sellTokenAddress"],
@@ -70,7 +71,6 @@ class MintMixin:
         ).get_all_entries()
 
     def parse_data_mint(self, event) -> MintData:
-        print(event)
         token_id = event["args"].get("tokenId")
         if token_id is None:
             token_id = event["args"].get("id")

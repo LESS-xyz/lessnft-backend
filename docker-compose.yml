@@ -10,7 +10,7 @@ services:
   web:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: compose/stage/Dockerfile
     env_file:
       - ./.env
     ports:
@@ -20,6 +20,7 @@ services:
     volumes:
       - ./src/:/code/src/
       - ./static/:/code/static/
+      - ./logs:/code/logs/
     command: python manage.py runserver 0.0.0.0:8000
     restart: unless-stopped
     networks:
@@ -27,6 +28,7 @@ services:
   scanner:
     build:
       context: .
+      dockerfile: compose/stage/Dockerfile
     env_file:
       - ./.env
     depends_on:
@@ -46,19 +48,29 @@ services:
     networks:
       nft-net:
   celery:
-    build: .
+    build:
+      context: .
+      dockerfile: compose/stage/Dockerfile
     image: celery:3.1
+    entrypoint: ''
     command: "celery -A src worker -l info"
     depends_on:
       - redis
+    restart: always
+    volumes:
+      - ./logs:/code/logs/
     networks:
       nft-net:
   celery_beat:
-    build: .
+    build:
+      context: .
+      dockerfile: compose/stage/Dockerfile
     image: celery:3.1
+    entrypoint: ''
     command: "celery -A src beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     depends_on:
       - redis
+    restart: always
     networks:
       nft-net:
 networks:

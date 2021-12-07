@@ -32,25 +32,28 @@ class Command(BaseCommand):
                 name=usd_rate.name,
                 image=usd_rate.image,
                 address=usd_rate.address,
-                network=Network.objects.get(id=usd_rate.network),
+                network=Network.objects.get(name__iexact=usd_rate.network),
                 fee_discount=usd_rate.fee_discount,
                 decimal = usd_rate.decimal
                 )
 
-        """Create Master User object"""
-        MasterUser.objects.get_or_create(
-            address=config.MASTER_USER.address,
-            network = Network.objects.get(id=config.MASTER_USER.network),
-            commission=config.MASTER_USER.commission
+        """Create Master User objects"""
+        for master_user in config.MASTER_USER:
+            instance = MasterUser.objects.get(
+                network = Network.objects.get(name__iexact=master_user.network),
             )
-        
+            instance.address = master_user.address
+            instance.commission = master_user.commission
+            instance.save()
+
         """Create Intervals for Celery"""
         for interval in config.INTERVALS:
             IntervalSchedule.objects.get_or_create(
+                pk=interval.pk,
                 every=interval.every,
-                period=interval.period
+                period=getattr(IntervalSchedule, interval.period)
             )
-        
+
         """Create Periodic task for Celery"""
         for periodic_task in config.PERIODIC_TASKS:
             PeriodicTask.objects.get_or_create(
