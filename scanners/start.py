@@ -17,7 +17,7 @@ from scanners.scanners import (
 )
 from src.networks.models import Network
 from src.rates.models import UsdRate
-from src.store.models import Collection, Status
+from src.store.models import Collection
 from src.settings import config
 
 if __name__ == "__main__":
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     ).start()
 
     # Ethereum
-    collections = Collection.objects.filter(status__in=[Status.COMMITTED, Status.SYNCED]).exclude(network__network_type="tron")
+    collections = Collection.objects.committed().exclude(network__network_type="tron")
     for collection in collections:
         ScannerAbsolute(
             network=collection.network,
@@ -79,19 +79,15 @@ if __name__ == "__main__":
 
     while True:
         time.sleep(60)
-        updated_collections = Collection.objects.filter(status__in=[Status.COMMITTED, Status.SYNCED]).exclude(network__network_type="tron")
+        updated_collections = Collection.objects.committed().exclude(network__network_type="tron")
         new_collections = list(set(updated_collections) - set(collections))
 
         if new_collections:
             for collection in new_collections:
-                block = None
-                if collection.status == Status.SYNCED:
-                    block = collection.deploy_block
                 ScannerAbsolute(
                     network=collection.network,
                     handler=HandlerMintTransferBurn,
                     contract=collection.get_contract(),
                     contract_type=collection.standart,
-                    block=block,
                 ).start()
             collections = updated_collections

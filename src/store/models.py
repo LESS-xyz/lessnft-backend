@@ -35,7 +35,6 @@ class Status(models.TextChoices):
     COMMITTED = 'Committed'
     BURNED = 'Burned'
     EXPIRED = 'Expired'
-    SYNCED = 'Synced'
 
 
 class CollectionQuerySet(models.QuerySet):

@@ -4,6 +4,7 @@ from src.store.models import Collection, Token, Status
 from src.accounts.models import AdvUser
 from dataclasses import dataclass, fields
 from typing import Optional
+from src.utilities import RedisClient
 
 
 URL = 'https://api.opensea.io/api/v1/'
@@ -32,6 +33,7 @@ class OpenSeaImport:
         self.collection_address = collection_address
         self.network = network 
         self.api = OpenSeaAPI()
+        self.last_block = self.get_last_network_block()
 
     def _get_collection_slug(self):
         response = self.api.asset_contract(self.collection_address)
@@ -47,6 +49,14 @@ class OpenSeaImport:
         if response.status_code == 200:
             return response.json().get("collection")
         return None
+    
+    def get_last_network_block(self):
+        return self.network.get_last_block()
+    
+    def save_last_block(self, address):
+        redis = RedisClient()
+        key = f'mint_Ethereum_{address}_ERC721'
+        redis.connection.set(key, self.last_block)
 
     def save_in_db(self, collection):
         """ 
@@ -55,8 +65,7 @@ class OpenSeaImport:
         """
         collection_model, _ = self.get_or_save_collection(collection)
         self.save_tokens(collection_model)
-        collection_model.status = Status.SYNCED
-        collection_model.save()
+        self.save_last_block(collection_model.address)
 
     def _get_user(self, user):
         """
