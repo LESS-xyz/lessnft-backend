@@ -627,9 +627,11 @@ class Token(models.Model):
                 is1155=True,
             )
 
-
     def buy_token(self, token_amount, buyer, seller=None, price=None, auc=False, bid=None):
-        fee_address = self.collection.network.get_ethereum_address(self.currency.fee_address)
+        currency = self.currency
+        if self.standart == "ERC1155":
+            currency = self.ownership_set.filter(owner=seller).first().currency
+        fee_address = self.collection.network.get_ethereum_address(currency.fee_address)
 
         id_order = '0x%s' % secrets.token_hex(32)
         token_count = token_amount
@@ -645,7 +647,7 @@ class Token(models.Model):
                 price = self.price
             else:
                 price = Ownership.objects.get(token=self, owner=seller, selling=True).price
-        address = self.collection.network.get_ethereum_address(self.currency.address)
+        address = self.collection.network.get_ethereum_address(currency.address)
         creator_address = self.collection.network.get_ethereum_address(self.creator.username)
         buyer_address = self.collection.network.get_ethereum_address(buyer.username)
         value = 0
@@ -679,7 +681,7 @@ class Token(models.Model):
             ],
             [
                 (int(self.creator_royalty / 100 * total_amount)),
-                (int(self.currency.service_fee / 100 * total_amount)),
+                (int(currency.service_fee / 100 * total_amount)),
             ],
             self.collection.network.wrap_in_checksum(buyer_address),
         ]
@@ -744,7 +746,7 @@ class Token(models.Model):
                     ]
         feeAmounts = [
                 (int(self.creator_royalty / 100 * total_amount)),
-                (int(self.currency.service_fee / 100 * total_amount))
+                (int(currency.service_fee / 100 * total_amount))
         ]
         signature = signature
 
@@ -781,8 +783,6 @@ class Token(models.Model):
                     ),
                 input_type=input_types
             )
-
-
 
     def get_owner_auction(self):
         owners_auction = self.ownership_set.filter(currency_price=None, selling=True)
