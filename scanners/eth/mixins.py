@@ -1,4 +1,4 @@
-from scanners.base import DeployData, BuyData, ApproveData, MintData
+from scanners.base import ApproveData, BuyData, DeployData, MintData
 
 
 class DeployMixin:
@@ -62,8 +62,12 @@ class ApproveMixin:
 class MintMixin:
     def get_events_mint(self, last_checked_block, last_network_block):
         event = {
-            "ERC721": self.network.get_erc721main_contract(self.contract.address).events.Transfer,
-            "ERC1155": self.network.get_erc1155main_contract(self.contract.address).events.TransferSingle,
+            "ERC721": self.network.get_erc721main_contract(
+                self.contract.address
+            ).events.Transfer,
+            "ERC1155": self.network.get_erc1155main_contract(
+                self.contract.address
+            ).events.TransferSingle,
         }[self.contract_type]
         return event.createFilter(
             fromBlock=last_checked_block,
@@ -80,5 +84,5 @@ class MintMixin:
             old_owner=event["args"]["from"].lower(),
             tx_hash=event["transactionHash"].hex(),
             amount=event["args"].get("value", 1),
-            contract = None,
+            contract=None,
         )

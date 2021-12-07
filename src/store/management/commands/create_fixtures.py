@@ -8,8 +8,9 @@ from django_celery_beat.models import IntervalSchedule, PeriodicTask
 
 class Command(BaseCommand):
     """Provide initial db fixtures from config with 'manage.py create_fixtures.py'"""
+
     def handle(self, *args, **options):
-        help = 'Create initial fixtures for Networks, Usd rates and Master user'
+        help = "Create initial fixtures for Networks, Usd rates and Master user"
 
         """Create Network objects"""
         for network in config.NETWORKS:
@@ -21,8 +22,8 @@ class Command(BaseCommand):
                 fabric721_address=network.fabric721_address,
                 fabric1155_address=network.fabric1155_address,
                 exchange_address=network.exchange_address,
-                network_type=network.network_type
-                )
+                network_type=network.network_type,
+            )
 
         """Create UsdRates objects"""
         for usd_rate in config.USD_RATES:
@@ -34,13 +35,13 @@ class Command(BaseCommand):
                 address=usd_rate.address,
                 network=Network.objects.get(name__iexact=usd_rate.network),
                 fee_discount=usd_rate.fee_discount,
-                decimal = usd_rate.decimal
-                )
+                decimal=usd_rate.decimal,
+            )
 
         """Create Master User objects"""
         for master_user in config.MASTER_USER:
             instance = MasterUser.objects.get(
-                network = Network.objects.get(name__iexact=master_user.network),
+                network=Network.objects.get(name__iexact=master_user.network),
             )
             instance.address = master_user.address
             instance.commission = master_user.commission
@@ -51,7 +52,7 @@ class Command(BaseCommand):
             IntervalSchedule.objects.get_or_create(
                 pk=interval.pk,
                 every=interval.every,
-                period=getattr(IntervalSchedule, interval.period)
+                period=getattr(IntervalSchedule, interval.period),
             )
 
         """Create Periodic task for Celery"""
@@ -60,5 +61,5 @@ class Command(BaseCommand):
                 name=periodic_task.name,
                 task=periodic_task.task,
                 interval=IntervalSchedule.objects.get(id=periodic_task.interval),
-                enabled=True
+                enabled=True,
             )

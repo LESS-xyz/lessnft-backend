@@ -12,7 +12,8 @@ from src.settings import config
 
 
 QUERY_FSYM = "usd"
-logger = logging.getLogger('celery')
+logger = logging.getLogger("celery")
+
 
 def get_rate(coin_code):
     res = requests.get(config.API_URL.format(coin_code=coin_code))
@@ -24,8 +25,8 @@ def get_rate(coin_code):
 
 @shared_task(name="rates_checker")
 def rates_checker():
-    logger.info('celery is working')
-    coin_nodes = UsdRate.objects.all().values_list('coin_node', flat=True)
+    logger.info("celery is working")
+    coin_nodes = UsdRate.objects.all().values_list("coin_node", flat=True)
     for coin_node in coin_nodes:
         try:
             rate = get_rate(coin_node)

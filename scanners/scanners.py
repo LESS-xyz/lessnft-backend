@@ -1,16 +1,16 @@
 import threading
 from decimal import Decimal
 
-from src.accounts.models import AdvUser
-from src.rates.models import UsdRate
-from src.activity.models import BidsHistory, TokenHistory
-from src.store.models import Collection, Status, Token, Ownership, Bid
-from src.store.services.ipfs import get_ipfs
-from src.networks.models import Network
 from django.db.models import F
 
-from scanners.utils import get_scanner, never_fall
 from scanners.base import HandlerABC
+from scanners.utils import get_scanner, never_fall
+from src.accounts.models import AdvUser
+from src.activity.models import BidsHistory, TokenHistory
+from src.networks.models import Network
+from src.rates.models import UsdRate
+from src.store.models import Bid, Collection, Ownership, Status, Token
+from src.store.services.ipfs import get_ipfs
 
 
 class ScannerAbsolute(threading.Thread):
@@ -39,7 +39,9 @@ class ScannerAbsolute(threading.Thread):
     def block_name(self) -> str:
         name = f"{self.handler.TYPE}_{self.network.name}"
         if self.contract:
-            contract = self.contract if type(self.contract) == str else self.contract.address
+            contract = (
+                self.contract if type(self.contract) == str else self.contract.address
+            )
             name += f"_{contract}"
         name += f"_{self.contract_type}" if self.contract_type else ""
         return name
@@ -71,7 +73,7 @@ class ScannerAbsolute(threading.Thread):
                     last_network_block,
                 )
             except Exception as e:
-                print(f'error {e}')
+                print(f"error {e}")
                 event_list = []
 
             if event_list:
@@ -211,7 +213,7 @@ class HandlerMintTransferBurn(HandlerABC):
             price=None,
         )
 
-        if token.collection.standart == 'ERC721':
+        if token.collection.standart == "ERC721":
             price = token.price
             currency = token.currency
             if token.minimal_bid:
@@ -228,7 +230,7 @@ class HandlerMintTransferBurn(HandlerABC):
                 token=token,
                 old_owner=token.creator,
                 new_owner=None,
-                method='Listing',
+                method="Listing",
                 tx_hash=tx_hash,
                 amount=token.total_supply,
                 price=price,
@@ -380,7 +382,9 @@ class HandlerBuy(HandlerABC):
             try:
                 owner = Ownership.objects.get(owner=old_owner, token=token)
             except Ownership.DoesNotExist:
-                self.logger.warning(f"Ownership not found owner {old_owner}, token {token}")
+                self.logger.warning(
+                    f"Ownership not found owner {old_owner}, token {token}"
+                )
                 return
             owner.quantity = max(owner.quantity - data.amount, 0)
             if owner.quantity:

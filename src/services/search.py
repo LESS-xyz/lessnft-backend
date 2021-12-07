@@ -9,6 +9,7 @@ from src.utilities import get_page_slice
 from django.db.models import Count, Q
 from django.core.exceptions import ObjectDoesNotExist
 
+
 class Search:
     def user_search(self, **kwargs):
         words = kwargs.get("words").split(" ")
@@ -86,9 +87,13 @@ class Search:
         if currency is not None:
             currency = currency[0]
 
-        tokens = Token.objects.committed().network(network[0]).select_related(
-            "currency", 
-            "owner",
+        tokens = (
+            Token.objects.committed()
+            .network(network[0])
+            .select_related(
+                "currency",
+                "owner",
+            )
         )
         # Below are the tokens in the form of a QUERYSET
         if owner:

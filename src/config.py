@@ -1,10 +1,10 @@
-
 import os
 import yaml
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Optional
 from marshmallow_dataclass import class_schema
+
 
 @dataclass
 class Network:
@@ -16,6 +16,7 @@ class Network:
     fabric1155_address: str
     exchange_address: str
     network_type: str
+
 
 @dataclass
 class Config:
@@ -30,9 +31,9 @@ class Config:
     DEBUG: bool
 
     IPFS_CLIENT: str
-    SCANNER_SLEEP: int 
+    SCANNER_SLEEP: int
     ORACLE_ADDRESS: str
-    
+
     @dataclass
     class SortStatus:
         recent: str
@@ -84,7 +85,7 @@ class Config:
     CAPTCHA_URL: Optional[str]
     PRIV_KEY: str
 
-    DEFAULT_NETWORK : Optional[str]
+    DEFAULT_NETWORK: Optional[str]
     TX_TRACKER_TIMEOUT: int
 
     REDIS_EXPIRATION_TIME: int
@@ -110,9 +111,9 @@ class Config:
     REDIS_PORT: int
 
 
-config_path = '/../config.yaml'
+config_path = "/../config.yaml"
 if os.getenv("IS_TEST", False):
-    config_path = '/../config.example.yaml'
+    config_path = "/../config.example.yaml"
 
 
 with open(os.path.dirname(__file__) + config_path) as f:

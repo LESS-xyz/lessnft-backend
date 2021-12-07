@@ -4,7 +4,8 @@ from src.activity.services.top_users import update_users_stat
 from src.activity.services.top_collections import update_collection_stat
 from src.networks.models import Network
 
-logger = logging.getLogger('celery')
+logger = logging.getLogger("celery")
+
 
 @shared_task(name="update_top_users_info")
 def update_top_users_info():
