@@ -129,6 +129,7 @@ class OpenSeaImport:
             new_collection.description = collection.get('description')
             new_collection.symbol = collection.get('primary_asset_contracts')[0].get("symbol")
             new_collection.avatar_ipfs = collection.get('image_url')
+            new_collection.cover_ipfs = collection.get('banner_image_url')
             new_collection.standart = collection.get('primary_asset_contracts')[0].get("schema_name")
             new_collection.deploy_block = self.network.get_last_block()
             new_collection.save()

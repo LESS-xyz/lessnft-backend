@@ -29,6 +29,9 @@ from rest_framework.response import Response
 from .services.ipfs import get_ipfs_by_hash
 
 
+OPENSEA_MEDIA_PATH = 'https://lh3.googleusercontent.com/'
+
+
 class Status(models.TextChoices):
     PENDING = 'Pending'
     FAILED = 'Failed'
@@ -118,10 +121,14 @@ class Collection(models.Model):
 
     @property
     def avatar(self):
+        if self.avatar_ipfs.startswith(OPENSEA_MEDIA_PATH):
+            return self.avatar_ipfs
         return get_media_from_ipfs(self.avatar_ipfs)
 
     @property
     def cover(self):
+        if self.cover_ipfs.startswith(OPENSEA_MEDIA_PATH):
+            return self.cover_ipfs
         return get_media_from_ipfs(self.cover_ipfs)
 
     @property
