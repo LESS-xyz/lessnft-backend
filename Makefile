@@ -28,3 +28,6 @@ scanner-logs:
 	sudo docker-compose logs -f --tail=$(lines) scanner
 scanner-stop:
 	sudo docker-compose stop scanner
+
+fixtures:
+	sudo docker-compose exec web python manage.py create_fixtures

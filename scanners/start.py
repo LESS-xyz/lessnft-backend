@@ -61,11 +61,12 @@ if __name__ == "__main__":
     # Tron
     contract_address = config.ORACLE_ADDRESS
     network = Network.objects.filter(network_type="tron").first()
-    ScannerAbsolute(
-        network=network,
-        handler=HandlerMintTransferBurn,
-        contract=contract_address,
-    ).start()
+    if network:
+        ScannerAbsolute(
+            network=network,
+            handler=HandlerMintTransferBurn,
+            contract=contract_address,
+        ).start()
 
     # Ethereum
     collections = Collection.objects.committed().exclude(network__network_type="tron")
