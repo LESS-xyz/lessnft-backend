@@ -56,14 +56,6 @@ class MetamaskLoginSerializer(SocialLoginSerializer):
         signature = attrs["signed_msg"]
         message = attrs["msg"]
 
-        logging.info(
-            "metamask login, address",
-            address,
-            "message",
-            message,
-            "signature",
-            signature,
-        )
         if valid_metamask_message(address, message, signature):
             metamask_user = AdvUser.objects.filter(username__iexact=address).first()
 

@@ -3,7 +3,10 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "console": {
-            "format": "%(asctime)s %(levelname)s [%(name)s:%(lineno)s] %(module)s %(process)d %(thread)d | %(message)s",
+            "format": "%(asctime)s %(levelname)s %(pathname)s %(lineno)s %(funcName)s | %(message)s",
+        },
+        "system": {
+            "format": "%(asctime)s %(levelname)s | %(message)s",
         },
     },
     "handlers": {
@@ -11,10 +14,22 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "console",
         },
+        "system": {
+            "class": "logging.StreamHandler",
+            "formatter": "system",
+        },
         "file": {
-            "level": "WARNING",
+            "level": "INFO",
             "class": "logging.handlers.RotatingFileHandler",
             "formatter": "console",
+            "filename": "logs/web.log",
+            "maxBytes": 1024 * 1024 * 100,
+            "backupCount": 10,
+        },
+        "system_file": {
+            "level": "WARNING",
+            "class": "logging.handlers.RotatingFileHandler",
+            "formatter": "system",
             "filename": "logs/web.log",
             "maxBytes": 1024 * 1024 * 100,
             "backupCount": 10,
@@ -39,7 +54,7 @@ LOGGING = {
         },
         "django.server": {
             "level": "WARNING",
-            "handlers": ["file", "console"],
+            "handlers": ["system_file", "system"],
         },
     },
 }

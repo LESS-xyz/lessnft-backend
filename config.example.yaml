@@ -87,6 +87,36 @@ USD_RATES:
     network: ethereum
     fee_discount: 100
 
+#Celery tasks:
+INTERVALS:
+  - every: 2
+    period: MINUTES
+    pk: 1
+  - every: 1
+    period: HOURS
+    pk: 2
+  - every: 5
+    period: MINUTES
+    pk: 3
+
+PERIODIC_TASKS:
+  - name: remove_pending
+    task: remove_pending
+    interval: 2
+    enabled: true
+  - name: incorrect_bid_checker
+    task: incorrect_bid_checker
+    interval: 1
+    enabled: true
+  - name: update_top_users
+    task: update_top_users
+    interval: 2
+    enabled: true
+  - name: rates_checker
+    task: rates_checker
+    interval: 3
+    enabled: true
+
 MASTER_USER:
     - address: "0x111222233333444455556666777788889999"
       network: ethereum # Network name 

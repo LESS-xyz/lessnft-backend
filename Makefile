@@ -29,5 +29,5 @@ scanner-logs:
 scanner-stop:
 	sudo docker-compose stop scanner
 
-fixtures:
+fixtures: web-build
 	sudo docker-compose exec web python manage.py create_fixtures
