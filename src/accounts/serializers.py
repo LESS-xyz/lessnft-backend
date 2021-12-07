@@ -16,22 +16,31 @@ class TokenSlimSerializer(serializers.ModelSerializer):
 
 
 class PatchSerializer(serializers.ModelSerializer):
-    '''
+    """
     Serialiser for AdvUser model patching
-    '''
+    """
+
     class Meta:
         model = AdvUser
-        fields = ('display_name', 'custom_url', 'bio', 'twitter', 'instagram', 'facebook', 'site')
+        fields = (
+            "display_name",
+            "custom_url",
+            "bio",
+            "twitter",
+            "instagram",
+            "facebook",
+            "site",
+        )
 
     def update(self, instance, validated_data):
-        logging.info('started patch')
+        logging.info("started patch")
         for attr, value in validated_data.items():
-            if attr != 'bio' and value:
+            if attr != "bio" and value:
                 my_filter = {attr: value}
-                if attr == 'display_name' and value == '':
+                if attr == "display_name" and value == "":
                     pass
                 elif AdvUser.objects.filter(**my_filter).exclude(id=instance.id):
-                    return {attr: f'this {attr} is occupied'}
+                    return {attr: f"this {attr} is occupied"}
             setattr(instance, attr, value)
         instance.save()
         return instance
@@ -80,9 +89,15 @@ class CoverSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AdvUser
-        #read_only_fields = ("avatar", "cover",)
-        read_only_fields = ("avatar", "cover_ipfs",)
-        fields = ("id", "owner",) + read_only_fields
+        # read_only_fields = ("avatar", "cover",)
+        read_only_fields = (
+            "avatar",
+            "cover_ipfs",
+        )
+        fields = (
+            "id",
+            "owner",
+        ) + read_only_fields
 
     def get_id(self, obj):
         return obj.url
@@ -103,19 +118,22 @@ class BaseAdvUserSerializer(serializers.ModelSerializer):
         read_only_fields = (
             "avatar",
             "created_at",
-            'twitter',
-            'instagram',
-            'facebook',
-            'site',
-            'created_tokens',
-            'owned_tokens',
+            "twitter",
+            "instagram",
+            "facebook",
+            "site",
+            "created_tokens",
+            "owned_tokens",
             "address",
             "display_name",
             "custom_url",
             "bio",
             "is_verificated",
         )
-        fields = read_only_fields + ("id", "name",)
+        fields = read_only_fields + (
+            "id",
+            "name",
+        )
 
     def get_id(self, obj):
         return obj.url
@@ -127,20 +145,20 @@ class BaseAdvUserSerializer(serializers.ModelSerializer):
         return obj.get_name()
 
     def get_created_tokens(self, obj):
-        return obj.token_creator.filter(
-            status=Status.COMMITTED
-        ).count()
+        return obj.token_creator.filter(status=Status.COMMITTED).count()
 
     def get_owned_tokens(self, obj):
         owned_tokens = Token.objects.filter(
             Q(owner=obj) | Q(owners=obj),
         ).filter(status=Status.COMMITTED)
-        network = self.context.get('network')
+        network = self.context.get("network")
         if network:
-            owned_tokens = owned_tokens.filter(collection__network__name__icontains=network)
+            owned_tokens = owned_tokens.filter(
+                collection__network__name__icontains=network
+            )
         return owned_tokens.count()
 
- 
+
 class UserOwnerSerializer(BaseAdvUserSerializer):
     quantity = serializers.SerializerMethodField()
     price = serializers.SerializerMethodField()
@@ -175,7 +193,7 @@ class FollowingSerializer(BaseAdvUserSerializer):
 
     def get_tokens(self, obj):
         tokens = obj.token_owner.all()[:5]
-        return TokenSlimSerializer(tokens, many=True).data  
+        return TokenSlimSerializer(tokens, many=True).data
 
 
 class UserSearchSerializer(BaseAdvUserSerializer):
@@ -190,14 +208,14 @@ class UserSearchSerializer(BaseAdvUserSerializer):
 
     def get_tokens(self, obj):
         tokens = obj.token_owner.all()[:6]
-        return TokenSlimSerializer(tokens, many=True).data  
+        return TokenSlimSerializer(tokens, many=True).data
 
 
 class FollowerSerializer(BaseAdvUserSerializer):
     his_followers = serializers.SerializerMethodField()
 
     class Meta(BaseAdvUserSerializer.Meta):
-        fields = BaseAdvUserSerializer.Meta.fields + ("his_followers", )
+        fields = BaseAdvUserSerializer.Meta.fields + ("his_followers",)
 
     def get_his_followers(self, obj):
         return obj.following.filter(method="follow").count()
@@ -257,7 +275,6 @@ class UserSerializer(UserSlimSerializer):
             "followers_count",
         )
 
-
     def get_follows(self, obj):
         followers = obj.followers.filter(method="follow")
         users = [follower.whom_follow for follower in followers]
@@ -279,7 +296,7 @@ class SelfUserSerializer(UserSerializer):
     likes = serializers.SerializerMethodField()
 
     class Meta(UserSerializer.Meta):
-        fields = UserSerializer.Meta.fields + ("likes", )
+        fields = UserSerializer.Meta.fields + ("likes",)
 
     def get_likes(self, obj):
         return obj.followers.filter(method="like").count()

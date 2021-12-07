@@ -12,7 +12,7 @@ class NetworkAdmin(admin.ModelAdmin):
         "fabric721_address",
         "fabric1155_address",
         "exchange_address",
-        "network_type"
+        "network_type",
     )
 
 

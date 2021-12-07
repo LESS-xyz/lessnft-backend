@@ -14,7 +14,7 @@ from src.settings import config
 schema_view = get_schema_view(
     openapi.Info(
         title=config.TITLE,
-        default_version='v1',
+        default_version="v1",
         description=config.DESCRIPTION,
     ),
     public=True,
@@ -22,12 +22,16 @@ schema_view = get_schema_view(
 )
 
 urlpatterns = [
-    path('django-admin/', admin.site.urls),
-    path('api/v1/swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    path('api/v1/account/', include('src.accounts.urls')),
-    path('api/v1/rates/', include('src.rates.urls')),
-    path('api/v1/store/', include('src.store.urls')),
-    path('api/v1/activity/', include('src.activity.urls')),
+    path("django-admin/", admin.site.urls),
+    path(
+        "api/v1/swagger/",
+        schema_view.with_ui("swagger", cache_timeout=0),
+        name="schema-swagger-ui",
+    ),
+    path("api/v1/account/", include("src.accounts.urls")),
+    path("api/v1/rates/", include("src.rates.urls")),
+    path("api/v1/store/", include("src.store.urls")),
+    path("api/v1/activity/", include("src.activity.urls")),
 ]
 
 urlpatterns += static(MEDIA_URL, document_root=MEDIA_ROOT)

@@ -1,7 +1,4 @@
-from src.activity.serializers import (
-    UserStatSerializer,
-    ActivitySerializer
-)
+from src.activity.serializers import UserStatSerializer, ActivitySerializer
 from src.activity.services.top_users import get_top_users
 from src.activity.services.top_collections import get_top_collections
 from src.settings import config
@@ -38,7 +35,7 @@ class ActivityView(APIView, PaginateMixin):
         ],
     )
     def get(self, request):
-        network = request.query_params.get('network', config.DEFAULT_NETWORK)
+        network = request.query_params.get("network", config.DEFAULT_NETWORK)
         types = request.query_params.get("type")
 
         history_methods = {
@@ -66,15 +63,14 @@ class ActivityView(APIView, PaginateMixin):
                     items = TokenHistory.objects.filter(
                         method=method,
                         token__collection__network__name__icontains=network,
-                    ).order_by(
-                        "-date"
-                    )
+                    ).order_by("-date")
                     total_items += items.count()
                     activities.extend(items)
             for param, method in action_methods.items():
                 if param in types:
                     items = UserAction.objects.filter(
-                        Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
+                        Q(token__collection__network__name__icontains=network)
+                        | Q(token__isnull=True),
                         method=method,
                     ).order_by("-date")
                     total_items += items.count()
@@ -90,13 +86,16 @@ class ActivityView(APIView, PaginateMixin):
 
         else:
             actions = UserAction.objects.filter(
-                Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
+                Q(token__collection__network__name__icontains=network)
+                | Q(token__isnull=True),
             ).order_by("-date")
-            history = TokenHistory.objects.filter(
-                token__collection__network__name__icontains=network,   
-            ).exclude(
-                method="Burn"
-            ).order_by("-date")
+            history = (
+                TokenHistory.objects.filter(
+                    token__collection__network__name__icontains=network,
+                )
+                .exclude(method="Burn")
+                .order_by("-date")
+            )
             bids = BidsHistory.objects.filter(
                 token__collection__network__name__icontains=network,
             ).order_by("-date")
@@ -109,11 +108,12 @@ class ActivityView(APIView, PaginateMixin):
         items = ActivitySerializer(activities, many=True).data
         return Response(self.paginate(request, items), status=status.HTTP_200_OK)
 
-      
+
 class NotificationActivityView(APIView):
     """
     View for get user notifications
     """
+
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
@@ -124,19 +124,16 @@ class NotificationActivityView(APIView):
     )
     def get(self, request):
         address = request.user.username
-        network = request.query_params.get('network', config.DEFAULT_NETWORK)
+        network = request.query_params.get("network", config.DEFAULT_NETWORK)
         activities = list()
         end = 5
 
         new_owner_methods = [
-            'Transfer',
-            'Mint',
-            'Burn',
+            "Transfer",
+            "Mint",
+            "Burn",
         ]
-        old_owner_methods = [
-            'Buy',
-            'Listing'
-        ]
+        old_owner_methods = ["Buy", "Listing"]
 
         items = TokenHistory.objects.filter(
             token__collection__network__name__icontains=network,
@@ -155,7 +152,8 @@ class NotificationActivityView(APIView):
         activities.extend(buy_listing)
 
         user_actions = UserAction.objects.filter(
-            Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
+            Q(token__collection__network__name__icontains=network)
+            | Q(token__isnull=True),
             whom_follow__username=address,
             is_viewed=False,
         ).order_by("-date")[:end]
@@ -177,22 +175,23 @@ class NotificationActivityView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'activity_id': openapi.Schema(type=openapi.TYPE_NUMBER),
-                'method': openapi.Schema(type=openapi.TYPE_STRING),
-            }),
+                "activity_id": openapi.Schema(type=openapi.TYPE_NUMBER),
+                "method": openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        ),
         responses={200: "Marked as viewed"},
     )
     def post(self, request):
-        activity_id = request.data.get('activity_id')
-        method = request.data.get('method')
+        activity_id = request.data.get("activity_id")
+        method = request.data.get("method")
         address = request.user.username
         new_owner_methods = [
-            'Transfer',
-            'Mint',
-            'Burn',
+            "Transfer",
+            "Mint",
+            "Burn",
         ]
         old_owner_methods = [
-            'Buy',
+            "Buy",
             "Listing",
         ]
         if method == "all":
@@ -218,7 +217,7 @@ class NotificationActivityView(APIView):
                 is_viewed=False,
             ).update(is_viewed=True)
 
-            return Response('Marked all as viewed', status=status.HTTP_200_OK)
+            return Response("Marked all as viewed", status=status.HTTP_200_OK)
 
         methods = {
             "Transfer": TokenHistory,
@@ -233,7 +232,7 @@ class NotificationActivityView(APIView):
         action = methods[method].objects.get(id=int(activity_id))
         action.is_viewed = True
         action.save()
-        return Response('Marked as viewed', status=status.HTTP_200_OK)
+        return Response("Marked as viewed", status=status.HTTP_200_OK)
 
 
 class UserActivityView(APIView, PaginateMixin):
@@ -250,7 +249,7 @@ class UserActivityView(APIView, PaginateMixin):
         ],
     )
     def get(self, request, address):
-        network = request.query_params.get('network', config.DEFAULT_NETWORK)
+        network = request.query_params.get("network", config.DEFAULT_NETWORK)
         types = request.query_params.get("type")
 
         old_owner_methods = {
@@ -296,7 +295,8 @@ class UserActivityView(APIView, PaginateMixin):
                 if param in types:
                     items = UserAction.objects.filter(
                         Q(user__username=address) | Q(whom_follow__username=address),
-                        Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
+                        Q(token__collection__network__name__icontains=network)
+                        | Q(token__isnull=True),
                         method=method,
                         is_viewed=False,
                     ).order_by("-date")
@@ -313,14 +313,14 @@ class UserActivityView(APIView, PaginateMixin):
 
         else:
             new_owner_methods = [
-                'Transfer',
-                'Mint',
-                'Burn',
+                "Transfer",
+                "Mint",
+                "Burn",
             ]
 
             old_owner_methods = [
-                'Buy',
-                'Listing',
+                "Buy",
+                "Listing",
             ]
 
             items = TokenHistory.objects.filter(
@@ -340,7 +340,8 @@ class UserActivityView(APIView, PaginateMixin):
             activities.extend(buy)
 
             user_actions = UserAction.objects.filter(
-                Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
+                Q(token__collection__network__name__icontains=network)
+                | Q(token__isnull=True),
                 whom_follow__username=address,
                 is_viewed=False,
             ).order_by("-date")
@@ -371,7 +372,7 @@ class FollowingActivityView(APIView, PaginateMixin):
         ],
     )
     def get(self, request, address):
-        network = request.query_params.get('network', config.DEFAULT_NETWORK)
+        network = request.query_params.get("network", config.DEFAULT_NETWORK)
         types = request.query_params.get("type")
 
         token_transfer_methods = {
@@ -395,7 +396,8 @@ class FollowingActivityView(APIView, PaginateMixin):
         activities = list()
 
         following_ids = UserAction.objects.filter(
-            Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
+            Q(token__collection__network__name__icontains=network)
+            | Q(token__isnull=True),
             method="follow",
             user__username=address,
         ).values_list("whom_follow_id", flat=True)
@@ -413,7 +415,8 @@ class FollowingActivityView(APIView, PaginateMixin):
             for param, method in action_methods.items():
                 if param in types:
                     items = UserAction.objects.filter(
-                        Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
+                        Q(token__collection__network__name__icontains=network)
+                        | Q(token__isnull=True),
                         Q(user__id__in=following_ids)
                         | Q(whom_follow__id__in=following_ids),
                         method=method,
@@ -438,7 +441,8 @@ class FollowingActivityView(APIView, PaginateMixin):
         else:
             actions = UserAction.objects.filter(
                 Q(user__id__in=following_ids) | Q(whom_follow__id__in=following_ids),
-                Q(token__collection__network__name__icontains=network) | Q(token__isnull=True),
+                Q(token__collection__network__name__icontains=network)
+                | Q(token__isnull=True),
             ).order_by("-date")
             activities.extend(actions)
             history = (
@@ -447,9 +451,8 @@ class FollowingActivityView(APIView, PaginateMixin):
                     | Q(old_owner__id__in=following_ids),
                     token__collection__network__name__icontains=network,
                 )
-                #.exclude(Q(method="Burn") | Q(method="Transfer"))
-                .exclude(method="Burn")
-                .order_by("-date")
+                # .exclude(Q(method="Burn") | Q(method="Transfer"))
+                .exclude(method="Burn").order_by("-date")
             )
             activities.extend(history)
             bids = BidsHistory.objects.filter(
@@ -469,16 +472,18 @@ class GetTopCollectionsView(APIView):
         manual_parameters=[
             openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter(
-                "sort_period", 
+                "sort_period",
                 openapi.IN_QUERY,
                 required=True,
-                type=openapi.TYPE_STRING, 
+                type=openapi.TYPE_STRING,
                 description="day, week, month",
             ),
         ],
     )
     def get(self, request):
-        sort_period = request.query_params.get("sort_period", "month")   # day, week, month
+        sort_period = request.query_params.get(
+            "sort_period", "month"
+        )  # day, week, month
         network = request.query_params.get("network", config.DEFAULT_NETWORK)
         response_data = get_top_collections(network, sort_period)
         return Response(response_data, status=status.HTTP_200_OK)
@@ -490,47 +495,53 @@ class GetBestDealView(APIView):
         manual_parameters=[
             openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter(
-                "type", 
+                "type",
                 openapi.IN_QUERY,
                 required=True,
-                type=openapi.TYPE_STRING, 
+                type=openapi.TYPE_STRING,
                 description="seller, buyer, follows",
             ),
             openapi.Parameter(
-                "sort_period", 
+                "sort_period",
                 openapi.IN_QUERY,
                 required=True,
-                type=openapi.TYPE_STRING, 
+                type=openapi.TYPE_STRING,
                 description="day, week, month",
             ),
         ],
     )
     def get(self, request):
-        type_ = request.query_params.get("type")                # seller, buyer, follows
-        sort_period = request.query_params.get("sort_period")   # day, week, month
+        type_ = request.query_params.get("type")  # seller, buyer, follows
+        sort_period = request.query_params.get("sort_period")  # day, week, month
         network_name = request.query_params.get("network", config.DEFAULT_NETWORK)
         network = Network.objects.get(name__icontains=network_name)
 
         top_users = get_top_users(type_, sort_period, network)
-        response_data = UserStatSerializer(top_users, many=True, context={
-            "status": type_, 
-            "time_range": sort_period,
-            "network": network,
-        }).data 
+        response_data = UserStatSerializer(
+            top_users,
+            many=True,
+            context={
+                "status": type_,
+                "time_range": sort_period,
+                "network": network,
+            },
+        ).data
 
         return Response(response_data, status=status.HTTP_200_OK)
 
 
 class GetPriceHistory(APIView):
-    '''
+    """
     View for get price history of token id.
-    '''
+    """
+
     permission_classes = [IsAuthenticatedOrReadOnly]
+
     @swagger_auto_schema(
         operation_description="get price history",
         manual_parameters=[
             openapi.Parameter(
-                "period", 
+                "period",
                 openapi.IN_QUERY,
                 type=openapi.TYPE_STRING,
                 description="day, week, month, year",
@@ -538,15 +549,15 @@ class GetPriceHistory(APIView):
         ],
     )
     def get(self, request, id):
-        period = request.query_params.get('period')
+        period = request.query_params.get("period")
 
         try:
             token = Token.objects.committed().get(id=id)
         except Token.DoesNotExist:
-            return Response('token not found', status=status.HTTP_404_NOT_FOUND)
-        
-        if period not in ['day', 'week', 'month', 'year']:
-            return Response('unknown period', status=status.HTTP_400_BAD_REQUEST)
+            return Response("token not found", status=status.HTTP_404_NOT_FOUND)
+
+        if period not in ["day", "week", "month", "year"]:
+            return Response("unknown period", status=status.HTTP_400_BAD_REQUEST)
 
         response = PriceHistory(token, period).get_history()
         return Response(response, status=status.HTTP_200_OK)
