@@ -1,5 +1,5 @@
 from scanners.base import ScannerABC
-from scanners.eth.mixins import DeployMixin, ApproveMixin, BuyMixin, MintMixin
+from scanners.eth.mixins import ApproveMixin, BuyMixin, DeployMixin, MintMixin
 
 
 class Scanner(
@@ -13,4 +13,3 @@ class Scanner(
 
     def get_last_network_block(self) -> int:
         return self.network.get_web3_connection().eth.blockNumber
-

@@ -1,10 +1,11 @@
-import time
 import os
 import sys
+import time
 import traceback
-from src.networks.models import Network, Types
+
 from scanners.eth.scanner import Scanner as EthereumScanner
 from scanners.tron.scanner import Scanner as TronScanner
+from src.networks.models import Network, Types
 
 
 def get_scanner(network, contract_type=None, contract=None):
@@ -17,6 +18,7 @@ def get_scanner(network, contract_type=None, contract=None):
         print(network.network_type)
         print(Types.ethereum)
         print(network, contract_type, contract)
+
 
 def never_fall(func):
     def wrapper(*args, **kwargs):
