@@ -33,6 +33,8 @@ from src.store.serializers import (
    TokenSerializer,
 )
 from src.store.services.ipfs import create_ipfs, send_to_ipfs
+from src.store.services.collection_import import OpenSeaImport
+from src.store.tasks import import_opensea_collection
 from src.utilities import get_page_slice, sign_message, PaginateMixin
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
@@ -1246,3 +1248,40 @@ def get_total_count(request):
             "users_active_daily": users_active_daily,
         }
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class CollectionImportView(APIView):
+    '''
+    View for import contracts
+    '''
+    @swagger_auto_schema(
+        operation_description="Import 721 ethereum collection from opensea",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+                properties={
+                    'collection': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        ),
+        responses={200: "success"},
+    )
+    def post(self, request):
+        collection_address = request.data.get('collection')
+        network_name = 'ethereum'
+        network = Network.objects.filter(name__iexact=network_name).first()
+
+        collection_import = OpenSeaImport(collection_address, network)
+
+        collection = collection_import.get_collection_data()
+        if not collection:
+            return Response({"error": "Collection not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not collection.get('stats').get('count', 0):
+            return Response({"error": "Collection error"}, status=status.HTTP_400_BAD_REQUEST)
+
+        standart = collection.get('primary_asset_contracts')[0].get("schema_name")
+        if standart not in ["ERC1155", "ERC721"]:
+            return Response({"error": "Bad collection standart"}, status=status.HTTP_400_BAD_REQUEST)
+
+        import_opensea_collection.delay(collection_address, network_name, collection)
+
+        return Response("success", status=status.HTTP_200_OK)

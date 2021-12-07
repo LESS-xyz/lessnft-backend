@@ -241,7 +241,7 @@ class TokenSerializer(serializers.ModelSerializer):
         return [{"value": tag.name, "media": tag.ipfs_icon} for tag in obj.tags.all()]
 
     def get_network(self, obj):
-        network = obj.currency.network
+        network = obj.currency.network if obj.currency else None
         return NetworkSerializer(network).data
 
     def get_like_count(self, obj):
@@ -256,7 +256,7 @@ class TokenSerializer(serializers.ModelSerializer):
     def get_minimal_bid_USD(self, obj):
         if self.get_minimal_bid(obj) and obj.currency:
             amount = float(self.get_minimal_bid(obj))
-            decimals = obj.currency.get_decimals
+            decimals = obj.currency.get_decimals if obj.currency else None
             return calculate_amount(amount*decimals, obj.currency.symbol)[0]
 
     def get_highest_bid(self, obj):
@@ -278,7 +278,7 @@ class TokenSerializer(serializers.ModelSerializer):
     def get_highest_bid_USD(self, obj):
         if self.get_highest_bid(obj) and obj.currency:
             amount = float(self.get_highest_bid(obj).get('amount'))
-            decimals = obj.currency.get_decimals
+            decimals = obj.currency.get_decimals if obj.currency else None
             return calculate_amount(amount*decimals, obj.currency.symbol)[0]
 
     def get_bids(self, obj):
@@ -286,7 +286,7 @@ class TokenSerializer(serializers.ModelSerializer):
 
     def get_USD_price(self, obj):
         price = self.get_price(obj)
-        decimals = obj.currency.get_decimals
+        decimals = obj.currency.get_decimals if obj.currency else None
         if price:
             return calculate_amount(price*decimals, obj.currency.symbol)[0]
         if not self.get_highest_bid_USD(obj) and self.get_minimal_bid(obj):
@@ -480,14 +480,14 @@ class TokenFullSerializer(TokenSerializer):
     def get_USD_service_fee(self, obj):
         price = self.get_price(obj)
         if price:
-            decimals = obj.currency.get_decimals
+            decimals = obj.currency.get_decimals if obj.currency else None
             value = price / 100 * Decimal(obj.currency.service_fee) * decimals
             return calculate_amount(value, obj.currency.symbol)[0]
         amount = self.get_minimal_bid(obj)
         if self.get_highest_bid(obj) and obj.currency:
             amount = Decimal(self.get_highest_bid(obj).get('amount'))
         if amount:
-            decimals = obj.currency.get_decimals
+            decimals = obj.currency.get_decimals if obj.currency else None
             value = amount / 100 * decimals
             return calculate_amount(value, obj.currency.symbol)[0]
 

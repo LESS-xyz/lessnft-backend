@@ -29,6 +29,9 @@ from rest_framework.response import Response
 from .services.ipfs import get_ipfs_by_hash
 
 
+OPENSEA_MEDIA_PATH = 'https://lh3.googleusercontent.com/'
+
+
 class Status(models.TextChoices):
     PENDING = 'Pending'
     FAILED = 'Failed'
@@ -107,7 +110,7 @@ class Collection(models.Model):
     description = models.TextField(null=True, blank=True)
     standart = models.CharField(max_length=10, choices=[('ERC721', 'ERC721'), ('ERC1155', 'ERC1155')])
     short_url = models.CharField(max_length=30, default=None, null=True, blank=True, unique=True)
-    creator = models.ForeignKey('accounts.AdvUser', on_delete=models.PROTECT)
+    creator = models.ForeignKey('accounts.AdvUser', on_delete=models.PROTECT, null=True, default=None)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     deploy_block = models.IntegerField(null=True, default=None)
     network = models.ForeignKey('networks.Network', on_delete=models.CASCADE)
@@ -120,10 +123,14 @@ class Collection(models.Model):
 
     @property
     def avatar(self):
+        if self.avatar_ipfs.startswith(OPENSEA_MEDIA_PATH):
+            return self.avatar_ipfs
         return get_media_from_ipfs(self.avatar_ipfs)
 
     @property
     def cover(self):
+        if self.cover_ipfs.startswith(OPENSEA_MEDIA_PATH):
+            return self.cover_ipfs
         return get_media_from_ipfs(self.cover_ipfs)
 
     @property
@@ -134,10 +141,8 @@ class Collection(models.Model):
     def ethereum_address(self):
         return self.network.get_ethereum_address(self.address)
 
-
     def __str__(self):
         return self.name
-
 
     def save_in_db(self, request, avatar):
         self.name = request.data.get('name')
