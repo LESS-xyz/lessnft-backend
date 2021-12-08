@@ -32,6 +32,7 @@ from src.store.serializers import (
     TokenFullSerializer,
     TokenPatchSerializer,
     TokenSerializer,
+    TagSerializer,
 )
 from src.store.services.ipfs import create_ipfs, send_to_ipfs
 from src.store.services.collection_import import OpenSeaImport
@@ -759,10 +760,8 @@ class BuyTokenView(APIView):
 
 @api_view(http_method_names=["GET"])
 def get_tags(request):
-    tag_list = [
-        {"title": tag.name, "icon": tag.ipfs_icon} for tag in Tags.objects.all()
-    ]
-    return Response({"tags": tag_list}, status=status.HTTP_200_OK)
+    tags = Tags.objects.all()
+    return Response(TagSerializer(tags, many=True).data, status=status.HTTP_200_OK)
 
 
 class MakeBid(APIView):

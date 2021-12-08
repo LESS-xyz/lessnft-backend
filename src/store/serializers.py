@@ -17,6 +17,7 @@ from src.store.models import (
     Token,
     TransactionTracker,
     ViewsTracker,
+    Tags,
 )
 from django.db.models import Count, Min, Sum
 from rest_framework import serializers
@@ -43,6 +44,25 @@ class TokenPatchSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+
+
+class TagSerializer(serializers.ModelSerializer):
+    icon = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Tags
+        fields = (
+            "name",
+            "icon",
+            "image",
+        )
+
+    def get_icon(self, obj):
+        return obj.ipfs_icon
+
+    def get_image(self, obj):
+        return obj.ipfs_banner
 
 
 class OwnershipSerializer(serializers.ModelSerializer):
@@ -240,7 +260,7 @@ class TokenSerializer(serializers.ModelSerializer):
         return obj.creator_royalty
 
     def get_tags(self, obj):
-        return [{"value": tag.name, "media": tag.ipfs_icon} for tag in obj.tags.all()]
+        return TagSerializer(obj.tags.all(), many=True).data
 
     def get_network(self, obj):
         network = obj.currency.network if obj.currency else None

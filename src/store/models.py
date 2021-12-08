@@ -955,6 +955,7 @@ class Ownership(models.Model):
 class Tags(models.Model):
     name = models.CharField(max_length=30, unique=True)
     icon = models.CharField(max_length=200, blank=True, null=True, default=None)
+    banner = models.CharField(max_length=200, blank=True, null=True, default=None)
 
     def __str__(self):
         return self.name
@@ -966,6 +967,11 @@ class Tags(models.Model):
     def ipfs_icon(self):
         if self.icon:
             return "https://ipfs.io/ipfs/{ipfs}".format(ipfs=self.icon)
+
+    @property
+    def ipfs_banner(self):
+        if self.banner:
+            return "https://ipfs.io/ipfs/{ipfs}".format(ipfs=self.banner)
 
 
 class BidQuerySet(models.QuerySet):
