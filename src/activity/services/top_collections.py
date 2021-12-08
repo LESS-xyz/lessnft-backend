@@ -1,6 +1,6 @@
 import json
-from django.db.models import Sum, F
-from src.store.models import Collection
+from django.db.models import Sum, F, Exists, OuterRef
+from src.store.models import Collection, Token
 from src.store.serializers import CollectionSlimSerializer
 from src.activity.models import TokenHistory, CollectionStat
 from datetime import date, timedelta
@@ -60,7 +60,7 @@ def get_diff(value1, value2) -> str:
     return f"-{round(diff, 2)}%"
 
 
-def get_top_collections(network, period):
+def get_top_collections(network, period, tag=None):
     periods = get_periods("day", "week", "month")
     main_start = date.today()
     main_end = periods[period]
@@ -75,16 +75,21 @@ def get_top_collections(network, period):
     if data:
         return json.loads(data)
 
-    collections = (
-        Collection.objects.committed().network(network).values_list("id", flat=True)
-    )
+    collections = Collection.objects.committed().network(network)
+    if tag is not None:
+        collections = collections.filter(
+            Exists(
+                Token.objects.committed().filter(tag=tag, collection__id=OuterRef("id"))
+            )
+        )
+    collections = collections.values_list("id", flat=True)
     main_collections = list(_get_collections_stat(collections, main_start, main_end))
 
     if not main_collections:
         return []
 
     main_collections.sort(key=lambda val: val.get("price", 0), reverse=True)
-    main_collections = list(main_collections)[:15]
+    main_collections = list(main_collections)
 
     main_collections_id = [col.get("collection") for col in main_collections]
     prev_collections = _get_collections_stat(main_collections_id, main_end, prev_end)

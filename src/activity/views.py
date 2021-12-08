@@ -2,7 +2,7 @@ from src.activity.serializers import UserStatSerializer, ActivitySerializer
 from src.activity.services.top_users import get_top_users
 from src.activity.services.top_collections import get_top_collections
 from src.settings import config
-from src.store.models import Token
+from src.store.models import Token, Tags
 from src.networks.models import Network
 from src.utilities import PaginateMixin
 from django.db.models import Q
@@ -466,7 +466,7 @@ class FollowingActivityView(APIView, PaginateMixin):
         return Response(self.paginate(request, items), status=status.HTTP_200_OK)
 
 
-class GetTopCollectionsView(APIView):
+class GetTopCollectionsView(APIView, PaginateMixin):
     @swagger_auto_schema(
         operation_description="get top collections",
         manual_parameters=[
@@ -485,8 +485,11 @@ class GetTopCollectionsView(APIView):
             "sort_period", "month"
         )  # day, week, month
         network = request.query_params.get("network", config.DEFAULT_NETWORK)
-        response_data = get_top_collections(network, sort_period)
-        return Response(response_data, status=status.HTTP_200_OK)
+        tag = request.query_params.get("tag")
+        if tag is not None:
+            tag = Tags.objects.filter(name=tag).first()
+        collections = get_top_collections(network, sort_period, tag)
+        return Response(self.paginate(request, collections), status=status.HTTP_200_OK)
 
 
 class GetBestDealView(APIView):
