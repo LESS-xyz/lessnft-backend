@@ -39,7 +39,7 @@ def end_auction(token):
     ]
     signature = data.get("signature")
 
-    tx = token.collection.network.contract_call(
+    token.collection.network.contract_call(
         method_type="write",
         contract_type="exchage",
         address=token.currency.address,

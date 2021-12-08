@@ -3,7 +3,6 @@ import json
 
 import ipfshttpclient
 from src.settings import config
-from django.apps import apps
 
 
 def create_ipfs(request):

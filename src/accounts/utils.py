@@ -1,12 +1,6 @@
 import logging
 from web3 import Web3
 
-"""
-from eth_utils.hexadecimal import add_0x_prefix
-from eth_account.messages import encode_defunct
-"""
-from eth_account import Account
-
 from tronapi import Tron
 from tronapi.common.account import Account
 from rest_framework.exceptions import ValidationError

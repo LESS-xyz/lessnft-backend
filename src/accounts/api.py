@@ -1,4 +1,3 @@
-import logging
 from random import choice
 from string import ascii_letters
 

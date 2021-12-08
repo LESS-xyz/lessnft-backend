@@ -1,5 +1,37 @@
 from django.urls import path
-from src.store.views import *
+from src.store.views import (
+    CreateView,
+    CreateCollectionView,
+    GetMostBiddedView,
+    GetRelatedView,
+    TransactionTrackerView,
+    GetHotView,
+    GetHotCollectionsView,
+    SearchView,
+    GetLikedView,
+    TransferOwned,
+    GetCollectionView,
+    BuyTokenView,
+    MakeBid,
+    VerificateBetView,
+    AuctionEndView,
+    ReportView,
+    SetCoverView,
+    SupportView,
+    GetCollectionByAdressView,
+    RemoveRejectView,
+    CollectionImportView,
+    GetView,
+    TokenBurnView,
+    get_total_count,
+    get_tags,
+    get_max_price,
+    get_bids,
+    get_hot_bids,
+    get_fee,
+    get_favorites,
+    get_random_token,
+)
 
 urlpatterns = [
     path("create_token/", CreateView.as_view()),

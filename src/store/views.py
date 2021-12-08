@@ -98,8 +98,6 @@ buy_token_response = openapi.Response(
             "id_order": openapi.Schema(type=openapi.TYPE_STRING),
             "whoIsSelling": openapi.Schema(type=openapi.TYPE_STRING),
             "tokenToBuy": openapi.Schema(type=openapi.TYPE_OBJECT),
-            "tokenAddress": openapi.Schema(type=openapi.TYPE_STRING),
-            "id": openapi.Schema(type=openapi.TYPE_NUMBER),
             "amount": openapi.Schema(type=openapi.TYPE_NUMBER),
             "tokenToSell": openapi.Schema(type=openapi.TYPE_OBJECT),
             "tokenAddress": openapi.Schema(type=openapi.TYPE_STRING),
@@ -216,7 +214,7 @@ class CreateView(APIView):
             token_collection = Collection.objects.committed().get_by_short_url(
                 token_collection_id
             )
-        except:
+        except Collection.DoesNotExist:
             return Response(
                 {"error": "Collection not found"}, status=status.HTTP_404_NOT_FOUND
             )
@@ -785,8 +783,7 @@ class MakeBid(APIView):
             },
         ),
         responses={
-            400: "you cant buy token",
-            400: "You cannot bet on native currencies",
+            400: "error",
             404: "token not found",
         },
     )

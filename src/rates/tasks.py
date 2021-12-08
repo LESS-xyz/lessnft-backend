@@ -8,7 +8,6 @@ from src.settings import config
 from src.rates.models import UsdRate
 
 from celery import shared_task
-from src.settings import config
 
 
 QUERY_FSYM = "usd"
@@ -30,7 +29,7 @@ def rates_checker():
     for coin_node in coin_nodes:
         try:
             rate = get_rate(coin_node)
-        except Exception as e:
+        except Exception:
             logger.error("\n".join(traceback.format_exception(*sys.exc_info())))
             continue
         rates = UsdRate.objects.filter(coin_node=coin_node)

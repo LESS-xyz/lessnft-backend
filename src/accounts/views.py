@@ -1,4 +1,3 @@
-import logging
 import random
 
 from src.utilities import PaginateMixin
@@ -15,14 +14,13 @@ from src.accounts.serializers import (
     CoverSerializer,
 )
 from src.activity.models import UserAction
-from src.settings import *
+from src.settings import config, ALLOWED_HOSTS
 from src.store.models import Collection, Token
 from src.store.serializers import UserCollectionSerializer
 from src.store.services.ipfs import send_to_ipfs
 
 from django.core.mail import send_mail
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Q
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
@@ -390,12 +388,11 @@ class GetRandomCoverView(APIView):
             .exclude(cover_ipfs="")
             .exclude(is_verificated=False)
         )
-        try:
-            random_cover = random.choice(covers)
-        except:
+        if not covers:
             return Response(
                 {"error": "there is no available cover"},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        random_cover = random.choice(covers)
         response_data = CoverSerializer(random_cover).data
         return Response(response_data, status=status.HTTP_200_OK)

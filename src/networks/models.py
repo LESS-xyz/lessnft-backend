@@ -112,7 +112,7 @@ class Network(models.Model):
             return Web3.toChecksumAddress(address)
         return address
 
-    def contract_call(self, method_type: str, **kwargs) -> "result":
+    def contract_call(self, method_type: str, **kwargs):
         """
         redirects to ethereum/tron/whatever_functional_we_will_add_later read/write method
         kwargs example for ethereum/tron read method:
@@ -130,7 +130,7 @@ class Network(models.Model):
             **kwargs
         )
 
-    def execute_ethereum_read_method(self, **kwargs) -> "result":
+    def execute_ethereum_read_method(self, **kwargs):
         contract_type = kwargs.get("contract_type")
         address = kwargs.get("address")
         function_name = kwargs.get("function_name")
@@ -145,7 +145,7 @@ class Network(models.Model):
             return getattr(contract.functions, function_name)(*input_params).call()
         return getattr(contract.functions, function_name)().call()
 
-    def execute_ethereum_write_method(self, **kwargs) -> "initial_tx":
+    def execute_ethereum_write_method(self, **kwargs):
         contract_type = kwargs.get("contract_type")
         address = kwargs.get("address")
         send = kwargs.get("send", False)
@@ -191,7 +191,7 @@ class Network(models.Model):
             return tx_hash.hex()
         return initial_tx
 
-    def execute_tron_read_method(self, **kwargs) -> "result":
+    def execute_tron_read_method(self, **kwargs):
         input_params = kwargs.get("input_params")
         input_types = kwargs.get("input_type")
         function_name = kwargs.get("function_name")
@@ -233,13 +233,12 @@ class Network(models.Model):
         result = decode_abi(output_types, decoded_data)
         return result[0]
 
-    def execute_tron_write_method(self, **kwargs) -> "initial_tx":
+    def execute_tron_write_method(self, **kwargs):
         input_params = kwargs.get("input_params")
         input_types = kwargs.get("input_type")
         function_name = kwargs.get("function_name")
         address = kwargs.get("address")
         contract_type = kwargs.get("contract_type")
-        gas_limit = kwargs.get("gas_limit")
         tx_value = kwargs.get("tx_value")
         is1155 = kwargs.get("is1155")
         if not tx_value:
