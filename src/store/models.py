@@ -139,13 +139,13 @@ class Collection(models.Model):
 
     @property
     def avatar(self):
-        if self.avatar_ipfs.startswith(OPENSEA_MEDIA_PATH):
+        if self.avatar_ipfs and self.avatar_ipfs.startswith(OPENSEA_MEDIA_PATH):
             return self.avatar_ipfs
         return get_media_from_ipfs(self.avatar_ipfs)
 
     @property
     def cover(self):
-        if self.cover_ipfs.startswith(OPENSEA_MEDIA_PATH):
+        if self.cover_ipfs and self.cover_ipfs.startswith(OPENSEA_MEDIA_PATH):
             return self.cover_ipfs
         return get_media_from_ipfs(self.cover_ipfs)
 
