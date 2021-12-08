@@ -462,6 +462,7 @@ class GetView(APIView):
         if minimal_bid:
             request_data.pop("minimal_bid")
             minimal_bid = Decimal(str(minimal_bid))
+            price = minimal_bid
         request_data["currency_minimal_bid"] = minimal_bid
 
         currency = UsdRate.objects.filter(
