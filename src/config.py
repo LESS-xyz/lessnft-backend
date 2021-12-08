@@ -1,10 +1,9 @@
-
 import os
 import yaml
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import dataclass
 from typing import List, Optional
 from marshmallow_dataclass import class_schema
+
 
 @dataclass
 class Network:
@@ -16,6 +15,7 @@ class Network:
     fabric1155_address: str
     exchange_address: str
     network_type: str
+
 
 @dataclass
 class Config:
@@ -30,9 +30,9 @@ class Config:
     DEBUG: bool
 
     IPFS_CLIENT: str
-    SCANNER_SLEEP: int 
+    SCANNER_SLEEP: int
     ORACLE_ADDRESS: str
-    
+
     @dataclass
     class SortStatus:
         recent: str
@@ -53,20 +53,21 @@ class Config:
         image: str
         address: str
         decimal: int
-        network: int
+        network: str
         fee_discount: int
-    
+
     @dataclass
     class MasterUser:
         address: str
-        network: int 
+        network: str
         commission: int
-    
+
     @dataclass
     class Intervals:
         every: int
         period: str
-    
+        pk: int
+
     @dataclass
     class PeriodicTasks:
         name: str
@@ -83,7 +84,7 @@ class Config:
     CAPTCHA_URL: Optional[str]
     PRIV_KEY: str
 
-    DEFAULT_NETWORK : Optional[str]
+    DEFAULT_NETWORK: Optional[str]
     TX_TRACKER_TIMEOUT: int
 
     REDIS_EXPIRATION_TIME: int
@@ -95,10 +96,11 @@ class Config:
 
     TITLE: str
     DESCRIPTION: str
+    ITEMS_PER_PAGE: int
 
     NETWORKS: List[Network]
     USD_RATES: List[UsdRate]
-    MASTER_USER: MasterUser
+    MASTER_USER: List[MasterUser]
 
     INTERVALS: List[Intervals]
     PERIODIC_TASKS: List[PeriodicTasks]
@@ -108,7 +110,12 @@ class Config:
     REDIS_PORT: int
 
 
-with open(os.path.dirname(__file__) + '/../config.yaml') as f:
+config_path = "/../config.yaml"
+if os.getenv("IS_TEST", False):
+    config_path = "/../config.example.yaml"
+
+
+with open(os.path.dirname(__file__) + config_path) as f:
     config_data = yaml.safe_load(f)
 
 config: Config = class_schema(Config)().load(config_data)

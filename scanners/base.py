@@ -1,15 +1,18 @@
+import logging
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from src.utilities import RedisClient
 from typing import Optional
+
 from src.accounts.models import AdvUser
 from src.settings import config
-import logging
+from src.utilities import RedisClient
 
+_log_format = (
+    "%(asctime)s - [%(levelname)s] - %(filename)s (line %(lineno)d) - %(message)s"
+)
 
-_log_format = f"%(asctime)s - [%(levelname)s] - %(filename)s (line %(lineno)d) - %(message)s"
-_datetime_format = '%d.%m.%Y %H:%M:%S'
+_datetime_format = "%d.%m.%Y %H:%M:%S"
 
 loggers = {}
 
@@ -37,13 +40,17 @@ class HandlerABC(ABC):
     def get_file_handler(self, name):
         file_handler = logging.FileHandler(f"logs/{name}.log")
         file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(logging.Formatter(_log_format, datefmt=_datetime_format))
+        file_handler.setFormatter(
+            logging.Formatter(_log_format, datefmt=_datetime_format)
+        )
         return file_handler
 
     def get_stream_handler(self):
         stream_handler = logging.StreamHandler()
         stream_handler.setLevel(logging.DEBUG)
-        stream_handler.setFormatter(logging.Formatter(_log_format, datefmt=_datetime_format))
+        stream_handler.setFormatter(
+            logging.Formatter(_log_format, datefmt=_datetime_format)
+        )
         return stream_handler
 
     def get_logger(self, name):

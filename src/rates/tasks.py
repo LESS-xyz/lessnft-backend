@@ -1,3 +1,4 @@
+import logging
 import sys
 import requests
 import traceback
@@ -7,10 +8,10 @@ from src.settings import config
 from src.rates.models import UsdRate
 
 from celery import shared_task
-from src.settings import config
 
 
 QUERY_FSYM = "usd"
+logger = logging.getLogger("celery")
 
 
 def get_rate(coin_code):
@@ -23,12 +24,13 @@ def get_rate(coin_code):
 
 @shared_task(name="rates_checker")
 def rates_checker():
-    coin_nodes = UsdRate.objects.all().values_list('coin_node', flat=True)
+    logger.info("celery is working")
+    coin_nodes = UsdRate.objects.all().values_list("coin_node", flat=True)
     for coin_node in coin_nodes:
         try:
             rate = get_rate(coin_node)
-        except Exception as e:
-            print("\n".join(traceback.format_exception(*sys.exc_info())), flush=True)
+        except Exception:
+            logger.error("\n".join(traceback.format_exception(*sys.exc_info())))
             continue
         rates = UsdRate.objects.filter(coin_node=coin_node)
         rates.update(rate=rate)

@@ -13,29 +13,30 @@ class TokenHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = TokenHistory
         fields = (
-            'id',
-            'date',
-            'method',
-            'new_owner',
-            'old_owner',
-            'price',
-            'USD_price',
-            'amount',
+            "id",
+            "date",
+            "method",
+            "new_owner",
+            "old_owner",
+            "price",
+            "USD_price",
+            "amount",
         )
 
 
 class UserStatSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['user'] = BaseAdvUserSerializer(context=self.context)
+        self.fields["user"] = BaseAdvUserSerializer(context=self.context)
+
     price = serializers.SerializerMethodField()
 
     class Meta:
         model = UserStat
         fields = (
-            'id',
-            'user',
-            'price',
+            "id",
+            "user",
+            "price",
         )
 
     def get_price(self, obj):
@@ -50,16 +51,16 @@ class UserStatSerializer(serializers.ModelSerializer):
 class BidsHistorySerializer(serializers.ModelSerializer):
     user = UserSlimSerializer()
     amount = serializers.SerializerMethodField()
-    currency = serializers.CharField(source='token.currency')
+    currency = serializers.CharField(source="token.currency")
 
     class Meta:
         model = BidsHistory
         fields = (
-            'id',
-            'price',
-            'user',
-            'date',
-            'currency',
+            "id",
+            "price",
+            "user",
+            "date",
+            "currency",
         )
 
     def get_amount(self, obj):
@@ -107,12 +108,12 @@ class ActivitySerializer(serializers.Serializer):
         if obj.token:
             return obj.token.id
         return None
-    
+
     def get_token_image(self, obj):
         if obj.token:
             return obj.token.image
         return None
-    
+
     def get_token_name(self, obj):
         if obj.token:
             return obj.token.name
@@ -125,7 +126,7 @@ class ActivitySerializer(serializers.Serializer):
 
     def get_amount(self, obj):
         try:
-            amount = getattr(obj, 'amount')
+            amount = getattr(obj, "amount")
         except AttributeError:
             amount = None
         return amount
@@ -142,13 +143,13 @@ class ActivitySerializer(serializers.Serializer):
         if user_from:
             return user_from.custom_url if user_from.custom_url else user_from.id
         return None
-    
+
     def get_from_image(self, obj):
         user_from = self._get_user_from(obj)
         if user_from:
             return user_from.avatar
         return None
-    
+
     def get_from_address(self, obj):
         user_from = self._get_user_from(obj)
         if user_from:
@@ -160,19 +161,19 @@ class ActivitySerializer(serializers.Serializer):
         if user_from:
             return user_from.get_name()
         return None
-    
+
     def get_to_id(self, obj):
         user_to = self._get_user_to(obj)
         if user_to:
             return user_to.custom_url if user_to.custom_url else user_to.id
         return None
-    
+
     def get_to_image(self, obj):
         user_to = self._get_user_to(obj)
         if user_to:
             return user_to.avatar
         return None
-    
+
     def get_to_address(self, obj):
         user_to = self._get_user_to(obj)
         if user_to:

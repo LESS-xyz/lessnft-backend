@@ -1,4 +1,4 @@
-from scanners.base import DeployData, BuyData, ApproveData, MintData
+from scanners.base import ApproveData, BuyData, DeployData, MintData
 
 
 class DeployMixin:
@@ -37,6 +37,7 @@ class BuyMixin:
             seller=event["args"]["seller"].lower(),
             price=event["args"]["buyAmount"],
             amount=event["args"]["sellAmount"],
+            currency_address=event["args"]["buyTokenAddress"],
             tx_hash=event["transactionHash"].hex(),
             token_id=event["args"]["sellId"],
             collection_address=event["args"]["sellTokenAddress"],
@@ -61,8 +62,12 @@ class ApproveMixin:
 class MintMixin:
     def get_events_mint(self, last_checked_block, last_network_block):
         event = {
-            "ERC721": self.network.get_erc721main_contract(self.contract.address).events.Transfer,
-            "ERC1155": self.network.get_erc1155main_contract(self.contract.address).events.TransferSingle,
+            "ERC721": self.network.get_erc721main_contract(
+                self.contract.address
+            ).events.Transfer,
+            "ERC1155": self.network.get_erc1155main_contract(
+                self.contract.address
+            ).events.TransferSingle,
         }[self.contract_type]
         return event.createFilter(
             fromBlock=last_checked_block,
@@ -70,7 +75,6 @@ class MintMixin:
         ).get_all_entries()
 
     def parse_data_mint(self, event) -> MintData:
-        print(event)
         token_id = event["args"].get("tokenId")
         if token_id is None:
             token_id = event["args"].get("id")
@@ -80,5 +84,5 @@ class MintMixin:
             old_owner=event["args"]["from"].lower(),
             tx_hash=event["transactionHash"].hex(),
             amount=event["args"].get("value", 1),
-            contract = None,
+            contract=None,
         )

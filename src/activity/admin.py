@@ -4,10 +4,10 @@ from .models import UserAction, TokenHistory, BidsHistory
 
 class UserActionAdmin(admin.ModelAdmin):
     model = UserAction
-    readonly_fields = ('id',)
-    list_display = ('user', 'method', 'date')
-    list_filter = ('method',)
-    ordering = ('-date',)
+    readonly_fields = ("id",)
+    list_display = ("user", "method", "date")
+    list_filter = ("method",)
+    ordering = ("-date",)
 
     def has_change_permission(self, request, obj=None):
         return False
@@ -21,9 +21,17 @@ class UserActionAdmin(admin.ModelAdmin):
 
 class TokenHistoryAdmin(admin.ModelAdmin):
     model = TokenHistory
-    list_display = ('token', 'amount', 'old_owner', 'method', 'date', 'price')
-    list_filter = ('method',)
-    ordering = ('-date',)
+    list_display = (
+        "token",
+        "amount",
+        "old_owner",
+        "method",
+        "date",
+        "price",
+        "currency",
+    )
+    list_filter = ("method",)
+    ordering = ("-date",)
 
     def has_change_permission(self, request, obj=None):
         return False
@@ -37,8 +45,8 @@ class TokenHistoryAdmin(admin.ModelAdmin):
 
 class BidsHistoryAdmin(admin.ModelAdmin):
     model = BidsHistory
-    list_display = ('token', 'user', 'price', 'date')
-    ordering = ('-date',)
+    list_display = ("token", "user", "price", "date")
+    ordering = ("-date",)
 
     def has_change_permission(self, request, obj=None):
         return False
