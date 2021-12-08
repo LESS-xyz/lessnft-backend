@@ -125,7 +125,7 @@ class HandlerMintTransferBurn(HandlerABC):
             is_mint=bool(data.old_owner == self.scanner.EMPTY_ADDRESS.lower()),
         )
         if token is None:
-            self.logger.warning(f"Token not found")
+            self.logger.warning("Token not found")
             return
 
         if data.old_owner == self.scanner.EMPTY_ADDRESS.lower():

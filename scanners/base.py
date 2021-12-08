@@ -9,8 +9,9 @@ from src.settings import config
 from src.utilities import RedisClient
 
 _log_format = (
-    f"%(asctime)s - [%(levelname)s] - %(filename)s (line %(lineno)d) - %(message)s"
+    "%(asctime)s - [%(levelname)s] - %(filename)s (line %(lineno)d) - %(message)s"
 )
+
 _datetime_format = "%d.%m.%Y %H:%M:%S"
 
 loggers = {}
