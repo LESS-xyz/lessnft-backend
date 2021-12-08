@@ -11,11 +11,3 @@ ignore =
     E128,
     E122,
     E126,
-
-    ; F401, # import *
-    ; F403, # unused imports
-    ; F601, # dictionary key repeated with different values
-    ; E711, # use foo is not None 
-    ; E722, # do not use bare 'except'
-    ; F811, # repeated imports
-    ; F841, # variable assigned but never used
