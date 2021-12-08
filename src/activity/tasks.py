@@ -9,7 +9,7 @@ logger = logging.getLogger("celery")
 
 @shared_task(name="update_top_users_info")
 def update_top_users_info():
-    logger.info(f"Start update top users info")
+    logger.info("Start update top users info")
     networks = Network.objects.all()
     for network in networks:
         update_users_stat(network)

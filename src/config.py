@@ -1,7 +1,6 @@
 import os
 import yaml
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import dataclass
 from typing import List, Optional
 from marshmallow_dataclass import class_schema
 

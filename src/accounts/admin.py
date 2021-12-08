@@ -7,7 +7,6 @@ from allauth.socialaccount.models import (
     SocialToken,
     SocialAccount,
     SocialApp,
-    SocialToken,
 )
 from allauth.account.models import EmailAddress
 

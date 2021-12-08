@@ -884,7 +884,7 @@ def token_save_dispatcher(sender, instance, created, **kwargs):
                     .order_by("price")[0]
                     .price
                 )
-            except:
+            except Exception:
                 minimal_price = None
             instance.currency_price = minimal_price
         post_save.disconnect(token_save_dispatcher, sender=sender)

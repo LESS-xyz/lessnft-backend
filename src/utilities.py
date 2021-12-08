@@ -1,3 +1,5 @@
+import logging
+
 from django.utils import timezone
 from datetime import timedelta
 
@@ -69,13 +71,15 @@ class PaginateMixin:
     def _parse_request(self, request):
         try:
             self.page = int(abs(request.query_params.get("page", 1))) or 1
-        except:
+        except Exception as e:
+            logging.error(f"Pagination value error {e}")
             self.page = 1
         try:
             self.items_per_page = int(
                 abs(request.query_params.get("items_per_page", config.ITEMS_PER_PAGE))
             ) or int(config.ITEMS_PER_PAGE)
-        except:
+        except Exception as e:
+            logging.error(f"Pagination value error {e}")
             self.items_per_page = int(config.ITEMS_PER_PAGE)
 
     def get_page_slice(self, items_length: int) -> Tuple[int, int]:

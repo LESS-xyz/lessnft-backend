@@ -1,5 +1,18 @@
 from django.urls import path
-from src.accounts.views import *
+from src.accounts.views import (
+    MetamaskLogin,
+    FollowView,
+    UnfollowView,
+    LikeView,
+    GetUserCollections,
+    GetView,
+    GetFollowersView,
+    GetFollowingView,
+    VerificationView,
+    SetUserCoverView,
+    GetRandomCoverView,
+    GetOtherView,
+)
 from src.accounts.api import generate_metamask_message
 
 urlpatterns = [
