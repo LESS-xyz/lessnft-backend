@@ -158,9 +158,6 @@ CELERY_RESULT_BACKEND = f"redis://{config.REDIS_HOST}:{config.REDIS_PORT}"
 SHELL_PLUS = "ptpython"
 
 # https://django-extensions.readthedocs.io/en/latest/shell_plus.html#additional-imports
-# SHELL_PLUS_IMPORTS = [
-#    'from module.submodule1 import class1, function2',
-#    'from module.submodule2 import function3 as another1',
-#    'from module.submodule3 import *',
-#    'import module.submodule4',
-# ]
+SHELL_PLUS_IMPORTS = [
+    "from src.utilities import RedisClient",
+]
