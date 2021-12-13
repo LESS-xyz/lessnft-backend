@@ -31,3 +31,7 @@ scanner-stop:
 
 fixtures: web-build
 	sudo docker-compose exec web python manage.py create_fixtures
+
+pre-commit:
+	pip install pre-commit --upgrade
+	pre-commit install -t pre-commit -t prepare-commit-msg
