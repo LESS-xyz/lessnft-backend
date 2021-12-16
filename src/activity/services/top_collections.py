@@ -1,5 +1,5 @@
 import json
-from django.db.models import Sum, F, Exists, OuterRef
+from django.db.models import Sum, F, Exists, OuterRef, Count
 from src.store.models import Collection, Token
 from src.store.serializers import CollectionSlimSerializer
 from src.activity.models import TokenHistory, CollectionStat
@@ -103,6 +103,22 @@ def get_top_collections(network, period, tag=None):
         )
         collection_object = Collection.objects.get(id=collection["collection"])
         collection["collection"] = CollectionSlimSerializer(collection_object).data
+        tokens = collection_object.token_set.filter(
+            selling=True,
+            currency_price__isnull=False,
+        )
+        token_prices = [token.usd_price for token in tokens]
+        collection["floor_price"] = min(token_prices) if token_prices else None
+        collection["total_items"] = collection_object.token_set.count()
+
+        owner_value = "owner" if collection_object.standart == "ERC721" else "owners"
+        collection["total_owners"] = (
+            collection_object.token_set.all()
+            .values(owner_value)
+            .distinct()
+            .aggregate(Count(owner_value))
+            .get("owner__count")
+        )
 
     redis.connection.set(
         redis_key,

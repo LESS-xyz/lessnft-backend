@@ -15,6 +15,7 @@ from src.consts import (
     TOKEN_TRANSFER_GAS_LIMIT,
 )
 from src.networks.models import Network
+from src.rates.api import calculate_amount
 from src.rates.models import UsdRate
 from src.settings import config
 from src.utilities import get_media_from_ipfs, sign_message
@@ -399,6 +400,11 @@ class Token(models.Model):
     def price(self):
         if self.currency_price and self.currency:
             return int(self.currency_price * self.currency.get_decimals)
+
+    @property
+    def usd_price(self):
+        if self.price:
+            calculate_amount(self.price, self.currency)[0]
 
     @property
     def minimal_bid(self):

@@ -471,6 +471,7 @@ class GetTopCollectionsView(APIView, PaginateMixin):
         operation_description="get top collections",
         manual_parameters=[
             openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("tag", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter(
                 "sort_period",
                 openapi.IN_QUERY,
