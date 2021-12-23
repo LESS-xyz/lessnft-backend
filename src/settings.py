@@ -2,6 +2,7 @@ import os
 
 # from .config import *
 from .config import config
+from .logging_settings import LOGGING
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

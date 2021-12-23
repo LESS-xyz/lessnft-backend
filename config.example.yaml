@@ -112,8 +112,20 @@ PERIODIC_TASKS:
     task: update_top_users
     interval: 2
     enabled: true
+  - name: update_collections_stat_info
+    task: update_collection_stat_info
+    interval: 3
+    enabled: false
   - name: rates_checker
     task: rates_checker
+    interval: 3
+    enabled: true
+  - name: remove_token_tag_new
+    task: remove_token_tag_new
+    interval: 3
+    enabled: true
+  - name: transaction_tracker
+    task: transaction_tracker
     interval: 3
     enabled: true
 

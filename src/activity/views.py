@@ -479,17 +479,24 @@ class GetTopCollectionsView(APIView, PaginateMixin):
                 type=openapi.TYPE_STRING,
                 description="day, week, month",
             ),
+            openapi.Parameter(
+                "order_by",
+                openapi.IN_QUERY,
+                type=openapi.TYPE_STRING,
+                description="price, defference, floor_price, total_items, total_owners",
+            ),
         ],
     )
     def get(self, request):
         sort_period = request.query_params.get(
             "sort_period", "month"
         )  # day, week, month
+        order_by = request.query_params.get("order_by", "price")  # day, week, month
         network = request.query_params.get("network", config.DEFAULT_NETWORK)
         tag = request.query_params.get("tag")
         if tag is not None:
             tag = Tags.objects.filter(name=tag).first()
-        collections = get_top_collections(network, sort_period, tag)
+        collections = get_top_collections(network, sort_period, order_by, tag)
         return Response(self.paginate(request, collections), status=status.HTTP_200_OK)
 
 

@@ -1,191 +1,379 @@
+import logging
 from decimal import Decimal
-
 from src.accounts.models import AdvUser
-from src.accounts.serializers import UserSearchSerializer
 from src.rates.api import calculate_amount
-from src.store.models import Collection, Ownership, Token
-from src.store.serializers import CollectionSearchSerializer, TokenSerializer
+from src.store.models import Ownership, Token, Collection, Bid
+from src.store.serializers import TokenSerializer, CollectionSearchSerializer
+from src.accounts.serializers import UserSearchSerializer
 from src.utilities import get_page_slice
-from django.db.models import Count, Q
+from django.db.models import Q, Count, Exists, OuterRef
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils import timezone
 
 
-class Search:
-    def user_search(self, **kwargs):
-        words = kwargs.get("words").split(" ")
-        verificated = kwargs.get("verificated")
-        page = kwargs.get("page", [1])
-        order_by = kwargs.get("order_by")
-        if order_by:
-            reverse = "-" if order_by[0] == "-" else ""
+class SearchToken:
+    def __init__(self):
+        self.tokens = None
 
-        users = AdvUser.objects.all()
-        users_count = users.count()
+    def network(self, network):
+        if network and network[0]:
+            if not network[0].lower() == "undefined":
+                networks = network[0].split(",")
+                self.tokens = self.tokens.filter(collection__network__name__in=networks)
 
-        if verificated is not None:
-            users = users.filter(is_verificated=verificated[0].lower() == "true")
+    def tags(self, tags):
+        if tags and tags[0]:
+            tags = tags[0].split(",")
+            self.tokens = self.tokens.filter(tags__name__in=tags).distinct()
 
-        for word in words:
-            users = users.filter(display_name__icontains=word)
+    def text(self, words):
+        if words and words[0]:
+            words = words[0].split(" ")
+            for word in words:
+                self.tokens = self.tokens.filter(name__icontains=word)
 
-        if order_by == "created":
-            users = users.order_by(f"{reverse}id")
-        elif order_by == "followers":
-            users = users.annotate(follow_count=Count("following")).order_by(
-                f"{reverse}follow_count"
+    def is_verified(self, is_verified):
+        if is_verified is not None:
+            is_verified = is_verified[0]
+            is_verified = is_verified.lower() == "true"
+            self.tokens = self.tokens.filter(
+                Q(owner__is_verificated=is_verified)
+                | Q(owners__is_verificated=is_verified)
             )
-        elif order_by == "tokens_created":
-            users = users.annotate(Count("token_creator")).order_by(
-                f"{reverse}token_creator"
+
+    def min_price(self, price):
+        # TODO: DRY max_price and min_price
+        if price and price[0]:
+            min_price = Decimal(price[0])
+
+            tokens = self.tokens
+            ownerships = Ownership.objects.filter(token__in=tokens)
+            ownerships = [
+                ownership.token.id
+                for ownership in ownerships
+                if ownership.usd_price and ownership.usd_price > min_price
+            ]
+            tokens = [
+                token
+                for token in tokens
+                if token.usd_price and token.usd_price > min_price
+            ]
+
+            token_ids = [token.id for token in tokens]
+            token_ids.extend(ownerships)
+            self.tokens = Token.objects.filter(id__in=token_ids)
+
+    def max_price(self, price):
+        if price and price[0]:
+            max_price = Decimal(price[0])
+
+            tokens = self.tokens
+            ownerships = Ownership.objects.filter(token__in=tokens)
+            ownerships = [
+                ownership.token.id
+                for ownership in ownerships
+                if ownership.usd_price and ownership.usd_price < max_price
+            ]
+            tokens = [
+                token
+                for token in tokens
+                if token.usd_price and token.usd_price < max_price
+            ]
+
+            token_ids = [token.id for token in tokens]
+            token_ids.extend(ownerships)
+            self.tokens = Token.objects.filter(id__in=token_ids)
+
+    def collections(self, collections):
+        if collections and collections[0]:
+            collections = collections[0].split(",")
+            self.tokens = self.tokens.filter(collections__name__in=collections)
+
+    def owner(self, owner):
+        if owner:
+            try:
+                owner = AdvUser.objects.get_by_custom_url(owner[0])
+            except ObjectDoesNotExist:
+                owner = None
+            self.tokens = self.tokens.filter(
+                Q(owner=owner) | Q(owners=owner),
+            ).order_by("-id")
+
+    def creator(self, creator):
+        if creator:
+            try:
+                creator = AdvUser.objects.get_by_custom_url(creator[0])
+            except ObjectDoesNotExist:
+                creator = None
+            self.tokens = self.tokens.filter(creator=creator).order_by("-id")
+
+    def currency(self, currency):
+        if currency and currency[0]:
+            currencies = currency[0].split(",")
+            self.tokens = self.tokens.filter(currency__symbol__in=currencies)
+
+    def on_sale(self, on_sale):
+        if on_sale and on_sale[0] != "":
+            filter = "filter" if on_sale[0].lower() == "true" else "exclude"
+            self.tokens = getattr(self.tokens, filter)(
+                Q(selling=True, currency_price__isnull=False, currency__isnull=False)
+                | Q(
+                    Exists(
+                        Ownership.objects.filter(
+                            token__id=OuterRef("id"),
+                            selling=True,
+                            currency_price__isnull=False,
+                        )
+                    )
+                )
             )
 
-        start, end = get_page_slice(int(page[0]), len(users))
-        return users_count, UserSearchSerializer(users[start:end], many=True).data
+    def on_auc_sale(self, on_sale):
+        if on_sale and on_sale[0] != "":
+            filter = "filter" if on_sale[0].lower() == "true" else "exclude"
+            self.tokens = getattr(self.tokens, filter)(
+                Q(
+                    selling=True,
+                    currency_minimal_bid__isnull=False,
+                    currency__isnull=False,
+                )
+                | Q(
+                    Exists(
+                        Ownership.objects.filter(
+                            token__id=OuterRef("id"),
+                            selling=True,
+                            currency_price__isnull=True,
+                            currency_minimal_bid__isnull=False,
+                        )
+                    )
+                )
+            )
 
-    def token_selling_filter(self, is_selling) -> bool:
-        def token_filter(token):
-            if is_selling:
-                return token.is_selling or token.is_auc_selling
-            return not token.is_selling and not token.is_auc_selling
+    def on_timed_auc_sale(self, on_sale):
+        if on_sale and on_sale[0] != "":
+            filter = "filter" if on_sale[0].lower() == "true" else "exclude"
+            self.tokens = getattr(self.tokens, filter)(
+                selling=True,
+                currency_price__isnull=True,
+                start_auction__lte=timezone.now(),
+                end_auction__gte=timezone.now(),
+            )
 
-        return token_filter
+    def has_bids(self, has_bids):
+        if has_bids:
+            filter = "filter" if has_bids[0].lower() == "true" else "exclude"
+            self.tokens = getattr(self.tokens, filter)(
+                Exists(Bid.objects.filter(token__id=OuterRef("id")))
+            )
 
-    def token_sort_price(self, token, reverse=False):
+    def bids_by(self, user_):
+        if user_ is not None:
+            try:
+                user = AdvUser.objects.get_by_custom_url(user_[0])
+            except AdvUser.DoesNotExist:
+                user = None
+            if user:
+                self.tokens = self.tokens.filter(
+                    Exists(
+                        Bid.objects.filter(
+                            token__id=OuterRef("id"),
+                            user=user,
+                        )
+                    )
+                )
+
+    def order_by_price(self, token, reverse=False):
         currency = token.currency.symbol
-        if not (token.is_selling or token.is_auc_selling):
+        if not token.selling:
             return 0
         if token.standart == "ERC721":
             price = token.price if token.currency_price else token.minimal_bid
             return calculate_amount(price, currency)[0]
         owners = token.ownership_set.all()
         prices = [
-            calculate_amount(owner.get_currency_price, currency)[0] for owner in owners
+            owner.get_currency_price for owner in owners if owner.get_currency_price
         ]
+        prices = [calculate_amount(price, currency)[0] for price in prices]
         if reverse:
             return max(prices)
         return min(prices)
 
-    def token_sort_likes(self, token, reverse=False):
+    def order_by_likes(self, token):
         return token.useraction_set.filter(method="like").count()
 
-    def token_sort_updated_at(self, token, reverse=False):
+    def order_by_created_at(self, token):
         return token.updated_at
 
-    def token_search(self, **kwargs):
-        words = kwargs.get("words", "").split(" ")
-        tags = kwargs.get("tags")
-        is_verified = kwargs.get("is_verified")
-        max_price = kwargs.get("max_price")
-        order_by = kwargs.get("order_by")
-        on_sale = kwargs.get("on_sale")
-        currency = kwargs.get("currency")
-        page = kwargs.get("page", [1])
-        network = kwargs.get("network")
-        user = kwargs.get("user")
-        creator = kwargs.get("creator")
-        owner = kwargs.get("owner")
-        if currency is not None:
-            currency = currency[0]
+    def order_by_views(self, token):
+        return token.viewstracker_set.count()
 
-        tokens = (
-            Token.objects.committed()
-            .network(network[0])
-            .select_related(
-                "currency",
-                "owner",
-            )
+    def order_by_sale(self, token):
+        history = token.tokenhistory_set.filter(method="Buy").order_by("date").last()
+        if history:
+            return history.date
+
+    def order_by_transfer(self, token):
+        history = (
+            token.tokenhistory_set.filter(method="Transfer").order_by("date").last()
         )
-        # Below are the tokens in the form of a QUERYSET
-        if owner:
-            try:
-                owner = AdvUser.objects.get_by_custom_url(owner[0])
-            except ObjectDoesNotExist:
-                owner = None
-            tokens = tokens.filter(
-                Q(owner=owner) | Q(owners=owner),
-            ).order_by("-id")
+        if history:
+            return history.date
 
-        if creator:
-            try:
-                creator = AdvUser.objects.get_by_custom_url(creator[0])
-            except ObjectDoesNotExist:
-                creator = None
-            tokens = tokens.filter(creator=creator).order_by("-id")
+    def order_by_auction_end(self, token):
+        if token.is_timed_auc_selling:
+            return token.end_auction
 
-        for word in words:
-            tokens = tokens.filter(name__icontains=word)
+    def order_by_last_sale(self, token):
+        history = token.tokenhistory_set.filter(method="Buy").order_by("date").last()
+        if history:
+            return history.price
 
-        if tags and tags[0]:
-            tags = tags[0].split(",")
-            tokens = tokens.filter(tags__name__in=tags).distinct()
-
-        if is_verified is not None:
-            is_verified = is_verified[0]
-            is_verified = is_verified.lower() == "true"
-            tokens = tokens.filter(
-                Q(owner__is_verificated=is_verified)
-                | Q(owners__is_verificated=is_verified)
-            )
-
-        if currency is not None:
-            tokens = tokens.filter(currency__symbol=currency)
-
-        if max_price:
-            max_price = Decimal(max_price[0])
-            ownerships = Ownership.objects.filter(token__in=tokens)
-            ownerships = ownerships.filter(
-                Q(currency_price__lte=max_price)
-                | Q(currency_minimal_bid__lte=max_price)
-            )
-            token_ids = list()
-            token_ids.extend(ownerships.values_list("token_id", flat=True).distinct())
-            token_list = tokens.filter(
-                Q(currency_price__lte=max_price)
-                | Q(currency_minimal_bid__lte=max_price)
-            )
-            token_ids.extend(token_list.values_list("id", flat=True).distinct())
-            tokens = Token.objects.filter(id__in=token_ids)
-
-        # Below are the tokens in the form of a LIST
-        if on_sale is not None:
-            on_sale = on_sale[0]
-            selling_filter = self.token_selling_filter(on_sale.lower() == "true")
-            tokens = filter(selling_filter, tokens)
-            tokens = list(tokens)
-
+    def order_by(self, order_by):
+        tokens = list(self.tokens)
+        reverse = False
         if order_by is not None:
             order_by = order_by[0]
-        reverse = False
-        if order_by and order_by.startswith("-"):
-            order_by = order_by[1:]
-            reverse = True
+            if order_by.startswith("-"):
+                order_by = order_by[1:]
+                reverse = True
 
-        if order_by == "date":
-            tokens = sorted(tokens, key=self.token_sort_updated_at, reverse=reverse)
-        elif order_by == "price":
-            tokens = sorted(tokens, key=self.token_sort_price, reverse=reverse)
-        elif order_by == "likes":
-            tokens = sorted(tokens, key=self.token_sort_likes, reverse=reverse)
+        try:
+            tokens = sorted(
+                tokens, key=getattr(self, f"order_by_{order_by}"), reverse=reverse
+            )
+        except AttributeError:
+            logging.warning(f"Unknown token sort method {order_by}")
+
+        self.tokens = tokens
+
+    def parse(self, **kwargs):
+        self.tokens = Token.objects.committed()
+        page = kwargs.pop("page", [1])
+        current_user = kwargs.pop("current_user", None)
+        order_by = kwargs.pop("order_by", None)
+
+        for method, value in kwargs.items():
+            try:
+                getattr(self, method)(value)
+            except AttributeError as e:
+                logging.warning(e)
+            except Exception as e:
+                logging.error(e)
+
+        if order_by:
+            self.order_by(order_by)
 
         page = int(page[0])
-        start, end = get_page_slice(page, len(tokens), items_per_page=8)
+        tokens_count = len(self.tokens)
+        start, end = get_page_slice(page, tokens_count, items_per_page=8)
         return (
-            len(tokens),
-            TokenSerializer(tokens[start:end], context={"user": user}, many=True).data,
+            tokens_count,
+            TokenSerializer(
+                self.tokens[start:end], context={"user": current_user}, many=True
+            ).data,
         )
 
-    def collection_search(self, **kwargs):
-        words = kwargs.get("words").split(" ")
-        page = kwargs.get("page", [1])
 
-        collections = Collection.objects.committed()
-        collections_count = collections.count()
+class SearchCollection:
+    def tags(self, tags):
+        if tags and tags[0]:
+            tags = tags[0].split(",")
+            self.collections = self.collections.filter(tags__name__in=tags).distinct()
 
+    def creator(self, user):
+        if user and user[0]:
+            user = AdvUser.objects.get_by_custom_url(user[0])
+            self.collections = self.collections.filter(creator=user)
+
+    def text(self, words):
+        words = words.split(" ")
         for word in words:
-            collections = collections.filter(name__icontains=word)
+            self.collections = self.collections.filter(name__icontains=word)
 
-        start, end = get_page_slice(int(page[0]), len(collections))
+    def network(self, network):
+        return
+        if network and network[0]:
+            if not network[0].lower() == "undefined":
+                networks = network[0].split(",")
+                self.collections = self.collections.filter(network__name__in=networks)
+
+    def parse(self, **kwargs):
+        self.collections = Collection.objects.committed()
+        page = kwargs.pop("page", [1])
+        current_user = kwargs.pop("current_user", None)
+        order_by = kwargs.pop("order_by", None)
+
+        for method, value in kwargs.items():
+            try:
+                getattr(self, method)(value)
+            except AttributeError:
+                logging.warning(f"Unknown collection filter {method}")
+
+        page = int(page[0])
+        collections_count = len(self.collections)
+        start, end = get_page_slice(page, collections_count, items_per_page=8)
         return (
             collections_count,
-            CollectionSearchSerializer(collections[start:end]).data,
+            CollectionSearchSerializer(self.collections[start:end], many=True).data,
         )
+
+
+class SearchUser:
+    def text(self, words):
+        words = words.split(" ")
+        for word in words:
+            self.users = self.users.filter(display_name__icontains=word)
+
+    def verificated(self, verificated):
+        self.users = self.users.filter(is_verificated=verificated[0].lower() == "true")
+
+    def order_by_created(self, reverse):
+        return self.users.order_by(f"{reverse}id")
+
+    def order_by_followers(self, reverse):
+        return self.users.annotate(follow_count=Count("following")).order_by(
+            f"{reverse}follow_count"
+        )
+
+    def order_by_tokens_created(self, reverse):
+        return self.users.annotate(Count("token_creator")).order_by(
+            f"{reverse}token_creator"
+        )
+
+    def order_by(self, order_by):
+        reverse = "-" if order_by[0] == "-" else ""
+        try:
+            users = getattr(self, f"order_by_{order_by}")(reverse)
+        except AttributeError:
+            logging.warning(f"Unknown token sort method {order_by}")
+        self.users = users
+
+    def parse(self, **kwargs):
+        self.users = AdvUser.objects.all()
+        page = kwargs.pop("page", [1])
+        order_by = kwargs.pop("order_by", None)
+        current_user = kwargs.pop("current_user", None)
+
+        for method, value in kwargs.items():
+            try:
+                getattr(self, method)(value)
+            except AttributeError:
+                logging.warning(f"Unknown collection filter {method}")
+
+        if order_by:
+            self.order_by(order_by)
+
+        page = int(page[0])
+        users_count = len(self.users)
+        start, end = get_page_slice(page, users_count, items_per_page=8)
+        return (
+            users_count,
+            UserSearchSerializer(self.users[start:end], many=True).data,
+        )
+
+
+Search = {
+    "token": SearchToken(),
+    "collection": SearchCollection(),
+    "user": SearchUser(),
+}

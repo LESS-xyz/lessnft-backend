@@ -24,6 +24,7 @@ from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Exists, OuterRef, Q, Sum
 from django.db.models.signals import post_save, pre_save
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -111,6 +112,11 @@ class CollectionManager(models.Manager):
 
 
 class Collection(models.Model):
+    DISPLAY_THEMES = [
+        ("Padded", "Padded"),
+        ("Contained", "Contained"),
+        ("Covered", "Covered"),
+    ]
     name = models.CharField(max_length=50)
     avatar_ipfs = models.CharField(max_length=200, null=True, default=None)
     cover_ipfs = models.CharField(max_length=200, null=True, default=None, blank=True)
@@ -118,20 +124,40 @@ class Collection(models.Model):
     symbol = models.CharField(max_length=30)
     description = models.TextField(null=True, blank=True)
     standart = models.CharField(
-        max_length=10, choices=[("ERC721", "ERC721"), ("ERC1155", "ERC1155")]
+        max_length=10,
+        choices=[("ERC721", "ERC721"), ("ERC1155", "ERC1155")],
     )
     short_url = models.CharField(
-        max_length=30, default=None, null=True, blank=True, unique=True
+        max_length=30,
+        default=None,
+        null=True,
+        blank=True,
+        unique=True,
     )
     creator = models.ForeignKey(
-        "accounts.AdvUser", on_delete=models.PROTECT, null=True, default=None
+        "accounts.AdvUser",
+        on_delete=models.PROTECT,
+        null=True,
+        default=None,
     )
     status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.PENDING
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
     )
     deploy_block = models.IntegerField(null=True, default=None)
     network = models.ForeignKey("networks.Network", on_delete=models.CASCADE)
     is_default = models.BooleanField(default=False)
+    is_nsfw = models.BooleanField(default=False)
+    display_theme = models.CharField(
+        max_length=10, choices=DISPLAY_THEMES, default="Padded"
+    )
+    site = models.URLField(blank=True, null=True, default=None)
+    discord = models.URLField(blank=True, null=True, default=None)
+    twitter = models.URLField(blank=True, null=True, default=None)
+    instagram = models.URLField(blank=True, null=True, default=None)
+    medium = models.URLField(blank=True, null=True, default=None)
+    telegram = models.URLField(blank=True, null=True, default=None)
 
     objects = CollectionManager()
 
@@ -146,9 +172,10 @@ class Collection(models.Model):
 
     @property
     def cover(self):
-        if self.cover_ipfs and self.cover_ipfs.startswith(OPENSEA_MEDIA_PATH):
-            return self.cover_ipfs
-        return get_media_from_ipfs(self.cover_ipfs)
+        if self.cover_ipfs:
+            if self.cover_ipfs.startswith(OPENSEA_MEDIA_PATH):
+                return self.cover_ipfs
+            return get_media_from_ipfs(self.cover_ipfs)
 
     @property
     def url(self):
@@ -172,6 +199,14 @@ class Collection(models.Model):
         self.standart = request.data.get("standart")
         self.description = request.data.get("description")
         self.short_url = request.data.get("short_url")
+        self.site = request.data.get("short_url")
+        self.discord = request.data.get("short_url")
+        self.twitter = request.data.get("short_url")
+        self.instagram = request.data.get("short_url")
+        self.medium = request.data.get("short_url")
+        self.telegram = request.data.get("short_url")
+        self.display_theme = request.data.get("display_theme", "Padded")
+        self.is_nsfw = request.data.get("is_nsfw", "false").lower() == "true"
         self.creator = request.user
         self.save()
 
@@ -368,7 +403,7 @@ class Token(models.Model):
     collection = models.ForeignKey("Collection", on_delete=models.CASCADE)
     internal_id = models.PositiveIntegerField(null=True, blank=True)
     description = models.TextField(blank=True, null=True)
-    details = models.JSONField(blank=True, null=True, default=None)
+    _details = models.JSONField(blank=True, null=True, default=None)
     selling = models.BooleanField(default=False)
     status = models.CharField(
         max_length=50, choices=Status.choices, default=Status.PENDING
@@ -379,8 +414,22 @@ class Token(models.Model):
     start_auction = models.DateTimeField(blank=True, null=True, default=None)
     end_auction = models.DateTimeField(blank=True, null=True, default=None)
     digital_key = models.CharField(max_length=1000, blank=True, null=True, default=None)
+    external_link = models.CharField(max_length=200, null=True, blank=True)
 
     objects = TokenManager()
+
+    @property
+    def details(self):
+        details = list()
+        for key, item in self._details.items():
+            item.update({"trait_type": key})
+            details.append(item)
+        return details
+
+    @details.setter
+    def details(self, value):
+        if value:
+            self._details = {item.pop("trait_type"): item for item in value}
 
     @property
     def media(self):
@@ -392,8 +441,11 @@ class Token(models.Model):
     @property
     def animation(self):
         if not self.animation_file:
-            self.animation_file = get_ipfs_by_hash(self.ipfs).get("animation_url")
-            self.save(update_fields=["animation_file"])
+            try:
+                self.animation_file = get_ipfs_by_hash(self.ipfs).get("animation_url")
+                self.save(update_fields=["animation_file"])
+            except Exception as e:
+                print(e)
         return self.animation_file
 
     @property
@@ -404,7 +456,9 @@ class Token(models.Model):
     @property
     def usd_price(self):
         if self.price:
-            calculate_amount(self.price, self.currency)[0]
+            return calculate_amount(self.price, self.currency.symbol)[0]
+        if self.minimal_bid:
+            return calculate_amount(self.minimal_bid, self.currency.symbol)[0]
 
     @property
     def minimal_bid(self):
@@ -436,10 +490,18 @@ class Token(models.Model):
 
     @property
     def is_timed_auc_selling(self):
-        if self.standart == "ERC721" and self.end_auction:
+        if (
+            self.standart == "ERC721"
+            and self.start_auction is not None
+            and self.end_auction is not None
+        ):
             return bool(
-                self.selling and not self.price and self.end_auction < datetime.today()
+                self.selling
+                and not self.price
+                and self.start_auction < timezone.now()
+                and self.end_auction > timezone.now()
             )
+        return False
 
     @property
     def rarity(self):
@@ -562,6 +624,15 @@ class Token(models.Model):
         self.collection = Collection.objects.committed().get_by_short_url(collection)
         self.total_supply = request.data.get("total_supply")
         self.digital_key = request.data.get("digital_key")
+        self.external_link = request.data.get("external_link")
+
+        start_auction = request.data.get("start_auction")
+        end_auction = request.data.get("end_auction")
+
+        if start_auction:
+            self.start_auction = datetime.fromtimestamp(int(start_auction))
+        if end_auction:
+            self.end_auction = datetime.fromtimestamp(int(end_auction))
 
         price = request.data.get("price")
         if price:
@@ -603,6 +674,16 @@ class Token(models.Model):
             ownership.full_clean()
             ownership.save()
         self.full_clean()
+
+        self.save()
+        tag, _ = Tags.objects.get_or_create(name="New")
+        self.tags.add(tag)
+        nsfw = request.data.get("is_nsfw", False)
+
+        if nsfw or self.collection.is_nsfw:
+            tag, _ = Tags.objects.get_or_create(name="NSFW")
+            self.tags.add(tag)
+
         self.save()
 
     def get_highest_bid(self):
@@ -956,6 +1037,13 @@ class Ownership(models.Model):
         if self.price:
             return self.price
         return self.minimal_bid
+
+    @property
+    def usd_price(self):
+        if self.price:
+            return calculate_amount(self.price, self.token.currency.symbol)[0]
+        if self.minimal_bid:
+            return calculate_amount(self.minimal_bid, self.token.currency.symbol)[0]
 
 
 class Tags(models.Model):

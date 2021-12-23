@@ -45,6 +45,7 @@ class Network(models.Model):
     in witch we have our contracts.
     """
 
+    icon = models.CharField(max_length=200, blank=True, null=True, default=None)
     name = models.CharField(max_length=100)
     needs_middleware = models.BooleanField(default=False)
     native_symbol = models.CharField(max_length=10, blank=True, null=True, default=None)
@@ -58,6 +59,11 @@ class Network(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def ipfs_icon(self):
+        if self.icon:
+            return "https://ipfs.io/ipfs/{ipfs}".format(ipfs=self.icon)
 
     def get_web3_connection(self) -> "Web3":
         web3 = Web3(Web3.HTTPProvider(self.endpoint))

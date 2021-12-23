@@ -34,6 +34,8 @@ from src.store.serializers import (
     TokenSerializer,
     TagSerializer,
 )
+from src.store.services.collection_import import OpenSeaImport
+from src.store.tasks import import_opensea_collection
 from src.store.services.ipfs import create_ipfs, send_to_ipfs
 from src.store.services.collection_import import OpenSeaImport
 from src.store.tasks import import_opensea_collection
@@ -127,40 +129,60 @@ class SearchView(APIView):
         operation_description="get search pattern",
         manual_parameters=[
             openapi.Parameter(
-                "sort",
+                "type",
                 openapi.IN_QUERY,
                 type=openapi.TYPE_STRING,
                 description="Search by: items, users, collections",
             ),
-            # openapi.Parameter("tags", openapi.IN_QUERY, type=openapi.TYPE_ARRAY),
+            openapi.Parameter("tags", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter(
+                "collections", openapi.IN_QUERY, type=openapi.TYPE_STRING
+            ),
             openapi.Parameter(
                 "is_verified", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN
             ),
+            openapi.Parameter("min_price", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
             openapi.Parameter("max_price", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
             openapi.Parameter(
                 "order_by",
                 openapi.IN_QUERY,
                 type=openapi.TYPE_STRING,
-                description="For tokens: date, price, likes. \n For users: created, followers, tokens_created",
+                description="For tokens: created_at, price, likes, views, sale, transfer, auction_end, last_sale. \n For users: created, followers, tokens_created",
             ),
             openapi.Parameter("on_sale", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN),
+            openapi.Parameter(
+                "on_auc_sale", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN
+            ),
+            openapi.Parameter(
+                "on_timed_auc_sale", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN
+            ),
+            openapi.Parameter("has_bids", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN),
             openapi.Parameter("currency", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
             openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("creator", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("text", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("owner", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("bids_by", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("text", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_STRING),
         ],
         responses={200: TokenSerializer(many=True)},
     )
     def get(self, request):
         # TODO: try use PaginateMixin
-        params = request.query_params
-        sort = params.get("type", "items")
+        params = request.query_params.copy()
+        sort = params.pop("type", ["items"])
+        sort = sort[0]
+
+        if sort not in config.SEARCH_TYPES.__dict__.keys():
+            return Response(
+                {"error": "type not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         sort_type = getattr(config.SEARCH_TYPES, sort)
-        token_count, search_result = getattr(Search(), f"{sort_type}_search")(
-            user=request.user,
+        token_count, search_result = Search.get(sort_type).parse(
+            current_user=request.user,
             **params,
         )
         response_data = {"total_tokens": token_count, "items": search_result}
@@ -207,7 +229,6 @@ class CreateView(APIView):
     )
     def post(self, request):
         request_data = request.data
-        standart = request_data.get("standart")
         creator = request.user
         token_collection_id = request_data.get("collection")
 
@@ -220,11 +241,7 @@ class CreateView(APIView):
                 {"error": "Collection not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
-        if standart != token_collection.standart:
-            return Response(
-                {"standart": "collections type mismatch"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        standart = token_collection.standart
 
         if Token.objects.filter(collection__network=token_collection.network).filter(
             name=request_data.get("name")
@@ -234,37 +251,24 @@ class CreateView(APIView):
             )
 
         ipfs = create_ipfs(request)
-        if standart == "ERC721":
-            signature = sign_message(
-                ["address", "string"],
-                [
-                    token_collection.network.wrap_in_checksum(
-                        token_collection.ethereum_address
-                    ),
-                    ipfs,
-                ],
-            )
-            amount = 1
-        else:
-            amount = request_data.get("total_supply")
-            signature = sign_message(
-                ["address", "string", "uint256"],
-                [
-                    token_collection.network.wrap_in_checksum(
-                        token_collection.ethereum_address
-                    ),
-                    ipfs,
-                    int(amount),
-                ],
-            )
+        type_ = ["address", "string"]
+        msg = [
+            token_collection.network.wrap_in_checksum(
+                token_collection.ethereum_address
+            ),
+            ipfs,
+        ]
+        amount = 1
+        if standart == "ERC1155":
+            type_.append("uint256")
+            msg.append(int(amount))
+
+        signature = sign_message(type_, msg)
 
         initial_tx = token_collection.create_token(creator, ipfs, signature, amount)
+
         token = Token()
         token.save_in_db(request, ipfs)
-
-        tag, _ = Tags.objects.get_or_create(name="New")
-        token.tags.add(tag)
-        token.save()
 
         response_data = {"initial_tx": initial_tx, "token": TokenSerializer(token).data}
         return Response(response_data, status=status.HTTP_200_OK)
@@ -293,6 +297,17 @@ class CreateCollectionView(APIView):
                 "symbol": openapi.Schema(type=openapi.TYPE_STRING),
                 "description": openapi.Schema(type=openapi.TYPE_STRING),
                 "short_url": openapi.Schema(type=openapi.TYPE_STRING),
+                "site": openapi.Schema(type=openapi.TYPE_STRING),
+                "discord": openapi.Schema(type=openapi.TYPE_STRING),
+                "twitter": openapi.Schema(type=openapi.TYPE_STRING),
+                "instagram": openapi.Schema(type=openapi.TYPE_STRING),
+                "medium": openapi.Schema(type=openapi.TYPE_STRING),
+                "telegram": openapi.Schema(type=openapi.TYPE_STRING),
+                "is_nsfw": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                "display_theme": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="Padded, Contained, Covered",
+                ),
             },
             required=["name", "creator", "avatar", "symbol", "standart"],
         ),
@@ -303,7 +318,6 @@ class CreateCollectionView(APIView):
         short_url = request.data.get("short_url")
         standart = request.data.get("standart")
         network = request.query_params.get("network", config.DEFAULT_NETWORK)
-        logging.info(network)
         owner = request.user
 
         is_unique, response = Collection.collection_is_unique(
@@ -318,7 +332,6 @@ class CreateCollectionView(APIView):
             )
 
         network = Network.objects.filter(name__icontains=network)
-        logging.info(network.first().name)
         if not network:
             return Response("invalid network name", status=status.HTTP_404_NOT_FOUND)
 
@@ -329,12 +342,10 @@ class CreateCollectionView(APIView):
         collection = Collection()
 
         media = request.FILES.get("avatar")
-        logging.info(media)
         if media:
             ipfs = send_to_ipfs(media)
         else:
             ipfs = None
-        logging.info(ipfs)
         collection.save_in_db(request, ipfs)
         response_data = {
             "initial_tx": initial_tx,
@@ -495,14 +506,15 @@ class GetView(APIView):
             ownership.full_clean()
             ownership.save()
 
+        new_price = price or minimal_bid
         # add changes to listing
-        if price != old_price:
+        if new_price and new_price != old_price:
             TokenHistory.objects.create(
                 token=token,
                 old_owner=user,
                 currency=currency,
                 amount=amount,
-                price=price,
+                price=new_price,
                 method="Listing",
             )
 
@@ -761,7 +773,7 @@ class BuyTokenView(APIView):
 
 @api_view(http_method_names=["GET"])
 def get_tags(request):
-    tags = Tags.objects.all()
+    tags = Tags.objects.all().order_by("id")
     return Response(TagSerializer(tags, many=True).data, status=status.HTTP_200_OK)
 
 
@@ -1068,7 +1080,7 @@ class ReportView(APIView):
         )
 
         send_mail(
-            "Report from digital dollar store",
+            f"Report from {config.TITLE}",
             text,
             config.HOST_USER,
             [config.MAIL],
@@ -1224,7 +1236,7 @@ class SupportView(APIView):
         )
 
         send_mail(
-            "Support form from digital dollar store",
+            f"Support form from {config.TITLE}",
             text,
             config.HOST_USER,
             [config.MAIL],
@@ -1395,8 +1407,17 @@ class GetRelatedView(APIView):
             token = Token.objects.committed().get(id=id)
         except ObjectDoesNotExist:
             return Response("token not found", status=status.HTTP_404_NOT_FOUND)
-        all_related = Token.objects.committed().filter(collection=token.collection)
-        random_related = random.choices(all_related, k=4)
+        random_related = (
+            Token.objects.committed()
+            .filter(collection=token.collection)
+            .exclude(id=id)
+            .distinct()
+        )
+        if random_related:
+            random_related = random.choices(random_related, k=4)
+            random_related = set(
+                random_related
+            )  # if count of tokens is less than k, the list will contain duplicate
         response_data = TokenSerializer(
             random_related, many=True, context={"user": request.user}
         ).data

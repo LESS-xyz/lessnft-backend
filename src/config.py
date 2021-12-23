@@ -91,6 +91,7 @@ class Config:
     CLEAR_TOKEN_TAG_NEW_TIME: int
 
     API_URL: str
+    OPENSEA_API: str
 
     RATES_CHECKER_TIMEOUT: int
 

@@ -323,7 +323,10 @@ class HandlerMintTransferBurn(HandlerABC):
                     "selling": False,
                 },
             )
-            ownership.quantity = F("quantity") + amount
+            if ownership.quantity:
+                ownership.quantity = F("quantity") + amount
+            else:
+                ownership.quantity = amount
             ownership.save()
             if created:
                 token.owners.add(new_owner)
@@ -432,10 +435,10 @@ class HandlerApproveBet(HandlerABC):
 
     def save_event(self, event_data):
         data = self.scanner.parse_data_approve(event_data)
-        self.logger.debug(f"New event: {data}")
 
         if data.exchange != self.network.exchange_address:
             return
+        self.logger.debug(f"New event: {data}")
 
         bet = Bid.objects.filter(user__username=data.user)
         if not bet.exists():

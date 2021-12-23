@@ -60,7 +60,7 @@ def get_diff(value1, value2) -> str:
     return f"-{round(diff, 2)}%"
 
 
-def get_top_collections(network, period, tag=None):
+def get_top_collections(network, period, order_by, tag=None):
     periods = get_periods("day", "week", "month")
     main_start = date.today()
     main_end = periods[period]
@@ -68,7 +68,8 @@ def get_top_collections(network, period, tag=None):
     prev_end = prev_end[period]
 
     redis = RedisClient()
-    redis_key = f"top_collection__{period}__{main_start}__{network}"
+    redis_key = f"top_collection__{period}__{order_by}__{main_start}__{network}"
+    redis_key += f"__{tag}" if tag else ""
 
     data = redis.connection.get(redis_key)
 
@@ -119,6 +120,8 @@ def get_top_collections(network, period, tag=None):
             .aggregate(Count(owner_value))
             .get("owner__count")
         )
+
+    main_collections = sorted(main_collections, key=lambda col: col.get(order_by))
 
     redis.connection.set(
         redis_key,

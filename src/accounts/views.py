@@ -1,3 +1,4 @@
+import logging
 import random
 
 from src.utilities import PaginateMixin
@@ -343,7 +344,7 @@ class VerificationView(APIView):
         )
 
         send_mail(
-            "New verification request",
+            f"Verification request from {config.TITLE}",
             text,
             config.HOST_USER,
             [config.MAIL],

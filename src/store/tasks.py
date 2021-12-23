@@ -8,9 +8,12 @@ from src.store.services.collection_import import OpenSeaImport
 from src.store.models import Bid, Status, Token, TransactionTracker, Tags
 from src.networks.models import Types, Network
 from src.store.services.auction import end_auction
+from src.store.services.collection_import import OpenSeaImport
+from src.celery import app
 from web3.exceptions import TransactionNotFound
 from tronapi import HttpProvider, Tron
 from src.settings import config
+
 
 logger = logging.getLogger("celery")
 
@@ -45,14 +48,22 @@ def end_auction_checker():
         end_auction__lte=datetime.today(),
     )
     for token in tokens:
-        end_auction(token)
+        if token.bid_set.count():
+            end_auction(token)
+        else:
+            token.start_auction = None
+            token.end_auction = None
+            token.selling = False
+            token.currency_minimal_bid = None
+            token.save()
 
 
 @shared_task(name="incorrect_bid_checker")
 def incorrect_bid_checker():
     bids = Bid.objects.committed()
     for bid in bids:
-        user_balance = bid.token.currency.network.contract_call(
+        network = bid.token.currency.network
+        user_balance = network.contract_call(
             method_type="read",
             contract_type="token",
             address=bid.token.currency.address,
@@ -62,14 +73,14 @@ def incorrect_bid_checker():
             output_types=("uint256",),
         )
 
-        allowance = bid.token.currency.network.contract_call(
+        allowance = network.contract_call(
             method_type="read",
             contract_type="token",
             address=bid.token.currency.address,
             function_name="allowance",
             input_params=(
                 bid.user.username,
-                bid.token.currency.network.exchange_address,
+                network.exchange_address,
             ),
             input_type=("address", "address"),
             output_types=("uint256",),

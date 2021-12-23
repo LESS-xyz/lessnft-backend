@@ -61,3 +61,4 @@ class BidsHistoryAdmin(admin.ModelAdmin):
 admin.site.register(UserAction, UserActionAdmin)
 admin.site.register(TokenHistory, TokenHistoryAdmin)
 admin.site.register(BidsHistory, BidsHistoryAdmin)
+

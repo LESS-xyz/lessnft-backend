@@ -15,6 +15,8 @@ from django_celery_beat.models import (
     ClockedSchedule,
     CrontabSchedule,
     SolarSchedule,
+    PeriodicTask,
+    IntervalSchedule,
 )
 from django.contrib.sites.models import Site
 from django_admin_inline_paginator.admin import TabularInlinePaginated
@@ -25,8 +27,9 @@ class TagIconForm(forms.ModelForm):
 
     def save(self, commit=True):
         set_icon = self.cleaned_data.get("set_icon", None)
-        icon = send_to_ipfs(set_icon)
-        self.instance.icon = icon
+        if set_icon:
+            icon = send_to_ipfs(set_icon)
+            self.instance.icon = icon
         return super(TagIconForm, self).save(commit=commit)
 
     class Meta:
@@ -189,8 +192,8 @@ admin.site.register(Collection, CollectionAdmin)
 
 admin.site.unregister(SolarSchedule)
 admin.site.unregister(ClockedSchedule)
-# admin.site.unregister(PeriodicTask)
-# admin.site.unregister(IntervalSchedule)
+admin.site.unregister(PeriodicTask)
+admin.site.unregister(IntervalSchedule)
 admin.site.unregister(CrontabSchedule)
 
 admin.site.unregister(Site)

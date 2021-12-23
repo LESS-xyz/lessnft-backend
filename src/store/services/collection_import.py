@@ -8,22 +8,30 @@ from src.accounts.models import AdvUser
 from src.store.models import Collection, Status, Token
 from src.utilities import RedisClient
 
-URL = "https://api.opensea.io/api/v1/"
+import requests
+import logging
+from src.store.models import Collection, Token, Status
+from src.accounts.models import AdvUser
+from dataclasses import dataclass, fields
+from typing import Optional
+from src.utilities import RedisClient
+from src.settings import config
+
 logger = logging.getLogger("celery")
 
 
 class OpenSeaAPI:
     def asset_contract(self, collection_address):
-        return requests.get(f"{URL}asset_contract/{collection_address}/")
+        return requests.get(f"{config.OPENSEA_API}asset_contract/{collection_address}/")
 
     def collection(self, collection_slug):
-        return requests.get(f"{URL}collection/{collection_slug}/")
+        return requests.get(f"{config.OPENSEA_API}collection/{collection_slug}/")
 
     def assets(self, address, offset=0, limit=50):
         assert limit <= 50, "The max limit in api is 50"
 
         return requests.get(
-            f"{URL}assets/",
+            f"{config.OPENSEA_API}assets/",
             params={
                 "asset_contract_address": address,
                 "offset": offset,
@@ -70,6 +78,8 @@ class OpenSeaImport:
         collection_model, _ = self.get_or_save_collection(collection)
         self.save_tokens(collection_model)
         self.save_last_block(collection_model.address)
+        collection_model.status = Status.COMMITTED
+        collection_model.save()
 
     def _get_user(self, user):
         """
@@ -146,6 +156,7 @@ class OpenSeaImport:
                 "schema_name"
             )
             new_collection.deploy_block = self.network.get_last_block()
+            new_collection.network = self.network
             new_collection.save()
         return new_collection, created
 
@@ -214,7 +225,7 @@ class TokenData:
             ipfs=self.token_metadata,
             details=self.details,
             format=self.format,
-            status=Status.PENDING,
+            status=Status.COMMITTED,
             total_supply=1,
             owner=self.owner_user,
             creator=self.creator_user,

@@ -49,14 +49,18 @@ class TokenPatchSerializer(serializers.ModelSerializer):
 class TagSerializer(serializers.ModelSerializer):
     icon = serializers.SerializerMethodField()
     image = serializers.SerializerMethodField()
+    title = serializers.SerializerMethodField()
 
     class Meta:
         model = Tags
         fields = (
-            "name",
+            "title",
             "icon",
             "image",
         )
+
+    def get_title(self, obj):
+        return obj.name
 
     def get_icon(self, obj):
         return obj.ipfs_icon
@@ -161,6 +165,10 @@ class CollectionSearchSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "tokens",
+            "display_theme",
+            "is_nsfw",
+            "cover",
+            "description",
         )
 
     def get_id(self, obj):
@@ -181,6 +189,8 @@ class CollectionSlimSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "address",
+            "display_theme",
+            "is_nsfw",
         )
 
     def get_id(self, obj):
@@ -213,6 +223,9 @@ class TokenSerializer(serializers.ModelSerializer):
     minimal_bid = serializers.SerializerMethodField()
     like_count = serializers.SerializerMethodField()
     network = serializers.SerializerMethodField()
+    has_digital_key = serializers.SerializerMethodField()
+    start_auction = serializers.SerializerMethodField()
+    end_auction = serializers.SerializerMethodField()
 
     class Meta:
         model = Token
@@ -222,6 +235,7 @@ class TokenSerializer(serializers.ModelSerializer):
             "is_timed_auc_selling",
             "like_count",
             "tags",
+            "has_digital_key",
         )
         fields = read_only_fields + (
             "id",
@@ -254,7 +268,19 @@ class TokenSerializer(serializers.ModelSerializer):
             "minimal_bid_USD",
             "network",
             "sellers",
+            "external_link",
         )
+
+    def get_start_auction(self, obj):
+        if obj.start_auction:
+            return obj.start_auction.timestamp()
+
+    def get_end_auction(self, obj):
+        if obj.end_auction:
+            return obj.end_auction.timestamp()
+
+    def get_has_digital_key(self, obj):
+        return bool(obj.digital_key)
 
     def get_royalty(self, obj):
         return obj.creator_royalty
@@ -263,7 +289,7 @@ class TokenSerializer(serializers.ModelSerializer):
         return TagSerializer(obj.tags.all(), many=True).data
 
     def get_network(self, obj):
-        network = obj.currency.network if obj.currency else None
+        network = obj.currency.network if obj.currency else obj.collection.network
         return NetworkSerializer(network).data
 
     def get_like_count(self, obj):
@@ -483,6 +509,7 @@ class TokenFullSerializer(TokenSerializer):
     owner_auction = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
     views = serializers.SerializerMethodField()
+    auction_amount = serializers.SerializerMethodField()
 
     class Meta(TokenSerializer.Meta):
         fields = TokenSerializer.Meta.fields + (
@@ -494,6 +521,7 @@ class TokenFullSerializer(TokenSerializer):
             "internal_id",
             "owner_auction",
             "views",
+            "auction_amount",
         )
 
     def get_selling(self, obj):
@@ -508,10 +536,13 @@ class TokenFullSerializer(TokenSerializer):
         return TokenHistorySerializer(history, many=True).data
 
     def get_service_fee(self, obj):
-        return obj.currency.service_fee
+        if obj.currency:
+            return obj.currency.service_fee
 
     def get_currency_service_fee(self, obj):
         price = self.get_price(obj)
+        if not obj.currency:
+            return None
         if price:
             return price / 100 * Decimal(obj.currency.service_fee)
         bids = obj.bid_set.filter(state=Status.COMMITTED).order_by("-amount")
@@ -536,6 +567,22 @@ class TokenFullSerializer(TokenSerializer):
 
     def get_owner_auction(self, obj):
         return obj.get_owner_auction()
+
+    def get_auction_amount(self, obj):
+        if obj.standart == "ERC721":
+            if obj.is_auc_selling:
+                return 1
+            else:
+                return None
+        user = self.context.get("user")
+        ownerships = obj.ownership_set
+        if not user.is_anonymous:
+            ownerships = ownerships.exclude(owner=user)
+        return (
+            ownerships.filter(selling=True, currency_price__isnull=True)
+            .aggregate(Sum("quantity"))
+            .get("quantity__sum")
+        )
 
     def get_is_liked(self, obj):
         user = self.context.get("user")
