@@ -6,6 +6,16 @@ from collections import Counter
 from datetime import datetime
 from decimal import Decimal
 from typing import Tuple, Union
+
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator
+from django.db import models
+from django.db.models import Exists, OuterRef, Q, Sum
+from django.db.models.signals import post_save, pre_save
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.response import Response
+
 from src.accounts.models import AdvUser, DefaultAvatar
 from src.consts import (
     COLLECTION_CREATION_GAS_LIMIT,
@@ -19,17 +29,8 @@ from src.rates.api import calculate_amount
 from src.rates.models import UsdRate
 from src.settings import config
 from src.utilities import get_media_from_ipfs, sign_message
-from django.core.exceptions import ValidationError
-from django.core.validators import MaxValueValidator
-from django.db import models
-from django.db.models import Exists, OuterRef, Q, Sum
-from django.db.models.signals import post_save, pre_save
-from django.utils import timezone
-from rest_framework import status
-from rest_framework.response import Response
 
 from .services.ipfs import get_ipfs_by_hash
-
 
 OPENSEA_MEDIA_PATH = "https://lh3.googleusercontent.com/"
 
@@ -199,12 +200,12 @@ class Collection(models.Model):
         self.standart = request.data.get("standart")
         self.description = request.data.get("description")
         self.short_url = request.data.get("short_url")
-        self.site = request.data.get("short_url")
-        self.discord = request.data.get("short_url")
-        self.twitter = request.data.get("short_url")
-        self.instagram = request.data.get("short_url")
-        self.medium = request.data.get("short_url")
-        self.telegram = request.data.get("short_url")
+        self.site = request.data.get("site")
+        self.discord = request.data.get("discord")
+        self.twitter = request.data.get("twitter")
+        self.instagram = request.data.get("instagram")
+        self.medium = request.data.get("medium")
+        self.telegram = request.data.get("telegram")
         self.display_theme = request.data.get("display_theme", "Padded")
         self.is_nsfw = request.data.get("is_nsfw", "false").lower() == "true"
         self.creator = request.user
