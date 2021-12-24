@@ -1,5 +1,6 @@
 import logging
 import operator
+from abc import ABC, abstractmethod
 from decimal import Decimal
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -11,35 +12,71 @@ from src.accounts.serializers import UserSearchSerializer
 from src.rates.api import calculate_amount
 from src.store.models import Bid, Collection, Ownership, Token
 from src.store.serializers import CollectionSearchSerializer, TokenSerializer
-from src.utilities import get_page_slice
 
 
-class SearchToken:
-    def __init__(self):
-        self.tokens = None
+class SearchABC(ABC):
+    @abstractmethod
+    def initial(self):
+        """initial items and serializer"""
+        ...
+        self.items = Token.objects.committed()
+        self.serializer = TokenSerializer
+
+    def remove_unused_kwargs(self, kwargs):
+        kwargs.pop("page", None)
+
+    def parse(self, **kwargs):
+        self.initial()
+        self.remove_unused_kwargs(kwargs)
+
+        current_user = kwargs.pop("current_user", None)
+        order_by = kwargs.pop("order_by", None)
+
+        for method, value in kwargs.items():
+            try:
+                getattr(self, method)(value)
+            except AttributeError as e:
+                logging.warning(e)
+            except Exception as e:
+                logging.error(e)
+
+        if order_by:
+            self.order_by(order_by)
+
+        return self.serializer(
+            self.items,
+            context={"user": current_user},
+            many=True,
+        ).data
+
+
+class SearchToken(SearchABC):
+    def initial(self):
+        self.items = Token.objects.committed()
+        self.serializer = TokenSerializer
 
     def network(self, network):
         if network and network[0]:
             if not network[0].lower() == "undefined":
                 networks = network[0].split(",")
-                self.tokens = self.tokens.filter(collection__network__name__in=networks)
+                self.items = self.items.filter(collection__network__name__in=networks)
 
     def tags(self, tags):
         if tags and tags[0]:
             tags = tags[0].split(",")
-            self.tokens = self.tokens.filter(tags__name__in=tags).distinct()
+            self.items = self.items.filter(tags__name__in=tags).distinct()
 
     def text(self, words):
         if words and words[0]:
             words = words[0].split(" ")
             for word in words:
-                self.tokens = self.tokens.filter(name__icontains=word)
+                self.items = self.items.filter(name__icontains=word)
 
     def is_verified(self, is_verified):
         if is_verified is not None:
             is_verified = is_verified[0]
             is_verified = is_verified.lower() == "true"
-            self.tokens = self.tokens.filter(
+            self.items = self.items.filter(
                 Q(owner__is_verificated=is_verified)
                 | Q(owners__is_verificated=is_verified)
             )
@@ -52,7 +89,7 @@ class SearchToken:
         if price and price[0]:
             min_price = Decimal(price[0])
 
-            tokens = self.tokens
+            tokens = self.items
             ownerships = Ownership.objects.filter(token__in=tokens)
             ownerships = [
                 ownership.token.id
@@ -67,7 +104,7 @@ class SearchToken:
 
             token_ids = [token.id for token in tokens]
             token_ids.extend(ownerships)
-            self.tokens = Token.objects.filter(id__in=token_ids)
+            self.items = Token.objects.filter(id__in=token_ids)
 
     def min_price(self, price):
         self._price_filter_tokens(price, "min_price")
@@ -78,7 +115,7 @@ class SearchToken:
     def collections(self, collections):
         if collections and collections[0]:
             collections = collections[0].split(",")
-            self.tokens = self.tokens.filter(collections__name__in=collections)
+            self.items = self.items.filter(collections__name__in=collections)
 
     def owner(self, owner):
         if owner:
@@ -86,7 +123,7 @@ class SearchToken:
                 owner = AdvUser.objects.get_by_custom_url(owner[0])
             except ObjectDoesNotExist:
                 owner = None
-            self.tokens = self.tokens.filter(
+            self.items = self.items.filter(
                 Q(owner=owner) | Q(owners=owner),
             ).order_by("-id")
 
@@ -96,17 +133,17 @@ class SearchToken:
                 creator = AdvUser.objects.get_by_custom_url(creator[0])
             except ObjectDoesNotExist:
                 creator = None
-            self.tokens = self.tokens.filter(creator=creator).order_by("-id")
+            self.items = self.items.filter(creator=creator).order_by("-id")
 
     def currency(self, currency):
         if currency and currency[0]:
             currencies = currency[0].split(",")
-            self.tokens = self.tokens.filter(currency__symbol__in=currencies)
+            self.items = self.items.filter(currency__symbol__in=currencies)
 
     def on_sale(self, on_sale):
         if on_sale and on_sale[0] != "":
             filter = "filter" if on_sale[0].lower() == "true" else "exclude"
-            self.tokens = getattr(self.tokens, filter)(
+            self.items = getattr(self.items, filter)(
                 Q(selling=True, currency_price__isnull=False, currency__isnull=False)
                 | Q(
                     Exists(
@@ -122,7 +159,7 @@ class SearchToken:
     def on_auc_sale(self, on_sale):
         if on_sale and on_sale[0] != "":
             filter = "filter" if on_sale[0].lower() == "true" else "exclude"
-            self.tokens = getattr(self.tokens, filter)(
+            self.items = getattr(self.items, filter)(
                 Q(
                     selling=True,
                     currency_minimal_bid__isnull=False,
@@ -143,7 +180,7 @@ class SearchToken:
     def on_timed_auc_sale(self, on_sale):
         if on_sale and on_sale[0] != "":
             filter = "filter" if on_sale[0].lower() == "true" else "exclude"
-            self.tokens = getattr(self.tokens, filter)(
+            self.items = getattr(self.items, filter)(
                 selling=True,
                 currency_price__isnull=True,
                 start_auction__lte=timezone.now(),
@@ -153,7 +190,7 @@ class SearchToken:
     def has_bids(self, has_bids):
         if has_bids:
             filter = "filter" if has_bids[0].lower() == "true" else "exclude"
-            self.tokens = getattr(self.tokens, filter)(
+            self.items = getattr(self.items, filter)(
                 Exists(Bid.objects.filter(token__id=OuterRef("id")))
             )
 
@@ -164,7 +201,7 @@ class SearchToken:
             except AdvUser.DoesNotExist:
                 user = None
             if user:
-                self.tokens = self.tokens.filter(
+                self.items = self.items.filter(
                     Exists(
                         Bid.objects.filter(
                             token__id=OuterRef("id"),
@@ -220,7 +257,7 @@ class SearchToken:
             return history.price
 
     def order_by(self, order_by):
-        tokens = list(self.tokens)
+        tokens = list(self.items)
         reverse = False
         if order_by is not None:
             order_by = order_by[0]
@@ -235,92 +272,60 @@ class SearchToken:
         except AttributeError:
             logging.warning(f"Unknown token sort method {order_by}")
 
-        self.tokens = tokens
-
-    def parse(self, **kwargs):
-        self.tokens = Token.objects.committed()
-        kwargs.pop("page", None)
-        current_user = kwargs.pop("current_user", None)
-        order_by = kwargs.pop("order_by", None)
-
-        for method, value in kwargs.items():
-            try:
-                getattr(self, method)(value)
-            except AttributeError as e:
-                logging.warning(e)
-            except Exception as e:
-                logging.error(e)
-
-        if order_by:
-            self.order_by(order_by)
-
-        return TokenSerializer(
-            self.tokens,
-            context={"user": current_user},
-            many=True,
-        ).data
+        self.items = tokens
 
 
-class SearchCollection:
+class SearchCollection(SearchABC):
+    def initial(self):
+        self.items = Collection.objects.committed()
+        self.serializer = CollectionSearchSerializer
+
     def tags(self, tags):
         if tags and tags[0]:
             tags = tags[0].split(",")
-            self.collections = self.collections.filter(tags__name__in=tags).distinct()
+            self.items = self.items.filter(tags__name__in=tags).distinct()
 
     def creator(self, user):
         if user and user[0]:
             user = AdvUser.objects.get_by_custom_url(user[0])
-            self.collections = self.collections.filter(creator=user)
+            self.items = self.items.filter(creator=user)
 
     def text(self, words):
         words = words.split(" ")
         for word in words:
-            self.collections = self.collections.filter(name__icontains=word)
+            self.items = self.items.filter(name__icontains=word)
 
     def network(self, network):
         return
         if network and network[0]:
             if not network[0].lower() == "undefined":
                 networks = network[0].split(",")
-                self.collections = self.collections.filter(network__name__in=networks)
-
-    def parse(self, **kwargs):
-        self.collections = Collection.objects.committed()
-        page = kwargs.pop("page", [1])
-        kwargs.pop("current_user", None)
-        kwargs.pop("order_by", None)
-
-        for method, value in kwargs.items():
-            try:
-                getattr(self, method)(value)
-            except AttributeError:
-                logging.warning(f"Unknown collection filter {method}")
-
-        page = int(page[0])
-        collections_count = len(self.collections)
-        start, end = get_page_slice(page, collections_count, items_per_page=8)
-        return CollectionSearchSerializer(self.collections[start:end], many=True).data
+                self.items = self.items.filter(network__name__in=networks)
 
 
-class SearchUser:
+class SearchUser(SearchABC):
+    def initial(self):
+        self.items = AdvUser.objects.all()
+        self.serializer = UserSearchSerializer
+
     def text(self, words):
         words = words.split(" ")
         for word in words:
-            self.users = self.users.filter(display_name__icontains=word)
+            self.items = self.items.filter(display_name__icontains=word)
 
     def verificated(self, verificated):
-        self.users = self.users.filter(is_verificated=verificated[0].lower() == "true")
+        self.items = self.items.filter(is_verificated=verificated[0].lower() == "true")
 
     def order_by_created(self, reverse):
-        return self.users.order_by(f"{reverse}id")
+        return self.items.order_by(f"{reverse}id")
 
     def order_by_followers(self, reverse):
-        return self.users.annotate(follow_count=Count("following")).order_by(
+        return self.items.annotate(follow_count=Count("following")).order_by(
             f"{reverse}follow_count"
         )
 
     def order_by_tokens_created(self, reverse):
-        return self.users.annotate(Count("token_creator")).order_by(
+        return self.items.annotate(Count("token_creator")).order_by(
             f"{reverse}token_creator"
         )
 
@@ -330,27 +335,7 @@ class SearchUser:
             users = getattr(self, f"order_by_{order_by}")(reverse)
         except AttributeError:
             logging.warning(f"Unknown token sort method {order_by}")
-        self.users = users
-
-    def parse(self, **kwargs):
-        self.users = AdvUser.objects.all()
-        page = kwargs.pop("page", [1])
-        order_by = kwargs.pop("order_by", None)
-        kwargs.pop("current_user", None)
-
-        for method, value in kwargs.items():
-            try:
-                getattr(self, method)(value)
-            except AttributeError:
-                logging.warning(f"Unknown collection filter {method}")
-
-        if order_by:
-            self.order_by(order_by)
-
-        page = int(page[0])
-        users_count = len(self.users)
-        start, end = get_page_slice(page, users_count, items_per_page=8)
-        return UserSearchSerializer(self.users[start:end], many=True).data
+        self.items = users
 
 
 Search = {
