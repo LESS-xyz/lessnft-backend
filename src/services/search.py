@@ -1,14 +1,16 @@
 import logging
 from decimal import Decimal
-from src.accounts.models import AdvUser
-from src.rates.api import calculate_amount
-from src.store.models import Ownership, Token, Collection, Bid
-from src.store.serializers import TokenSerializer, CollectionSearchSerializer
-from src.accounts.serializers import UserSearchSerializer
-from src.utilities import get_page_slice
-from django.db.models import Q, Count, Exists, OuterRef
+
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Count, Exists, OuterRef, Q
 from django.utils import timezone
+
+from src.accounts.models import AdvUser
+from src.accounts.serializers import UserSearchSerializer
+from src.rates.api import calculate_amount
+from src.store.models import Bid, Collection, Ownership, Token
+from src.store.serializers import CollectionSearchSerializer, TokenSerializer
+from src.utilities import get_page_slice
 
 
 class SearchToken:
@@ -248,7 +250,7 @@ class SearchToken:
 
     def parse(self, **kwargs):
         self.tokens = Token.objects.committed()
-        page = kwargs.pop("page", [1])
+        kwargs.pop("page", None)
         current_user = kwargs.pop("current_user", None)
         order_by = kwargs.pop("order_by", None)
 
@@ -263,15 +265,11 @@ class SearchToken:
         if order_by:
             self.order_by(order_by)
 
-        page = int(page[0])
-        tokens_count = len(self.tokens)
-        start, end = get_page_slice(page, tokens_count, items_per_page=8)
-        return (
-            tokens_count,
-            TokenSerializer(
-                self.tokens[start:end], context={"user": current_user}, many=True
-            ).data,
-        )
+        return TokenSerializer(
+            self.tokens,
+            context={"user": current_user},
+            many=True,
+        ).data
 
 
 class SearchCollection:
@@ -300,8 +298,8 @@ class SearchCollection:
     def parse(self, **kwargs):
         self.collections = Collection.objects.committed()
         page = kwargs.pop("page", [1])
-        current_user = kwargs.pop("current_user", None)
-        order_by = kwargs.pop("order_by", None)
+        kwargs.pop("current_user", None)
+        kwargs.pop("order_by", None)
 
         for method, value in kwargs.items():
             try:
@@ -312,10 +310,7 @@ class SearchCollection:
         page = int(page[0])
         collections_count = len(self.collections)
         start, end = get_page_slice(page, collections_count, items_per_page=8)
-        return (
-            collections_count,
-            CollectionSearchSerializer(self.collections[start:end], many=True).data,
-        )
+        return CollectionSearchSerializer(self.collections[start:end], many=True).data
 
 
 class SearchUser:
@@ -352,7 +347,7 @@ class SearchUser:
         self.users = AdvUser.objects.all()
         page = kwargs.pop("page", [1])
         order_by = kwargs.pop("order_by", None)
-        current_user = kwargs.pop("current_user", None)
+        kwargs.pop("current_user", None)
 
         for method, value in kwargs.items():
             try:
@@ -366,10 +361,7 @@ class SearchUser:
         page = int(page[0])
         users_count = len(self.users)
         start, end = get_page_slice(page, users_count, items_per_page=8)
-        return (
-            users_count,
-            UserSearchSerializer(self.users[start:end], many=True).data,
-        )
+        return UserSearchSerializer(self.users[start:end], many=True).data
 
 
 Search = {

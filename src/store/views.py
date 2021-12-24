@@ -1,7 +1,19 @@
 import logging
 import random
-from decimal import Decimal
 from datetime import timedelta
+from decimal import Decimal
+
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.mail import send_mail
+from django.db.models import Count, Q, Sum
+from django.utils import timezone
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from src.accounts.models import AdvUser
 from src.activity.models import BidsHistory, TokenHistory, UserAction
@@ -29,32 +41,15 @@ from src.store.serializers import (
     CollectionSerializer,
     CollectionSlimSerializer,
     HotCollectionSerializer,
+    TagSerializer,
     TokenFullSerializer,
     TokenPatchSerializer,
     TokenSerializer,
-    TagSerializer,
 )
 from src.store.services.collection_import import OpenSeaImport
-from src.store.tasks import import_opensea_collection
 from src.store.services.ipfs import create_ipfs, send_to_ipfs
-from src.store.services.collection_import import OpenSeaImport
 from src.store.tasks import import_opensea_collection
-from src.utilities import get_page_slice, sign_message, PaginateMixin
-from django.core.exceptions import ObjectDoesNotExist
-from django.core.mail import send_mail
-from django.db.models import Count, Q, Sum
-from django.utils import timezone
-from drf_yasg import openapi
-from drf_yasg.utils import swagger_auto_schema
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import (
-    IsAuthenticated,
-    IsAuthenticatedOrReadOnly,
-)
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
+from src.utilities import PaginateMixin, get_page_slice, sign_message
 
 transfer_tx = openapi.Response(
     description="Response with prepared transfer tx",
@@ -119,7 +114,7 @@ buy_token_response = openapi.Response(
 not_found_response = "user not found"
 
 
-class SearchView(APIView):
+class SearchView(APIView, PaginateMixin):
     """
     View for search items in shop.
     searching has simple 'contains' logic.
@@ -170,7 +165,6 @@ class SearchView(APIView):
         responses={200: TokenSerializer(many=True)},
     )
     def get(self, request):
-        # TODO: try use PaginateMixin
         params = request.query_params.copy()
         sort = params.pop("type", ["items"])
         sort = sort[0]
@@ -181,13 +175,12 @@ class SearchView(APIView):
             )
 
         sort_type = getattr(config.SEARCH_TYPES, sort)
-        token_count, search_result = Search.get(sort_type).parse(
+        result = Search.get(sort_type).parse(
             current_user=request.user,
             **params,
         )
-        response_data = {"total_tokens": token_count, "items": search_result}
 
-        return Response(response_data, status=status.HTTP_200_OK)
+        return Response(self.paginate(request, result), status=status.HTTP_200_OK)
 
 
 class CreateView(APIView):
