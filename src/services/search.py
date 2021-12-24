@@ -19,8 +19,6 @@ class SearchABC(ABC):
     def initial(self):
         """initial items and serializer"""
         ...
-        self.items = Token.objects.committed()
-        self.serializer = TokenSerializer
 
     def remove_unused_kwargs(self, kwargs):
         kwargs.pop("page", None)
