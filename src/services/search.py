@@ -1,4 +1,5 @@
 import logging
+import operator
 from decimal import Decimal
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -43,8 +44,11 @@ class SearchToken:
                 | Q(owners__is_verificated=is_verified)
             )
 
-    def min_price(self, price):
-        # TODO: DRY max_price and min_price
+    def _price_filter_tokens(self, price, type_):
+        relate = operator.gt
+        if type_ == "max_price":
+            relate = operator.lt
+
         if price and price[0]:
             min_price = Decimal(price[0])
 
@@ -53,38 +57,23 @@ class SearchToken:
             ownerships = [
                 ownership.token.id
                 for ownership in ownerships
-                if ownership.usd_price and ownership.usd_price > min_price
+                if ownership.usd_price and relate(ownership.usd_price, min_price)
             ]
             tokens = [
                 token
                 for token in tokens
-                if token.usd_price and token.usd_price > min_price
+                if token.usd_price and relate(token.usd_price, min_price)
             ]
 
             token_ids = [token.id for token in tokens]
             token_ids.extend(ownerships)
             self.tokens = Token.objects.filter(id__in=token_ids)
+
+    def min_price(self, price):
+        self._price_filter_tokens(price, "min_price")
 
     def max_price(self, price):
-        if price and price[0]:
-            max_price = Decimal(price[0])
-
-            tokens = self.tokens
-            ownerships = Ownership.objects.filter(token__in=tokens)
-            ownerships = [
-                ownership.token.id
-                for ownership in ownerships
-                if ownership.usd_price and ownership.usd_price < max_price
-            ]
-            tokens = [
-                token
-                for token in tokens
-                if token.usd_price and token.usd_price < max_price
-            ]
-
-            token_ids = [token.id for token in tokens]
-            token_ids.extend(ownerships)
-            self.tokens = Token.objects.filter(id__in=token_ids)
+        self._price_filter_tokens(price, "max_price")
 
     def collections(self, collections):
         if collections and collections[0]:
