@@ -451,7 +451,6 @@ class UserCollectionSerializer(CollectionSlimSerializer):
 class CollectionSerializer(CollectionSlimSerializer):
     tokens = serializers.SerializerMethodField()
     creator = CreatorSerializer()
-    attributes = serializers.SerializerMethodField()
     tokens_count = serializers.SerializerMethodField()
 
     class Meta(CollectionSlimSerializer.Meta):
@@ -462,7 +461,6 @@ class CollectionSerializer(CollectionSlimSerializer):
             "description",
             "tokens",
             "tokens_count",
-            "attributes",
         )
 
     def get_tokens_count(self, obj):
@@ -471,33 +469,6 @@ class CollectionSerializer(CollectionSlimSerializer):
     def get_tokens(self, obj):
         tokens = self.context.get("tokens")
         return TokenSerializer(tokens, many=True).data
-
-    def get_attributes(self, obj):
-        token_details = (
-            Token.objects.committed()
-            .filter(collection=obj)
-            .values_list("details", flat=True)
-        )
-
-        attribute_count = []
-        # Getting a list of all keys(token attributes) from the list of token details:
-        all_attributes = set().union(
-            *(d.keys() for d in token_details if d is not None)
-        )
-        # initialising a counter to iterate over value dicts in a list:
-        for attribute in all_attributes:
-            # Counting all occurrencies of each attribute value and writing it into a list of dicts like
-            # {'title': Attribute, properties: [{ 'name': value1, 'count': occurencies of value1},
-            # 'name': value2, 'count': occurencies of value2}], ...}]}]
-            value_amount = Counter(
-                token[attribute] for token in token_details if attribute in token
-            )
-            element = {"title": attribute, "properties": []}
-            for value, amount in value_amount.items():
-                element["properties"].append({"name": value, "count": amount})
-            attribute_count.append(element)
-
-        return attribute_count
 
 
 class TokenFullSerializer(TokenSerializer):

@@ -38,7 +38,7 @@ class SearchABC(ABC):
             except Exception as e:
                 logging.error(e)
 
-        if order_by:
+        if order_by and hasattr(self, 'order_by'):
             self.order_by(order_by)
 
         return self.serializer(

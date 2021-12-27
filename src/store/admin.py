@@ -22,15 +22,20 @@ from django.contrib.sites.models import Site
 from django_admin_inline_paginator.admin import TabularInlinePaginated
 
 
-class TagIconForm(forms.ModelForm):
+class TagForm(forms.ModelForm):
     set_icon = forms.FileField(required=False)
+    set_banner = forms.FileField(required=False)
 
     def save(self, commit=True):
         set_icon = self.cleaned_data.get("set_icon", None)
+        set_banner = self.cleaned_data.get("set_image", None)
         if set_icon:
             icon = send_to_ipfs(set_icon)
             self.instance.icon = icon
-        return super(TagIconForm, self).save(commit=commit)
+        if set_banner:
+            banner = send_to_ipfs(set_banner)
+            self.instance.banner = banner
+        return super(TagForm, self).save(commit=commit)
 
     class Meta:
         model = Tags
@@ -38,7 +43,7 @@ class TagIconForm(forms.ModelForm):
 
 
 class TagAdmin(admin.ModelAdmin):
-    form = TagIconForm
+    form = TagForm
     list_display = ("name", "icon")
     fieldsets = (
         (
@@ -47,7 +52,9 @@ class TagAdmin(admin.ModelAdmin):
                 "fields": (
                     "name",
                     "set_icon",
+                    "set_banner",
                     "icon",
+                    "banner",
                 ),
             },
         ),

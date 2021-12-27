@@ -70,7 +70,7 @@ def get_periods(*args, **kwargs):
 class PaginateMixin:
     def _parse_request(self, request):
         try:
-            self.page = int(abs(request.query_params.get("page", 1))) or 1
+            self.page = abs(int(request.query_params.get("page", 1))) or 1
         except Exception as e:
             logging.error(f"Pagination value error {e}")
             self.page = 1

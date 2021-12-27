@@ -199,7 +199,9 @@ class Collection(models.Model):
         self.avatar_ipfs = avatar
         self.standart = request.data.get("standart")
         self.description = request.data.get("description")
-        self.short_url = request.data.get("short_url")
+        short_url = request.data.get("short_url")
+        if short_url:
+            self.short_url = short_url
         self.site = request.data.get("site")
         self.discord = request.data.get("discord")
         self.twitter = request.data.get("twitter")
@@ -221,7 +223,7 @@ class Collection(models.Model):
                 input_type=(),
                 output_types=("uint256",),
             )
-            logging.info("fee: {value}")
+            logging.info(f"fee: {value}")
 
             initial_tx = self.network.contract_call(
                 method_type="write",
@@ -264,7 +266,7 @@ class Collection(models.Model):
     def collection_is_unique(
         cls, name, symbol, short_url, network
     ) -> Tuple[bool, Union[Response, None]]:
-        logging.info("{name}, {network}")
+        logging.info(f"{name}, {network}")
         network = Network.objects.get(name__icontains=network)
         if Collection.objects.filter(name=name).filter(network=network):
             return False, Response(

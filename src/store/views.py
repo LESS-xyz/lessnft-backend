@@ -151,7 +151,6 @@ class SearchView(APIView, PaginateMixin):
             openapi.Parameter(
                 "on_timed_auc_sale", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN
             ),
-            openapi.Parameter("has_bids", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN),
             openapi.Parameter("currency", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_NUMBER),
             openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
@@ -159,8 +158,6 @@ class SearchView(APIView, PaginateMixin):
             openapi.Parameter("text", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("owner", openapi.IN_QUERY, type=openapi.TYPE_STRING),
             openapi.Parameter("bids_by", openapi.IN_QUERY, type=openapi.TYPE_STRING),
-            openapi.Parameter("text", openapi.IN_QUERY, type=openapi.TYPE_STRING),
-            openapi.Parameter("page", openapi.IN_QUERY, type=openapi.TYPE_STRING),
         ],
         responses={200: TokenSerializer(many=True)},
     )
@@ -321,7 +318,13 @@ class CreateCollectionView(APIView):
 
         if standart not in ["ERC721", "ERC1155"]:
             return Response(
-                "invalid collection type", status=status.HTTP_400_BAD_REQUEST
+                "invalid collection type", 
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if short_url and Collection.objects.filter(short_url=short_url).exists():
+            return Response(
+                {"error": "short_url already created"}, 
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         network = Network.objects.filter(name__icontains=network)
@@ -347,7 +350,7 @@ class CreateCollectionView(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
 
-class GetLikedView(APIView):
+class GetLikedView(APIView, PaginateMixin):
     """
     View for getting all items liked by address
     """
