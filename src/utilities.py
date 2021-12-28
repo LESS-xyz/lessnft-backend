@@ -1,13 +1,12 @@
 import logging
-
-from django.utils import timezone
 from datetime import timedelta
+from math import ceil
+from typing import Tuple
 
+import redis
+from django.utils import timezone
 from eth_account import Account
 from web3 import Web3
-from typing import Tuple
-import redis
-from math import ceil
 
 from src.settings import config
 
@@ -65,6 +64,12 @@ def get_periods(*args, **kwargs):
     for key in args:
         periods[key] = PERIODS[key]
     return periods
+
+
+def to_int(value):
+    if str(value).isdigit():
+        return int(value)
+    return value
 
 
 class PaginateMixin:

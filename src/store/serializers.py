@@ -2,6 +2,9 @@ import logging
 from collections import Counter
 from decimal import Decimal
 
+from django.db.models import Count, Min, Sum
+from rest_framework import serializers
+
 from src.accounts.serializers import CreatorSerializer, UserOwnerSerializer
 from src.activity.models import UserAction
 from src.activity.serializers import TokenHistorySerializer
@@ -14,13 +17,11 @@ from src.store.models import (
     Collection,
     Ownership,
     Status,
+    Tags,
     Token,
     TransactionTracker,
     ViewsTracker,
-    Tags,
 )
-from django.db.models import Count, Min, Sum
-from rest_framework import serializers
 
 
 class TokenPatchSerializer(serializers.ModelSerializer):
@@ -253,7 +254,9 @@ class TokenSerializer(serializers.ModelSerializer):
             "collection",
             "minimal_bid",
             "description",
-            "details",
+            "properties",
+            "stats",
+            "rankings",
             "royalty",
             "is_liked",
             "selling",
@@ -449,9 +452,11 @@ class UserCollectionSerializer(CollectionSlimSerializer):
 
 
 class CollectionSerializer(CollectionSlimSerializer):
-    tokens = serializers.SerializerMethodField()
     creator = CreatorSerializer()
     tokens_count = serializers.SerializerMethodField()
+    properties = serializers.SerializerMethodField()
+    rankings = serializers.SerializerMethodField()
+    stats = serializers.SerializerMethodField()
 
     class Meta(CollectionSlimSerializer.Meta):
         read_only_fields = CollectionSlimSerializer.Meta.read_only_fields + ("cover",)
@@ -459,16 +464,51 @@ class CollectionSerializer(CollectionSlimSerializer):
             "cover",
             "creator",
             "description",
-            "tokens",
             "tokens_count",
+            "properties",
+            "rankings",
+            "stats",
         )
 
     def get_tokens_count(self, obj):
-        return self.context.get("tokens_count")
+        return obj.token_set.committed().count()
 
-    def get_tokens(self, obj):
-        tokens = self.context.get("tokens")
-        return TokenSerializer(tokens, many=True).data
+    def get_properties(self, obj):
+        props = (
+            obj.token_set.committed()
+            .filter(_details__isnull=False)
+            .values_list("_properties", flat=True)
+        )
+
+        properties = dict()
+
+        for prop in props:
+            for key, value in prop.items():
+                if not properties.get(key):
+                    properties[key] = list()
+                properties[key].append(value.get("value"))
+
+        return {k: dict(Counter(v)) for k, v in properties.items()}
+
+    def get_rankings(self, obj):
+        props = (
+            obj.token_set.committed()
+            .filter(_details__isnull=False)
+            .values_list("_rankings", flat=True)
+        )
+
+        items = list()
+
+        for prop in props:
+            for value in prop.values():
+                items.append(value.get("value"))
+
+        items = [int(item) for item in items if str(item).isdigit()]
+
+        return {"min": min(items), "max": max(items)}
+
+    def get_stats(self, obj):
+        return
 
 
 class TokenFullSerializer(TokenSerializer):

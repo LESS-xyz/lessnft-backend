@@ -2,7 +2,6 @@ import json
 import logging
 import random
 import secrets
-from collections import Counter
 from datetime import datetime
 from decimal import Decimal
 from typing import Tuple, Union
@@ -28,7 +27,7 @@ from src.networks.models import Network
 from src.rates.api import calculate_amount
 from src.rates.models import UsdRate
 from src.settings import config
-from src.utilities import get_media_from_ipfs, sign_message
+from src.utilities import get_media_from_ipfs, sign_message, to_int
 
 from .services.ipfs import get_ipfs_by_hash
 
@@ -370,7 +369,10 @@ class Token(models.Model):
     ipfs = models.CharField(max_length=200, null=True, default=None)
     image = models.CharField(max_length=200, null=True, blank=True, default=None)
     animation_file = models.CharField(
-        max_length=200, null=True, blank=True, default=None
+        max_length=200,
+        null=True,
+        blank=True,
+        default=None,
     )
     format = models.CharField(max_length=10, null=True, default="image")
     total_supply = models.PositiveIntegerField(validators=[validate_nonzero])
@@ -389,7 +391,11 @@ class Token(models.Model):
         decimal_places=18,
     )
     currency = models.ForeignKey(
-        "rates.UsdRate", on_delete=models.PROTECT, null=True, default=None, blank=True
+        "rates.UsdRate",
+        on_delete=models.PROTECT,
+        null=True,
+        default=None,
+        blank=True,
     )
     owner = models.ForeignKey(
         "accounts.AdvUser",
@@ -406,10 +412,14 @@ class Token(models.Model):
     collection = models.ForeignKey("Collection", on_delete=models.CASCADE)
     internal_id = models.PositiveIntegerField(null=True, blank=True)
     description = models.TextField(blank=True, null=True)
-    _details = models.JSONField(blank=True, null=True, default=None)
+    _properties = models.JSONField(blank=True, null=True, default=None)
+    _rankings = models.JSONField(blank=True, null=True, default=None)
+    _stats = models.JSONField(blank=True, null=True, default=None)
     selling = models.BooleanField(default=False)
     status = models.CharField(
-        max_length=50, choices=Status.choices, default=Status.PENDING
+        max_length=50,
+        choices=Status.choices,
+        default=Status.PENDING,
     )
     updated_at = models.DateTimeField(auto_now_add=True)
     tags = models.ManyToManyField("Tags", blank=True, null=True)
@@ -421,18 +431,45 @@ class Token(models.Model):
 
     objects = TokenManager()
 
-    @property
-    def details(self):
+    def _details_getter(self, field):
         details = list()
-        for key, item in self._details.items():
+        for key, item in getattr(self, field).items():
             item.update({"trait_type": key})
             details.append(item)
         return details
 
-    @details.setter
-    def details(self, value):
+    @property
+    def properties(self):
+        return self._details_getter("_properties")
+
+    @properties.setter
+    def properties(self, value):
         if value:
-            self._details = {item.pop("trait_type"): item for item in value}
+            self._properties = {
+                item.pop("trait_type"): {k: str(v) for k, v in item.items()}
+                for item in value
+            }
+
+    @property
+    def rankings(self):
+        return self._details_getter("_rankings")
+
+    @rankings.setter
+    def rankings(self, value):
+        if value:
+            {
+                rank.pop("trait_type"): {k: to_int(v) for k, v in rank.items()}
+                for rank in value
+            }
+
+    @property
+    def stats(self):
+        return self._details_getter("_stats")
+
+    @stats.setter
+    def stats(self, value):
+        if value:
+            self._stats = {item.pop("trait_type"): item for item in value}
 
     @property
     def media(self):
@@ -505,31 +542,6 @@ class Token(models.Model):
                 and self.end_auction > timezone.now()
             )
         return False
-
-    @property
-    def rarity(self):
-        details = self.details
-
-        if details:
-            rarity_attributes = {"Rarity points": 0}
-            total_tokens = Token.objects.filter(collection=self.collection).count()
-            token_details = Token.objects.filter(
-                collection=self.collection
-            ).values_list("details", flat=True)
-
-            for attribute, value in details.items():
-                value_ammount = Counter(
-                    x[attribute] for x in token_details if attribute in x
-                )
-                rarity_attributes[attribute] = {
-                    "value": value,
-                    "points": total_tokens / value_ammount[value],
-                }
-                rarity_attributes["Rarity points"] += (
-                    len(token_details) / value_ammount[value]
-                )
-
-        return rarity_attributes
 
     def __str__(self):
         return self.name
@@ -608,14 +620,21 @@ class Token(models.Model):
 
         return True, None
 
+    def _parse_and_save_details(self, details):
+        details = json.loads(details)
+        methods = [
+            "properties",
+            "stats",
+            "rankings",
+        ]
+        for method in methods:
+            data = [d for d in details if d.pop("display_type", None) == method]
+            if data:
+                setattr(self, method, data)
+
     def save_in_db(self, request, ipfs):
         self.name = request.data.get("name")
         self.status = Status.PENDING
-        details = request.data.get("details")
-        if details:
-            self.details = json.loads(details)
-        else:
-            self.details = None
         self.ipfs = ipfs
         self.format = request.data.get("format")
         self.description = request.data.get("description")
@@ -679,6 +698,11 @@ class Token(models.Model):
         self.full_clean()
 
         self.save()
+
+        details = request.data.get("details")
+        if details:
+            self._parse_and_save_details(details)
+
         tag, _ = Tags.objects.get_or_create(name="New")
         self.tags.add(tag)
         nsfw = request.data.get("is_nsfw", False)

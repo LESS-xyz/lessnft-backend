@@ -49,7 +49,7 @@ from src.store.serializers import (
 from src.store.services.collection_import import OpenSeaImport
 from src.store.services.ipfs import create_ipfs, send_to_ipfs
 from src.store.tasks import import_opensea_collection
-from src.utilities import PaginateMixin, get_page_slice, sign_message
+from src.utilities import PaginateMixin, sign_message
 
 transfer_tx = openapi.Response(
     description="Response with prepared transfer tx",
@@ -61,25 +61,6 @@ transfer_tx = openapi.Response(
     ),
 )
 
-
-create_response = openapi.Response(
-    description="Response with created token",
-    schema=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            "id": openapi.Schema(type=openapi.TYPE_NUMBER),
-            "total_supply": openapi.Schema(type=openapi.TYPE_NUMBER),
-            "available": openapi.Schema(type=openapi.TYPE_NUMBER),
-            "price": openapi.Schema(type=openapi.TYPE_NUMBER),
-            "USD_price": openapi.Schema(type=openapi.TYPE_NUMBER),
-            "owner": openapi.Schema(type=openapi.TYPE_STRING),
-            "creator": openapi.Schema(type=openapi.TYPE_STRING),
-            "collection": openapi.Schema(type=openapi.TYPE_STRING),
-            "standart": openapi.Schema(type=openapi.TYPE_STRING),
-            "details": openapi.Schema(type=openapi.TYPE_OBJECT),
-        },
-    ),
-)
 
 buy_token_response = openapi.Response(
     description="Response with buyed token",
@@ -143,6 +124,18 @@ class SearchView(APIView, PaginateMixin):
                 openapi.IN_QUERY,
                 type=openapi.TYPE_STRING,
                 description="For tokens: created_at, price, likes, views, sale, transfer, auction_end, last_sale. \n For users: created, followers, tokens_created",
+            ),
+            openapi.Parameter(
+                "properties",
+                openapi.IN_QUERY,
+                type=openapi.TYPE_STRING,
+                description="JSON in string format, where value is a list. e.g. {value: [1,2]}",
+            ),
+            openapi.Parameter(
+                "rankings",
+                openapi.IN_QUERY,
+                type=openapi.TYPE_STRING,
+                description="JSON in string format. e.g. {value: {min: 1, max: 10}}",
             ),
             openapi.Parameter("on_sale", openapi.IN_QUERY, type=openapi.TYPE_BOOLEAN),
             openapi.Parameter(
@@ -215,7 +208,7 @@ class CreateView(APIView):
                 "format": openapi.Schema(type=openapi.TYPE_STRING),
             },
         ),
-        responses={200: create_response, 404: "Collection not found"},
+        responses={200: TokenSerializer, 404: "Collection not found"},
     )
     def post(self, request):
         request_data = request.data
@@ -318,12 +311,12 @@ class CreateCollectionView(APIView):
 
         if standart not in ["ERC721", "ERC1155"]:
             return Response(
-                "invalid collection type", 
+                "invalid collection type",
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if short_url and Collection.objects.filter(short_url=short_url).exists():
             return Response(
-                {"error": "short_url already created"}, 
+                {"error": "short_url already created"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -616,38 +609,14 @@ class GetCollectionView(APIView):
         responses={200: CollectionSerializer, 400: "collection not found"},
     )
     def get(self, request, param):
-        page = request.query_params.get("page", 1)
         try:
             collection = Collection.objects.committed().get_by_short_url(param)
-        except ObjectDoesNotExist:
+        except Collection.DoesNotExist:
             return Response(
-                {"error": "collection not found"}, status=status.HTTP_404_NOT_FOUND
+                {"error": "collection not found"},
+                status=status.HTTP_404_NOT_FOUND,
             )
-
-        attribute_dict = dict(request.query_params)
-        attribute_dict.pop("network", None)
-        attribute_dict.pop("page", None)
-        """
-        Creating a dict of token attributes from query parameters in url, i.e.:
-        {hair: [black, red, blone]
-        eyes: [red, blue, brown]
-        height: [tall, short]}
-        """
-        tokens = Token.objects.committed().filter(collection=collection)
-        if attribute_dict:
-            # iterating through both atributes and values in a dict to dynamically
-            # filter tokens with required attribute values in their details
-            for attribute_, value in attribute_dict.items():
-                attribute_filter = {f"details__{attribute_}__in": value}
-                tokens = tokens.filter(**attribute_filter)
-
-        # Serializing the list of filtered tokens
-        start, end = get_page_slice(page, len(tokens), items_per_page=5)
-        tokens_count = len(tokens)
-        response_data = CollectionSerializer(
-            collection,
-            context={"tokens": tokens[start:end], "tokens_count": tokens_count},
-        ).data
+        response_data = CollectionSerializer(collection).data
         return Response(response_data, status=status.HTTP_200_OK)
 
 

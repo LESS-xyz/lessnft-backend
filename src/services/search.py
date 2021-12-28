@@ -1,3 +1,4 @@
+import json
 import logging
 import operator
 from abc import ABC, abstractmethod
@@ -38,7 +39,7 @@ class SearchABC(ABC):
             except Exception as e:
                 logging.error(e)
 
-        if order_by and hasattr(self, 'order_by'):
+        if order_by and hasattr(self, "order_by"):
             self.order_by(order_by)
 
         return self.serializer(
@@ -69,6 +70,26 @@ class SearchToken(SearchABC):
             words = words[0].split(" ")
             for word in words:
                 self.items = self.items.filter(name__icontains=word)
+
+    def rankings(self, rankings):
+        if rankings and rankings[0]:
+            rankings = json.parse(rankings[0])
+            for rank, value in rankings.items():
+                min_data = value.get("min")
+                max_data = value.get("max")
+                rank_filters = {}
+                if min_data:
+                    rank_filters[f"_rankings__{rank}__value__gte"] = min_data
+                if max_data:
+                    rank_filters[f"_rankings__{rank}__value__lte"] = max_data
+                self.tokens = self.tokens.filter(**rank_filters)
+
+    def properties(self, properties):
+        if properties and properties[0]:
+            props = json.parse(properties[0])
+            for prop, value in props.items():
+                props_filter = {f"_properties__{prop}__value__in": value}
+                self.tokens = self.tokens.filter(**props_filter)
 
     def is_verified(self, is_verified):
         if is_verified is not None:
