@@ -108,6 +108,7 @@ class BuyData:
     amount: int
     token_id: int
     tx_hash: str
+    currency_address: str
     collection_address: str
 
 

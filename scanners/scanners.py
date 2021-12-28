@@ -413,9 +413,9 @@ class HandlerBuy(HandlerABC):
         price = Decimal(int(data.price) / int(decimals))
 
         currency = UsdRate.objects.filter(
-            network=token.collection.networks,
-            address=data.address,
-        )
+            network=token.collection.network,
+            address__iexact=data.currency_address,
+        ).first()
         TokenHistory.objects.update_or_create(
             tx_hash=data.tx_hash,
             defaults={
