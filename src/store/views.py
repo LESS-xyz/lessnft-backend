@@ -1232,7 +1232,7 @@ class TransactionTrackerView(APIView):
     def post(self, request):
         token_id = request.data.get("token")
         tx_hash = request.data.get("tx_hash")
-        amount = request.data.get("amount")
+        amount = request.data.get("amount", 1)
         bid_id = request.data.get("bid_id")
 
         token = Token.objects.filter(id=token_id).first()

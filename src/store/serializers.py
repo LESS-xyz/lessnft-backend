@@ -167,6 +167,7 @@ class CollectionSearchSerializer(serializers.ModelSerializer):
             "name",
             "tokens",
             "display_theme",
+            "is_default",
             "is_nsfw",
             "cover",
             "description",

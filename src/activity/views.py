@@ -492,7 +492,7 @@ class GetTopCollectionsView(APIView, PaginateMixin):
             "sort_period", "month"
         )  # day, week, month
         order_by = request.query_params.get("order_by", "price")  # day, week, month
-        network = request.query_params.get("network", config.DEFAULT_NETWORK)
+        network = request.query_params.get("network")
         tag = request.query_params.get("tag")
         if tag is not None:
             tag = Tags.objects.filter(name=tag).first()

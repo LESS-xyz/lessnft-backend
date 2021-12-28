@@ -28,7 +28,7 @@ class TagForm(forms.ModelForm):
 
     def save(self, commit=True):
         set_icon = self.cleaned_data.get("set_icon", None)
-        set_banner = self.cleaned_data.get("set_image", None)
+        set_banner = self.cleaned_data.get("set_banner", None)
         if set_icon:
             icon = send_to_ipfs(set_icon)
             self.instance.icon = icon
@@ -146,7 +146,7 @@ class CollectionForm(ModelForm):
         data = self.cleaned_data
         already_exists = (
             Collection.objects.network(data["network"])
-            .filter(is_default=True)
+            .filter(is_default=True, standart=data["standart"])
             .exclude(name=data["name"])
         )
         if data["is_default"] and already_exists.exists():
