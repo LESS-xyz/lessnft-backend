@@ -310,9 +310,10 @@ class SearchCollection(SearchABC):
             self.items = self.items.filter(creator=user)
 
     def text(self, words):
-        words = words.split(" ")
-        for word in words:
-            self.items = self.items.filter(name__icontains=word)
+        if words and words[0]:
+            words = words[0].split(" ")
+            for word in words:
+                self.items = self.items.filter(name__icontains=word)
 
     def network(self, network):
         return
@@ -328,9 +329,10 @@ class SearchUser(SearchABC):
         self.serializer = UserSearchSerializer
 
     def text(self, words):
-        words = words.split(" ")
-        for word in words:
-            self.items = self.items.filter(display_name__icontains=word)
+        if words and words[0]:
+            words = words.split(" ")
+            for word in words:
+                self.items = self.items.filter(display_name__icontains=word)
 
     def verificated(self, verificated):
         self.items = self.items.filter(is_verificated=verificated[0].lower() == "true")
