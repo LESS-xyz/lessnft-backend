@@ -1,10 +1,9 @@
 from datetime import timedelta
-from dateutil.relativedelta import relativedelta
-
 from typing import Optional
 
+from dateutil.relativedelta import relativedelta
 from django.db.models import Avg
-from django.db.models.functions import TruncMonth, TruncDay, TruncHour
+from django.db.models.functions import TruncDay, TruncHour, TruncMonth
 
 from src.activity.models import TokenHistory
 from src.utilities import get_periods

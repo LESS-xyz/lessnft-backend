@@ -1,13 +1,13 @@
 import logging
-from web3 import Web3
 
-from tronapi import Tron
-from tronapi.common.account import Account
-from rest_framework.exceptions import ValidationError
-from ethereum.utils import ecrecover_to_pub, sha3
-from eth_utils.hexadecimal import encode_hex, decode_hex, add_0x_prefix
 from eth_account.messages import defunct_hash_message
 from eth_hash.auto import keccak as keccak_256
+from eth_utils.hexadecimal import add_0x_prefix, decode_hex, encode_hex
+from ethereum.utils import ecrecover_to_pub, sha3
+from rest_framework.exceptions import ValidationError
+from tronapi import Tron
+from tronapi.common.account import Account
+from web3 import Web3
 
 
 def valid_metamask_message(address, message, signature):

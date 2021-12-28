@@ -1,8 +1,8 @@
-from src.store.services.ipfs import send_to_ipfs
+from django import forms
 from django.contrib import admin
 
 from src.networks.models import Network
-from django import forms
+from src.store.services.ipfs import send_to_ipfs
 
 
 class NetworkIconForm(forms.ModelForm):

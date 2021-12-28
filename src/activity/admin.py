@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import UserAction, TokenHistory, BidsHistory
+
+from .models import BidsHistory, TokenHistory, UserAction
 
 
 class UserActionAdmin(admin.ModelAdmin):
@@ -61,4 +62,3 @@ class BidsHistoryAdmin(admin.ModelAdmin):
 admin.site.register(UserAction, UserActionAdmin)
 admin.site.register(TokenHistory, TokenHistoryAdmin)
 admin.site.register(BidsHistory, BidsHistoryAdmin)
-

@@ -5,17 +5,9 @@ from typing import Optional
 import requests
 
 from src.accounts.models import AdvUser
+from src.settings import config
 from src.store.models import Collection, Status, Token
 from src.utilities import RedisClient
-
-import requests
-import logging
-from src.store.models import Collection, Token, Status
-from src.accounts.models import AdvUser
-from dataclasses import dataclass, fields
-from typing import Optional
-from src.utilities import RedisClient
-from src.settings import config
 
 logger = logging.getLogger("celery")
 

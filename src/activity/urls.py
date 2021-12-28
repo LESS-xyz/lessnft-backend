@@ -1,6 +1,6 @@
 from django.urls import path
-from src.activity import views
 
+from src.activity import views
 
 urlpatterns = [
     path("topusers/", views.GetBestDealView.as_view()),

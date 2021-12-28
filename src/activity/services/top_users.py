@@ -1,5 +1,7 @@
 import json
-from django.db.models import Sum, F, Count
+
+from django.db.models import Count, F, Sum
+
 from src.accounts.models import AdvUser
 from src.activity.models import TokenHistory, UserStat
 from src.networks.models import Network

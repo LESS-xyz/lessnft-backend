@@ -1,7 +1,8 @@
-from src.consts import MAX_AMOUNT_LEN
-from src.rates.api import calculate_amount
 from django.db import models
 from django.db.models.signals import post_save
+
+from src.consts import MAX_AMOUNT_LEN
+from src.rates.api import calculate_amount
 
 
 class UserAction(models.Model):

@@ -1,10 +1,11 @@
 import json
 
 import requests
-from src.settings import config
-from src.store.models import Token
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import get_connection
+
+from src.settings import config
+from src.store.models import Token
 
 
 def validate_bid(user, token_id, amount, quantity):

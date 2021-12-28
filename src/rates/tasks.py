@@ -1,14 +1,12 @@
 import logging
 import sys
-import requests
 import traceback
 
-from src.settings import config
-
-from src.rates.models import UsdRate
+import requests
 
 from celery import shared_task
-
+from src.rates.models import UsdRate
+from src.settings import config
 
 QUERY_FSYM = "usd"
 logger = logging.getLogger("celery")

@@ -2,7 +2,6 @@ from django.urls import path
 
 from src.networks.views import NetworksModelView
 
-
 urlpatterns = [
     path(
         "",

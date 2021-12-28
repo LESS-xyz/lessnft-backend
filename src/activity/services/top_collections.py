@@ -1,12 +1,13 @@
 import json
-from django.db.models import Sum, F, Exists, OuterRef, Count
+from datetime import date, timedelta
+
+from django.db.models import Count, Exists, F, OuterRef, Sum
+
+from src.activity.models import CollectionStat, TokenHistory
+from src.settings import config
 from src.store.models import Collection, Token
 from src.store.serializers import CollectionSlimSerializer
-from src.activity.models import TokenHistory, CollectionStat
-from datetime import date, timedelta
-from src.utilities import get_periods
-from src.utilities import RedisClient
-from src.settings import config
+from src.utilities import RedisClient, get_periods
 
 
 def update_collection_stat():

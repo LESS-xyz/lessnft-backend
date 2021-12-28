@@ -1,7 +1,8 @@
-from src.accounts.models import MasterUser
-from src.consts import MAX_AMOUNT_LEN
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
+from src.accounts.models import MasterUser
+from src.consts import MAX_AMOUNT_LEN
 
 
 class UsdRate(models.Model):

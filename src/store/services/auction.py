@@ -1,5 +1,5 @@
-from src.store.models import Bid
 from src.settings import config
+from src.store.models import Bid
 
 
 def end_auction(token):

@@ -1,15 +1,11 @@
+from allauth.account.models import EmailAddress
+from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from django import forms
 from django.contrib import admin
 from django.contrib.auth.models import Group
 from rest_framework.authtoken.models import TokenProxy
-from src.accounts.models import AdvUser, VerificationForm, MasterUser, DefaultAvatar
-from allauth.socialaccount.models import (
-    SocialToken,
-    SocialAccount,
-    SocialApp,
-)
-from allauth.account.models import EmailAddress
 
+from src.accounts.models import AdvUser, DefaultAvatar, MasterUser, VerificationForm
 from src.store.services.ipfs import send_to_ipfs
 
 

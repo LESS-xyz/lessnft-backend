@@ -2,18 +2,16 @@ import logging
 from datetime import datetime, timedelta
 
 from django.utils import timezone
+from tronapi import HttpProvider, Tron
+from web3.exceptions import TransactionNotFound
+
 from celery import shared_task
 from src.celery import app
-from src.store.services.collection_import import OpenSeaImport
-from src.store.models import Bid, Status, Token, TransactionTracker, Tags
-from src.networks.models import Types, Network
+from src.networks.models import Network, Types
+from src.settings import config
+from src.store.models import Bid, Status, Tags, Token, TransactionTracker
 from src.store.services.auction import end_auction
 from src.store.services.collection_import import OpenSeaImport
-from src.celery import app
-from web3.exceptions import TransactionNotFound
-from tronapi import HttpProvider, Tron
-from src.settings import config
-
 
 logger = logging.getLogger("celery")
 

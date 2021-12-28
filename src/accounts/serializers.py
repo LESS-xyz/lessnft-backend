@@ -1,12 +1,13 @@
 import logging
-from django.db.models import Q
 
-from src.accounts.models import AdvUser
-from src.accounts.utils import valid_metamask_message
-from src.store.models import Token, Status
+from django.db.models import Q
 from rest_auth.registration.serializers import SocialLoginSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
+
+from src.accounts.models import AdvUser
+from src.accounts.utils import valid_metamask_message
+from src.store.models import Status, Token
 
 
 class TokenSlimSerializer(serializers.ModelSerializer):

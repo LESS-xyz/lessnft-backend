@@ -1,9 +1,10 @@
 import json
 
+from rest_framework import serializers
+
 from src.accounts.serializers import BaseAdvUserSerializer, UserSlimSerializer
 from src.activity.models import BidsHistory, TokenHistory, UserStat
 from src.rates.api import get_decimals
-from rest_framework import serializers
 
 
 class TokenHistorySerializer(serializers.ModelSerializer):

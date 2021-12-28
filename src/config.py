@@ -1,7 +1,8 @@
 import os
-import yaml
 from dataclasses import dataclass
 from typing import List, Optional
+
+import yaml
 from marshmallow_dataclass import class_schema
 
 

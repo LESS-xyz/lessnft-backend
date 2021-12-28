@@ -1,6 +1,7 @@
+from rest_framework.viewsets import ModelViewSet
+
 from src.networks.models import Network
 from src.networks.serializers import NetworkSerializer
-from rest_framework.viewsets import ModelViewSet
 
 
 class NetworksModelView(ModelViewSet):

@@ -1,25 +1,20 @@
-from src.store.services.ipfs import send_to_ipfs
-from src.store.models import (
-    Bid,
-    Collection,
-    Ownership,
-    Tags,
-    Token,
-)
 from django import forms
 from django.contrib import admin
+from django.contrib.sites.models import Site
 from django.db import models
 from django.forms import CheckboxSelectMultiple, ModelForm
 from django.utils.safestring import mark_safe
+from django_admin_inline_paginator.admin import TabularInlinePaginated
 from django_celery_beat.models import (
     ClockedSchedule,
     CrontabSchedule,
-    SolarSchedule,
-    PeriodicTask,
     IntervalSchedule,
+    PeriodicTask,
+    SolarSchedule,
 )
-from django.contrib.sites.models import Site
-from django_admin_inline_paginator.admin import TabularInlinePaginated
+
+from src.store.models import Bid, Collection, Ownership, Tags, Token
+from src.store.services.ipfs import send_to_ipfs
 
 
 class TagForm(forms.ModelForm):

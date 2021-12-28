@@ -1,37 +1,32 @@
-import logging
 import random
 
-from src.utilities import PaginateMixin
-
-from src.store.api import get_email_connection
-from src.accounts.models import AdvUser, VerificationForm
-from src.accounts.serializers import (
-    PatchSerializer,
-    MetamaskLoginSerializer,
-    UserSerializer,
-    UserSlimSerializer,
-    SelfUserSerializer,
-    FollowingSerializer,
-    CoverSerializer,
-)
-from src.activity.models import UserAction
-from src.settings import config, ALLOWED_HOSTS
-from src.store.models import Collection, Token
-from src.store.serializers import UserCollectionSerializer
-from src.store.services.ipfs import send_to_ipfs
-
-from django.core.mail import send_mail
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.mail import send_mail
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-
 from rest_auth.registration.views import SocialLoginView
-
-from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from src.accounts.models import AdvUser, VerificationForm
+from src.accounts.serializers import (
+    CoverSerializer,
+    FollowingSerializer,
+    MetamaskLoginSerializer,
+    PatchSerializer,
+    SelfUserSerializer,
+    UserSerializer,
+    UserSlimSerializer,
+)
+from src.activity.models import UserAction
+from src.settings import ALLOWED_HOSTS, config
+from src.store.api import get_email_connection
+from src.store.models import Collection, Token
+from src.store.serializers import UserCollectionSerializer
+from src.store.services.ipfs import send_to_ipfs
+from src.utilities import PaginateMixin
 
 not_found_response = "user not found"
 

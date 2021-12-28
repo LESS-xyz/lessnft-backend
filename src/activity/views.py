@@ -1,24 +1,22 @@
-from src.activity.serializers import UserStatSerializer, ActivitySerializer
-from src.activity.services.top_users import get_top_users
-from src.activity.services.top_collections import get_top_collections
-from src.settings import config
-from src.store.models import Token, Tags
-from src.networks.models import Network
-from src.utilities import PaginateMixin
 from django.db.models import Q
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import status
-from rest_framework.permissions import (
-    IsAuthenticated,
-    IsAuthenticatedOrReadOnly,
-)
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from src.activity.serializers import ActivitySerializer, UserStatSerializer
+from src.activity.services.price_history import PriceHistory
+from src.activity.services.top_collections import get_top_collections
+from src.activity.services.top_users import get_top_users
+from src.networks.models import Network
+from src.settings import config
+from src.store.models import Tags, Token
+from src.utilities import PaginateMixin
+
 from .models import BidsHistory, TokenHistory, UserAction
 from .utils import quick_sort
-from src.activity.services.price_history import PriceHistory
 
 
 class ActivityView(APIView, PaginateMixin):
