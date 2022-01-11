@@ -80,8 +80,8 @@ class PaginateMixin:
             logging.error(f"Pagination value error {e}")
             self.page = 1
         try:
-            self.items_per_page = int(
-                abs(request.query_params.get("items_per_page", config.ITEMS_PER_PAGE))
+            self.items_per_page = abs(
+                int(request.query_params.get("items_per_page", config.ITEMS_PER_PAGE))
             ) or int(config.ITEMS_PER_PAGE)
         except Exception as e:
             logging.error(f"Pagination value error {e}")

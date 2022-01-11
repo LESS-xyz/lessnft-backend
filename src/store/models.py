@@ -457,7 +457,7 @@ class Token(models.Model):
     @rankings.setter
     def rankings(self, value):
         if value:
-            {
+            self._rankings = {
                 rank.pop("trait_type"): {k: to_int(v) for k, v in rank.items()}
                 for rank in value
             }
@@ -535,12 +535,15 @@ class Token(models.Model):
             and self.start_auction is not None
             and self.end_auction is not None
         ):
-            return bool(
-                self.selling
-                and not self.price
-                and self.start_auction < timezone.now()
-                and self.end_auction > timezone.now()
-            )
+            try:
+                return bool(
+                    self.selling
+                    and not self.price
+                    and self.start_auction < timezone.now()
+                    and self.end_auction > timezone.now()
+                )
+            except Exception as e:
+                logging.error(e)
         return False
 
     def __str__(self):
@@ -628,7 +631,7 @@ class Token(models.Model):
             "rankings",
         ]
         for method in methods:
-            data = [d for d in details if d.pop("display_type", None) == method]
+            data = [d for d in details if d.get("display_type") == method]
             if data:
                 setattr(self, method, data)
 
@@ -639,8 +642,6 @@ class Token(models.Model):
         self.format = request.data.get("format")
         self.description = request.data.get("description")
         self.creator_royalty = request.data.get("creator_royalty")
-        self.start_auction = request.data.get("start_auction")
-        self.end_auction = request.data.get("end_auction")
         self.creator = request.user
         collection = request.data.get("collection")
         self.collection = Collection.objects.committed().get_by_short_url(collection)

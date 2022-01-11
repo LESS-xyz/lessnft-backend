@@ -22,6 +22,7 @@ from src.store.models import (
     TransactionTracker,
     ViewsTracker,
 )
+from src.utilities import to_int
 
 
 class TokenPatchSerializer(serializers.ModelSerializer):
@@ -192,6 +193,7 @@ class CollectionSlimSerializer(serializers.ModelSerializer):
             "name",
             "address",
             "display_theme",
+            "is_default",
             "is_nsfw",
         )
 
@@ -477,7 +479,7 @@ class CollectionSerializer(CollectionSlimSerializer):
     def get_properties(self, obj):
         props = (
             obj.token_set.committed()
-            .filter(_details__isnull=False)
+            .filter(_properties__isnull=False)
             .values_list("_properties", flat=True)
         )
 
@@ -494,19 +496,23 @@ class CollectionSerializer(CollectionSlimSerializer):
     def get_rankings(self, obj):
         props = (
             obj.token_set.committed()
-            .filter(_details__isnull=False)
+            .filter(_rankings__isnull=False)
             .values_list("_rankings", flat=True)
         )
 
         items = list()
+        data = dict()
 
         for prop in props:
-            for value in prop.values():
-                items.append(value.get("value"))
+            for key, value in prop.items():
+                if not data.get(key):
+                    data[key] = list()
+                data[key].append(to_int(value.get("value")))
 
-        items = [int(item) for item in items if str(item).isdigit()]
+        for key, value in data.items():
+            data[key] = {"min": min(value), "max": max(value)}
 
-        return {"min": min(items), "max": max(items)}
+        return data
 
     def get_stats(self, obj):
         return

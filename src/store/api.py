@@ -16,7 +16,7 @@ def validate_bid(user, token_id, amount, quantity):
     amount = amount * token.currency.get_decimals
     if not token.is_auc_selling:
         return "token is not set on action"
-    if token.currency_minimal_bid > amount:
+    if token.standart=="ERC721" and token.currency_minimal_bid > amount:
         return "Your bid is too low"
     if (
         token.standart == "ERC721"

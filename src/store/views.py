@@ -1,6 +1,6 @@
 import logging
 import random
-from datetime import timedelta
+from datetime import timedelta, datetime
 from decimal import Decimal
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -452,7 +452,7 @@ class GetView(APIView):
             request_data.pop("price", None)
             price = Decimal(str(price))
         elif (
-            currency != f"w{token.collection.network.native_symbol}".lower()
+            currency != f"w{token.collection.network.native_symbol}".lower() and selling
         ):  # auction sale
             return Response(
                 {"error": "Invalid currency"}, status=status.HTTP_400_BAD_REQUEST
@@ -465,20 +465,23 @@ class GetView(APIView):
             price = minimal_bid
         request_data["currency_minimal_bid"] = minimal_bid
 
-        currency = UsdRate.objects.filter(
-            name=currency, network=token.collection.network
-        ).first()
-        if not currency:
-            return Response(
-                {"error": "Currency not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+        if currency:
+            currency = UsdRate.objects.filter(
+                symbol=currency, network=token.collection.network
+            ).first()
+            if not currency:
+                return Response(
+                    {"error": "Currency not found"}, status=status.HTTP_404_NOT_FOUND
+                )
 
         if token.standart == "ERC721":
             old_price = token.currency_price
             amount = 1
 
-            request_data["start_auction"] = start_auction
-            request_data["end_auction"] = end_auction
+            if start_auction:
+                request_data["start_auction"] = datetime.fromtimestamp(int(start_auction))
+            if end_auction:
+                request_data["end_auction"] = datetime.fromtimestamp(int(end_auction))
             serializer = TokenPatchSerializer(token, data=request_data, partial=True)
 
             logging.info(f"PatchSerializer valid - {serializer.is_valid()}")
@@ -780,7 +783,7 @@ class MakeBid(APIView):
 
         network = token.collection.network
         currency = UsdRate.objects.filter(
-            name=f"w{network.native_symbol}".lower(),
+            symbol=f"w{network.native_symbol}".lower(),
             network=network,
         ).first()
         if not currency:
