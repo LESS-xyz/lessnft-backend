@@ -32,6 +32,7 @@ from src.store.views import (
     get_random_token,
     get_tags,
     get_total_count,
+    trending_collections,
 )
 
 urlpatterns = [
@@ -64,6 +65,7 @@ urlpatterns = [
     path("remove-reject/", RemoveRejectView.as_view()),
     path("collection-import/", CollectionImportView.as_view()),
     path("get_total_count/", get_total_count),
+    path("trending_collections/", trending_collections),
     path("<int:id>/", GetView.as_view()),
     path("<int:token_id>/burn/", TokenBurnView.as_view()),
 ]

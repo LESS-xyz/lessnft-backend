@@ -1,11 +1,11 @@
 import logging
 import random
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, OuterRef, Q, Subquery, Sum
 from django.utils import timezone
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
@@ -45,6 +45,7 @@ from src.store.serializers import (
     TokenFullSerializer,
     TokenPatchSerializer,
     TokenSerializer,
+    TrendingCollectionSerializer,
 )
 from src.store.services.collection_import import OpenSeaImport
 from src.store.services.ipfs import create_ipfs, send_to_ipfs
@@ -479,7 +480,9 @@ class GetView(APIView):
             amount = 1
 
             if start_auction:
-                request_data["start_auction"] = datetime.fromtimestamp(int(start_auction))
+                request_data["start_auction"] = datetime.fromtimestamp(
+                    int(start_auction)
+                )
             if end_auction:
                 request_data["end_auction"] = datetime.fromtimestamp(int(end_auction))
             serializer = TokenPatchSerializer(token, data=request_data, partial=True)
@@ -1440,6 +1443,48 @@ def get_total_count(request):
         "users_active_daily": users_active_daily,
     }
     return Response(response_data, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    method="get",
+    manual_parameters=[
+        openapi.Parameter("tag", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+        openapi.Parameter("network", openapi.IN_QUERY, type=openapi.TYPE_STRING),
+    ],
+    operation_description="Trending collections",
+    responses={200: TrendingCollectionSerializer(many=True)},
+)
+@api_view(http_method_names=["GET"])
+def trending_collections(request):
+    tag = request.query_params.get("tag")
+    network = request.query_params.get("network")
+
+    tracker_time = timezone.now() - timedelta(days=config.TRENDING_TRACKER_TIME)
+
+    tracker = (
+        ViewsTracker.objects.filter(created_at__gte=tracker_time)
+        .filter(token=OuterRef("id"))
+        .values("token")
+        .annotate(views_=Count("id"))
+    )
+
+    tokens = (
+        Token.objects.filter(collection=OuterRef("id"))
+        .annotate(views_=Subquery(tracker.values("views_")[:1]))
+        .values("collection")
+        .annotate(views=Sum("views_"))
+    )
+    collections = (
+        Collection.objects.network(network)
+        .tag(tag)
+        .filter(is_default=False)
+        .annotate(views=Subquery(tokens.values("views")[:1]))
+    ).order_by("-views")
+    collections = [col for col in collections if col.views][:12]
+    return Response(
+        TrendingCollectionSerializer(collections, many=True).data,
+        status=status.HTTP_200_OK,
+    )
 
 
 class CollectionImportView(APIView):

@@ -95,6 +95,7 @@ class Config:
     OPENSEA_API: str
 
     RATES_CHECKER_TIMEOUT: int
+    TRENDING_TRACKER_TIME: int
 
     TITLE: str
     DESCRIPTION: str

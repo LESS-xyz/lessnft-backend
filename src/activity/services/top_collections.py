@@ -1,11 +1,11 @@
 import json
 from datetime import date, timedelta
 
-from django.db.models import Count, Exists, F, OuterRef, Sum
+from django.db.models import Count, F, Sum
 
 from src.activity.models import CollectionStat, TokenHistory
 from src.settings import config
-from src.store.models import Collection, Token
+from src.store.models import Collection
 from src.store.serializers import CollectionSlimSerializer
 from src.utilities import RedisClient, get_periods
 
@@ -77,13 +77,7 @@ def get_top_collections(network, period, order_by, tag=None):
     if data:
         return json.loads(data)
 
-    collections = Collection.objects.committed().network(network)
-    if tag is not None:
-        collections = collections.filter(
-            Exists(
-                Token.objects.committed().filter(tag=tag, collection__id=OuterRef("id"))
-            )
-        )
+    collections = Collection.objects.committed().network(network).tag(tag)
     collections = collections.values_list("id", flat=True)
     main_collections = list(_get_collections_stat(collections, main_start, main_end))
 

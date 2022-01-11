@@ -201,6 +201,19 @@ class CollectionSlimSerializer(serializers.ModelSerializer):
         return obj.url
 
 
+class TrendingCollectionSerializer(CollectionSlimSerializer):
+    creator = CreatorSerializer()
+    views = serializers.IntegerField()
+
+    class Meta(CollectionSlimSerializer.Meta):
+        fields = CollectionSlimSerializer.Meta.fields + (
+            "description",
+            "short_url",
+            "creator",
+            "views",
+        )
+
+
 class TokenSlimSerializer(serializers.ModelSerializer):
     class Meta:
         model = Token
@@ -500,7 +513,6 @@ class CollectionSerializer(CollectionSlimSerializer):
             .values_list("_rankings", flat=True)
         )
 
-        items = list()
         data = dict()
 
         for prop in props:

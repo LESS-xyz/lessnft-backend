@@ -86,6 +86,18 @@ class CollectionQuerySet(models.QuerySet):
             return self
         return self.filter(network__name__icontains=network)
 
+    def tag(self, tag):
+        if not tag:
+            return self
+        return self.filter(
+            Exists(
+                Token.objects.committed().filter(
+                    tag=tag,
+                    collection__id=OuterRef("id"),
+                )
+            )
+        )
+
 
 class CollectionManager(models.Manager):
     def get_queryset(self):
@@ -109,6 +121,10 @@ class CollectionManager(models.Manager):
     def network(self, network):
         """Return collections filtered by network name"""
         return self.get_queryset().network(network)
+
+    def tag(self, tag):
+        """Return collections filtered by exists token with tag"""
+        return self.get_queryset().tag(tag)
 
 
 class Collection(models.Model):
@@ -1162,3 +1178,4 @@ class TransactionTracker(models.Model):
 class ViewsTracker(models.Model):
     user_id = models.IntegerField(null=True)
     token = models.ForeignKey("Token", on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
