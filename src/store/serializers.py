@@ -15,6 +15,7 @@ from src.settings import config
 from src.store.models import (
     Bid,
     Collection,
+    NotableDrop,
     Ownership,
     Status,
     Tags,
@@ -656,3 +657,18 @@ class CollectionMetadataSerializer(serializers.ModelSerializer):
     def get_fee_recipient(self, obj):
         fee_recipient = obj.creator.username
         return fee_recipient
+
+
+class NotableDropSerializer(serializers.ModelSerializer):
+    collection_id = serializers.IntegerField(read_only=True, source="collection.url")
+    name = serializers.CharField(read_only=True, source="collection.name")
+
+    class Meta:
+        model = NotableDrop
+        read_only_fields = (
+            "image",
+            "description",
+            "collection_id",
+            "name",
+        )
+        fields = read_only_fields

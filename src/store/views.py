@@ -27,6 +27,7 @@ from src.store.api import check_captcha, get_email_connection, validate_bid
 from src.store.models import (
     Bid,
     Collection,
+    NotableDrop,
     Ownership,
     Status,
     Tags,
@@ -41,6 +42,7 @@ from src.store.serializers import (
     CollectionSerializer,
     CollectionSlimSerializer,
     HotCollectionSerializer,
+    NotableDropSerializer,
     TagSerializer,
     TokenFullSerializer,
     TokenPatchSerializer,
@@ -1529,3 +1531,16 @@ class CollectionImportView(APIView):
         import_opensea_collection.delay(collection_address, network_name, collection)
 
         return Response("success", status=status.HTTP_200_OK)
+
+
+class NotableDropView(APIView):
+    @swagger_auto_schema(
+        operation_description="Get notable drops",
+        responses={200: NotableDropSerializer, 404: "no drops found"},
+    )
+    def get(self, request):
+        drops = NotableDrop.objects.all()
+        if not drops:
+            return Response("no drops found", status=status.HTTP_404_NOT_FOUND)
+        response_data = NotableDropSerializer(drops, many=True).data
+        return Response(response_data, status=status.HTTP_200_OK)

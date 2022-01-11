@@ -15,6 +15,7 @@ from src.store.views import (
     GetRelatedView,
     GetView,
     MakeBid,
+    NotableDropView,
     RemoveRejectView,
     ReportView,
     SearchView,
@@ -68,4 +69,5 @@ urlpatterns = [
     path("trending_collections/", trending_collections),
     path("<int:id>/", GetView.as_view()),
     path("<int:token_id>/burn/", TokenBurnView.as_view()),
+    path("drops/", NotableDropView.as_view()),
 ]

@@ -348,6 +348,15 @@ def collection_created_dispatcher(sender, instance, created, **kwargs):
 post_save.connect(collection_created_dispatcher, sender=Collection)
 
 
+class NotableDrop(models.Model):
+    image = models.CharField(max_length=200, null=True, default=None, blank=True)
+    description = models.CharField(max_length=500, null=True, default=None, blank=True)
+    collection = models.OneToOneField(
+        "store.Collection",
+        on_delete=models.CASCADE,
+    )
+
+
 def validate_nonzero(value):
     if value < 0:
         raise ValidationError(

@@ -13,8 +13,9 @@ from django_celery_beat.models import (
     SolarSchedule,
 )
 
-from src.store.models import Bid, Collection, Ownership, Tags, Token
+from src.store.models import Bid, Collection, NotableDrop, Ownership, Tags, Token
 from src.store.services.ipfs import send_to_ipfs
+from src.utilities import get_media_from_ipfs
 
 
 class TagForm(forms.ModelForm):
@@ -186,11 +187,54 @@ class OwnershipAdmin(admin.ModelAdmin):
         return False
 
 
+class NotableDropForm(forms.ModelForm):
+    image_file = forms.ImageField(required=False)
+
+    def save(self, commit=True):
+        image_file = self.cleaned_data.get("image_file", None)
+        if image_file:
+            image = send_to_ipfs(image_file)
+            self.instance.image = get_media_from_ipfs(image)
+        return super(NotableDropForm, self).save(commit=commit)
+
+    def clean(self):
+        data = self.cleaned_data
+        drops_count = NotableDrop.objects.count()
+        current_drop = NotableDrop.objects.filter(collection=data["collection"]).first()
+        if drops_count >= 3 and not self.instance.id:
+            raise forms.ValidationError("There can be only three notable drops at once")
+        if current_drop and (
+            not self.instance.id or current_drop.id != self.instance.id
+        ):
+            raise forms.ValidationError(
+                "You can not assert two notable drops for one collection"
+            )
+        return self.cleaned_data
+
+    class Meta:
+        model = NotableDrop
+        fields = "__all__"
+
+
+class NotableDropAdmin(admin.ModelAdmin):
+    form = NotableDropForm
+    list_display = ("collection",)
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": ("image_file", "image", "description", "collection"),
+            },
+        ),
+    )
+
+
 admin.site.register(Tags, TagAdmin)
 admin.site.register(Ownership, OwnershipAdmin)
 admin.site.register(Token, TokenAdmin)
 admin.site.register(Bid, BidAdmin)
 admin.site.register(Collection, CollectionAdmin)
+admin.site.register(NotableDrop, NotableDropAdmin)
 
 admin.site.unregister(SolarSchedule)
 admin.site.unregister(ClockedSchedule)
