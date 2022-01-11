@@ -82,14 +82,15 @@ class SearchToken(SearchABC):
                     rank_filters[f"_rankings__{rank}__value__gte"] = min_data
                 if max_data:
                     rank_filters[f"_rankings__{rank}__value__lte"] = max_data
-                self.tokens = self.tokens.filter(**rank_filters)
+                self.items = self.items.filter(**rank_filters)
 
     def properties(self, properties):
         if properties and properties[0]:
-            props = json.parse(properties[0])
+            props = json.loads(properties[0])
             for prop, value in props.items():
-                props_filter = {f"_properties__{prop}__value__in": value}
-                self.tokens = self.tokens.filter(**props_filter)
+                if value:
+                    props_filter = {f"_properties__{prop}__value__in": value}
+                    self.items = self.items.filter(**props_filter)
 
     def is_verified(self, is_verified):
         if is_verified is not None:
@@ -134,7 +135,12 @@ class SearchToken(SearchABC):
     def collections(self, collections):
         if collections and collections[0]:
             collections = collections[0].split(",")
-            self.items = self.items.filter(collections__name__in=collections)
+            collection_ids = [col for col in collections if str(col).isdigit()]
+            collection_short = [col for col in collections if col not in collection_ids]
+            self.items = self.items.filter(
+                Q(collection__id__in=collection_ids)|
+                Q(collection__short_url__in=collection_short)
+            )
 
     def owner(self, owner):
         if owner:
