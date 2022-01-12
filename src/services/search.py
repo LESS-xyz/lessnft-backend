@@ -73,15 +73,15 @@ class SearchToken(SearchABC):
 
     def rankings(self, rankings):
         if rankings and rankings[0]:
-            rankings = json.parse(rankings[0])
+            rankings = json.loads(rankings[0])
             for rank, value in rankings.items():
                 min_data = value.get("min")
                 max_data = value.get("max")
                 rank_filters = {}
                 if min_data:
-                    rank_filters[f"_rankings__{rank}__value__gte"] = min_data
+                    rank_filters[f"_rankings__{rank}__value__gte"] = float(min_data)
                 if max_data:
-                    rank_filters[f"_rankings__{rank}__value__lte"] = max_data
+                    rank_filters[f"_rankings__{rank}__value__lte"] = float(max_data)
                 self.items = self.items.filter(**rank_filters)
 
     def properties(self, properties):

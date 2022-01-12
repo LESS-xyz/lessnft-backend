@@ -92,7 +92,7 @@ class CollectionQuerySet(models.QuerySet):
         return self.filter(
             Exists(
                 Token.objects.committed().filter(
-                    tag=tag,
+                    tags__name=tag,
                     collection__id=OuterRef("id"),
                 )
             )
@@ -731,9 +731,9 @@ class Token(models.Model):
 
         tag, _ = Tags.objects.get_or_create(name="New")
         self.tags.add(tag)
-        nsfw = request.data.get("is_nsfw", False)
+        is_nsfw = request.data.get("is_nsfw", "false").lower() == "true"
 
-        if nsfw or self.collection.is_nsfw:
+        if is_nsfw or self.collection.is_nsfw:
             tag, _ = Tags.objects.get_or_create(name="NSFW")
             self.tags.add(tag)
 
