@@ -223,7 +223,13 @@ class NotableDropAdmin(admin.ModelAdmin):
         (
             None,
             {
-                "fields": ("image_file", "image", "description", "collection"),
+                "fields": (
+                    "image_file",
+                    "image",
+                    "description",
+                    "collection",
+                    "background_color",
+                ),
             },
         ),
     )

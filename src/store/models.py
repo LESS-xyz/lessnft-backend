@@ -351,6 +351,9 @@ post_save.connect(collection_created_dispatcher, sender=Collection)
 class NotableDrop(models.Model):
     image = models.CharField(max_length=200, null=True, default=None, blank=True)
     description = models.CharField(max_length=500, null=True, default=None, blank=True)
+    background_color = models.CharField(
+        max_length=7, null=True, default=None, blank=True, help_text="Hex color code"
+    )
     collection = models.OneToOneField(
         "store.Collection",
         on_delete=models.CASCADE,

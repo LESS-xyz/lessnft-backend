@@ -670,5 +670,6 @@ class NotableDropSerializer(serializers.ModelSerializer):
             "description",
             "collection_id",
             "name",
+            "background_color",
         )
         fields = read_only_fields
