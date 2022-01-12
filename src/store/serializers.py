@@ -2,7 +2,7 @@ import logging
 from collections import Counter
 from decimal import Decimal
 
-from django.db.models import Count, Min, Sum
+from django.db.models import Count, Sum
 from rest_framework import serializers
 
 from src.accounts.serializers import CreatorSerializer, UserOwnerSerializer
@@ -244,6 +244,7 @@ class TokenSerializer(serializers.ModelSerializer):
     has_digital_key = serializers.SerializerMethodField()
     start_auction = serializers.SerializerMethodField()
     end_auction = serializers.SerializerMethodField()
+    multiple_currency = serializers.SerializerMethodField()
 
     class Meta:
         model = Token
@@ -289,7 +290,18 @@ class TokenSerializer(serializers.ModelSerializer):
             "network",
             "sellers",
             "external_link",
+            "multiple_currency",
         )
+
+    def get_multiple_currency(self, obj):
+        if obj.standart == "ERC1155":
+            return (
+                obj.ownership_set.filter(selling=True).aggregate(
+                    Count("currency", distinct=True),
+                )
+                > 1
+            )
+        return False
 
     def get_start_auction(self, obj):
         if obj.start_auction:
@@ -351,23 +363,10 @@ class TokenSerializer(serializers.ModelSerializer):
         return BidSerializer(obj.bid_set.filter(state=Status.COMMITTED), many=True).data
 
     def get_USD_price(self, obj):
-        price = self.get_price(obj)
-        decimals = obj.currency.get_decimals if obj.currency else None
-        if price:
-            return calculate_amount(price * decimals, obj.currency.symbol)[0]
-        if not self.get_highest_bid_USD(obj) and self.get_minimal_bid(obj):
-            return calculate_amount(
-                self.get_minimal_bid(obj) * decimals, obj.currency.symbol
-            )[0]
+        return obj.usd_price
 
     def get_price(self, obj):
-        if obj.standart == "ERC721":
-            return obj.currency_price
-        currency = obj.ownership_set.filter(
-            selling=True,
-            currency_price__isnull=False,
-        ).aggregate(Min("currency_price"))
-        return currency.get("currency_price__min")
+        return obj.currency_price
 
     def get_available(self, obj):
         if obj.standart == "ERC721":

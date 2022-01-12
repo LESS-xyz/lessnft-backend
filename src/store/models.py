@@ -1012,27 +1012,27 @@ class Token(models.Model):
         return owners_auction_info
 
 
-def token_save_dispatcher(sender, instance, created, **kwargs):
-    if instance.standart == "ERC1155":
-        if not Ownership.objects.filter(token=instance).filter(selling=True):
-            instance.selling = False
-            instance.currency_price = None
-        else:
-            instance.selling = True
-            try:
-                minimal_price = (
-                    Ownership.objects.filter(token=instance)
-                    .filter(selling=True)
-                    .exclude(price=None)
-                    .order_by("price")[0]
-                    .price
-                )
-            except Exception:
-                minimal_price = None
-            instance.currency_price = minimal_price
-        post_save.disconnect(token_save_dispatcher, sender=sender)
-        instance.save(update_fields=["selling", "currency_price"])
-        post_save.connect(token_save_dispatcher, sender=sender)
+def ownership_save_dispatcher(sender, instance, **kwargs):
+    """
+    Recalculate 1155 token fields: selling, currency, currency_price.
+    """
+    token = instance.token
+    if not token.ownership_set.filter(selling=True).exists():
+        token.selling = False
+        token.currency_price = None
+        token.currency = None
+    else:
+        token.selling = True
+        ownerships = token.ownership_set.filter(
+            selling=True,
+            currency_price__isnull=False,
+        )
+        ownerships = list(ownerships)
+        ownerships.sort(key=lambda owner: owner.usd_price)
+        if ownerships:
+            token.currency_price = ownerships[0].currency_price
+            token.currency = ownerships[0].currency
+    token.save(update_fields=["selling", "currency_price", "currency"])
 
 
 def default_token_validators(sender, instance, **kwargs):
@@ -1045,7 +1045,6 @@ def default_token_validators(sender, instance, **kwargs):
         raise ValidationError("Name is occupied")
 
 
-post_save.connect(token_save_dispatcher, sender=Token)
 pre_save.connect(default_token_validators, sender=Token)
 
 
@@ -1100,6 +1099,9 @@ class Ownership(models.Model):
             return calculate_amount(self.price, self.token.currency.symbol)[0]
         if self.minimal_bid:
             return calculate_amount(self.minimal_bid, self.token.currency.symbol)[0]
+
+
+post_save.connect(ownership_save_dispatcher, sender=Ownership)
 
 
 class Tags(models.Model):
