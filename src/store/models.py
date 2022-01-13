@@ -709,32 +709,12 @@ class Token(models.Model):
             )
         self.currency = currency
 
-        if self.standart == "ERC721":
-            self.total_supply = 1
-            self.owner = self.creator
-            self.selling = selling
-            self.currency_price = price
-            self.currency_minimal_bid = minimal_bid
-        else:
-            self.full_clean()
-            self.save()
-            self.owners.add(request.user)
-            self.save()
-            ownership = Ownership.objects.get(owner=self.creator, token=self)
-            ownership.quantity = request.data.get("total_supply")
-            ownership.selling = selling
-            ownership.currency_price = price
-            ownership.currency = currency
-            ownership.currency_minimal_bid = minimal_bid
-            ownership.full_clean()
-            ownership.save()
-        self.full_clean()
-
-        self.save()
-
         details = request.data.get("details")
         if details:
             self._parse_and_save_details(details)
+
+        self.full_clean()
+        self.save()
 
         tag, _ = Tags.objects.get_or_create(name="New")
         self.tags.add(tag)
@@ -744,7 +724,24 @@ class Token(models.Model):
             tag, _ = Tags.objects.get_or_create(name="NSFW")
             self.tags.add(tag)
 
-        self.save()
+        if self.standart == "ERC721":
+            self.total_supply = 1
+            self.owner = self.creator
+            self.selling = selling
+            self.currency_price = price
+            self.currency_minimal_bid = minimal_bid
+            self.full_clean()
+            self.save()
+        else:
+            self.owners.add(request.user)
+            ownership = Ownership.objects.get(owner=self.creator, token=self)
+            ownership.quantity = request.data.get("total_supply")
+            ownership.selling = selling
+            ownership.currency_price = price
+            ownership.currency = currency
+            ownership.currency_minimal_bid = minimal_bid
+            ownership.full_clean()
+            ownership.save()
 
     def get_highest_bid(self):
         bids = self.bid_set.committed().values_list("amount", flat=True)

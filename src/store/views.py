@@ -244,11 +244,14 @@ class CreateView(APIView):
             ),
             ipfs,
         ]
-        amount = 1
+        amount = request_data.get("total_supply")
         if standart == "ERC1155":
+            if not amount:
+                return Response(
+                    {"amount": "supply not specified "}, status=status.HTTP_400_BAD_REQUEST
+                )
             type_.append("uint256")
             msg.append(int(amount))
-
         signature = sign_message(type_, msg)
 
         initial_tx = token_collection.create_token(creator, ipfs, signature, amount)
