@@ -334,11 +334,16 @@ class CreateCollectionView(APIView):
         collection = Collection()
 
         media = request.FILES.get("avatar")
+        cover = request.FILES.get("cover")
         if media:
             ipfs = send_to_ipfs(media)
         else:
             ipfs = None
-        collection.save_in_db(request, ipfs)
+        if cover:
+            cover = send_to_ipfs(cover)
+        else:
+            cover = None
+        collection.save_in_db(request, ipfs, cover)
         response_data = {
             "initial_tx": initial_tx,
             "collection": CollectionSlimSerializer(collection).data,

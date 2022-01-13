@@ -293,12 +293,12 @@ class TokenSerializer(serializers.ModelSerializer):
             "multiple_currency",
         )
 
-    def get_multiple_currency(self, obj):
+    def get_multiple_currency(self, obj) -> bool:
         if obj.standart == "ERC1155":
             return (
                 obj.ownership_set.filter(selling=True).aggregate(
-                    Count("currency", distinct=True),
-                )
+                    count=Count("currency", distinct=True),
+                ).get('count')
                 > 1
             )
         return False
@@ -527,7 +527,24 @@ class CollectionSerializer(CollectionSlimSerializer):
         return data
 
     def get_stats(self, obj):
-        return
+        props = (
+            obj.token_set.committed()
+            .filter(_stats__isnull=False)
+            .values_list("_stats", flat=True)
+        )
+
+        data = dict()
+
+        for prop in props:
+            for key, value in prop.items():
+                if not data.get(key):
+                    data[key] = list()
+                data[key].append(to_int(value.get("value")))
+
+        for key, value in data.items():
+            data[key] = {"min": min(value), "max": max(value)}
+
+        return data
 
 
 class TokenFullSerializer(TokenSerializer):

@@ -204,7 +204,7 @@ class Collection(models.Model):
     def __str__(self):
         return self.name
 
-    def save_in_db(self, request, avatar):
+    def save_in_db(self, request, avatar, cover):
         self.name = request.data.get("name")
         self.symbol = request.data.get("symbol")
         self.address = request.data.get("address")
@@ -212,6 +212,7 @@ class Collection(models.Model):
         network = Network.objects.filter(name__icontains=network_name).first()
         self.network = network
         self.avatar_ipfs = avatar
+        self.cover_ipfs = cover
         self.standart = request.data.get("standart")
         self.description = request.data.get("description")
         short_url = request.data.get("short_url")
@@ -497,7 +498,10 @@ class Token(models.Model):
     @stats.setter
     def stats(self, value):
         if value:
-            self._stats = {item.pop("trait_type"): item for item in value}
+            self._stats = {
+                stat.pop("trait_type"): {k: to_int(v) for k, v in stat.items()}
+                for stat in value
+            }
 
     @property
     def media(self):
@@ -508,7 +512,7 @@ class Token(models.Model):
 
     @property
     def animation(self):
-        if not self.animation_file:
+        if not self.animation_file and self.format != 'image':
             try:
                 self.animation_file = get_ipfs_by_hash(self.ipfs).get("animation_url")
                 self.save(update_fields=["animation_file"])
