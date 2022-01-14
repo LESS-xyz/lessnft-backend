@@ -8,5 +8,14 @@ class UsdRateAdmin(admin.ModelAdmin):
     list_display = ("name", "symbol", "rate", "coin_node")
     list_filter = ("coin_node", "network")
 
+    def has_delete_permission(self, request, obj=None):
+        return None
+
+    def has_add_permission(self, request):
+        return None
+
+    def has_change_permission(self, request, obj=None):
+        return None
+
 
 admin.site.register(UsdRate, UsdRateAdmin)
