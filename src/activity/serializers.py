@@ -10,6 +10,7 @@ from src.rates.api import get_decimals
 class TokenHistorySerializer(serializers.ModelSerializer):
     new_owner = UserSlimSerializer()
     old_owner = UserSlimSerializer()
+    currency = serializers.CharField(source="token.currency")
 
     class Meta:
         model = TokenHistory
@@ -22,6 +23,7 @@ class TokenHistorySerializer(serializers.ModelSerializer):
             "price",
             "USD_price",
             "amount",
+            "currency",
         )
 
 

@@ -600,6 +600,8 @@ class TokenFullSerializer(TokenSerializer):
 
     def get_USD_service_fee(self, obj):
         price = self.get_price(obj)
+        if not obj.currency:
+            return None
         if price:
             decimals = obj.currency.get_decimals if obj.currency else None
             value = price / 100 * Decimal(obj.currency.service_fee) * decimals
@@ -676,7 +678,7 @@ class CollectionMetadataSerializer(serializers.ModelSerializer):
 
 
 class NotableDropSerializer(serializers.ModelSerializer):
-    collection_id = serializers.IntegerField(read_only=True, source="collection.url")
+    collection_id = serializers.CharField(read_only=True, source="collection.url")
     name = serializers.CharField(read_only=True, source="collection.name")
 
     class Meta:
