@@ -1,6 +1,7 @@
 import json
 import logging
 import operator
+from datetime import datetime
 from abc import ABC, abstractmethod
 from decimal import Decimal
 
@@ -262,24 +263,29 @@ class SearchToken(SearchABC):
 
     def order_by_sale(self, token):
         history = token.tokenhistory_set.filter(method="Buy").order_by("date").last()
-        if history:
+        if history and history.date:
             return history.date
+        return datetime.fromtimestamp(0)
 
     def order_by_transfer(self, token):
         history = (
             token.tokenhistory_set.filter(method="Transfer").order_by("date").last()
         )
-        if history:
+        if history and history.date:
             return history.date
+        return datetime.fromtimestamp(0)
 
     def order_by_auction_end(self, token):
+        default_value = datetime.fromtimestamp(0)
         if token.is_timed_auc_selling:
             return token.end_auction
+        return default_value
 
     def order_by_last_sale(self, token):
         history = token.tokenhistory_set.filter(method="Buy").order_by("date").last()
-        if history:
+        if history and history.price:
             return history.price
+        return 0
 
     def order_by(self, order_by):
         tokens = list(self.items)
