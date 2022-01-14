@@ -40,6 +40,7 @@ class Status(models.TextChoices):
     COMMITTED = "Committed"
     BURNED = "Burned"
     EXPIRED = "Expired"
+    DELETED = "Deleted"
 
 
 class CollectionQuerySet(models.QuerySet):
