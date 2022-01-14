@@ -5,7 +5,7 @@ from rest_auth.registration.serializers import SocialLoginSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 
-from src.accounts.models import AdvUser
+from src.accounts.models import AdvUser, Email
 from src.accounts.utils import valid_metamask_message
 from src.store.models import Status, Token
 
@@ -293,3 +293,9 @@ class SelfUserSerializer(UserSerializer):
 
     def get_likes(self, obj):
         return obj.followers.filter(method="like").count()
+
+
+class EmailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Email
+        fields = "__all__"

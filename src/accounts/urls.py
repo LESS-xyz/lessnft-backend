@@ -11,6 +11,7 @@ from src.accounts.views import (
     GetView,
     LikeView,
     MetamaskLogin,
+    SaveEmail,
     SetUserCoverView,
     UnfollowView,
     VerificationView,
@@ -29,5 +30,6 @@ urlpatterns = [
     path("verification/", VerificationView.as_view()),
     path("set_user_cover/", SetUserCoverView.as_view()),
     path("get_random_cover/", GetRandomCoverView.as_view()),
+    path("save_email/", SaveEmail.as_view()),
     path("<str:param>/", GetOtherView.as_view()),
 ]

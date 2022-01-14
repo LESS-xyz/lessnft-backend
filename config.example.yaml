@@ -40,31 +40,11 @@ TRENDING_TRACKER_TIME: 7 # days
 DEFAULT_COMMISSION: 5
 
 API_URL: 'API Url for rates checker'
+OPENSEA_API: "https://testnets-api.opensea.io/"
 
 TITLE: 'Project name'
 DESCRIPTION: 'Project description'
 ITEMS_PER_PAGE: 50 # Default items count on page for pagination
-
-INTERVALS:
-  - every: 2
-    period: MINUTES
-    pk: 1
-  - every: 1
-    period: HOURS
-    pk: 2
-PERIODIC_TASKS:
-  - name: remove_pending
-    task: remove_pending
-    interval: 2
-    enabled: true
-  - name: incorrect_bid_checker
-    task: incorrect_bid_checker
-    interval: 1
-    enabled: true
-  - name: update_top_users
-    task: update_top_users
-    interval: 2
-    enabled: true
 
 DEFAULT_NETWORK: ethereum
 

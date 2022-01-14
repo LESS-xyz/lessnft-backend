@@ -5,7 +5,7 @@ from django.core.mail import send_mail
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_auth.registration.views import SocialLoginView
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from src.accounts.models import AdvUser, VerificationForm
 from src.accounts.serializers import (
     CoverSerializer,
+    EmailSerializer,
     FollowingSerializer,
     MetamaskLoginSerializer,
     PatchSerializer,
@@ -392,3 +393,7 @@ class GetRandomCoverView(APIView):
         random_cover = random.choice(covers)
         response_data = CoverSerializer(random_cover).data
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class SaveEmail(generics.CreateAPIView):
+    serializer_class = EmailSerializer
