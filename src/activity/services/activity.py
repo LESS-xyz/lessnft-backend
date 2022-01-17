@@ -43,7 +43,7 @@ class Activity(ActivityBase):
         return TokenHistory.objects.filter(
             method__in=methods,
             token__collection__network__name__icontains=self.network,
-            deleted=False,
+            token__deleted=False,
         ).order_by("-date")
 
     def get_user_action(self):
@@ -52,7 +52,7 @@ class Activity(ActivityBase):
             Q(token__collection__network__name__icontains=self.network)
             | Q(token__isnull=True),
             method__in=methods,
-            deleted=False,
+            token__deleted=False,
         ).order_by("-date")
 
     def get_bids_history(self):
@@ -60,7 +60,7 @@ class Activity(ActivityBase):
         return BidsHistory.objects.filter(
             method__in=methods,
             token__collection__network__name__icontains=self.network,
-            deleted=False,
+            token__deleted=False,
         ).order_by("-date")
 
     def get_activity(self):
@@ -101,7 +101,7 @@ class UserActivity(ActivityBase):
             new_owner__username=self.user,
             token__collection__network__name__icontains=self.network,
             method__in=methods,
-            deleted=False,
+            token__deleted=False,
         ).order_by("-date")
 
     def get_old_owner_history(self):
@@ -110,7 +110,7 @@ class UserActivity(ActivityBase):
             token__collection__network__name__icontains=self.network,
             old_owner__username=self.user,
             method__in=methods,
-            deleted=False,
+            token__deleted=False,
         ).order_by("-date")
 
     def get_user_action(self):
@@ -120,7 +120,7 @@ class UserActivity(ActivityBase):
             Q(token__collection__network__name__icontains=self.network)
             | Q(token__isnull=True),
             method__in=methods,
-            deleted=False,
+            token__deleted=False,
         ).order_by("-date")
 
     def get_bids_history(self):
@@ -129,7 +129,7 @@ class UserActivity(ActivityBase):
             token__collection__network__name__icontains=self.network,
             user__username=self.user,
             method__in=methods,
-            deleted=False,
+            token__deleted=False,
         ).order_by("-date")
 
     def get_activity(self):
@@ -172,7 +172,7 @@ class FollowingActivity(ActivityBase):
             | Q(old_owner__id__in=self.following_ids),
             token__collection__network__name__icontains=self.network,
             method__in=methods,
-            deleted=False,
+            token__deleted=False,
         ).order_by("-date")
 
     def get_token_history(self):
@@ -180,7 +180,7 @@ class FollowingActivity(ActivityBase):
         return TokenHistory.objects.filter(
             Q(new_owner__id__in=self.following_ids),
             method__in=methods,
-            deleted=False,
+            token__deleted=False,
         ).order_by("-date")
 
     def get_user_action(self):
@@ -191,7 +191,7 @@ class FollowingActivity(ActivityBase):
             Q(user__id__in=self.following_ids)
             | Q(whom_follow__id__in=self.following_ids),
             method__in=methods,
-            deleted=False,
+            token__deleted=False,
         ).order_by("-date")
 
     def get_bids_history(self):
@@ -200,7 +200,7 @@ class FollowingActivity(ActivityBase):
             user__id__in=self.following_ids,
             method__in=methods,
             token__collection__network__name__icontains=self.network,
-            deleted=False,
+            token__deleted=False,
         ).order_by("-date")
 
     def get_activity(self):

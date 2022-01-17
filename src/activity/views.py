@@ -37,7 +37,7 @@ class ActivityView(APIView, PaginateMixin):
         network = request.query_params.get("network", config.DEFAULT_NETWORK)
         types = request.query_params.get("type")
 
-        activities = Activity(network=network, types=types).get_activity()
+        activities = Activity(network=network, types=types.split(",")).get_activity()
         items = ActivitySerializer(activities, many=True).data
         return Response(self.paginate(request, items), status=status.HTTP_200_OK)
 
@@ -187,7 +187,7 @@ class UserActivityView(APIView, PaginateMixin):
 
         activities = UserActivity(
             network=network,
-            types=types,
+            types=types.split(","),
             user=address,
         ).get_activity()
 
@@ -221,7 +221,7 @@ class FollowingActivityView(APIView, PaginateMixin):
 
         activities = FollowingActivity(
             network=network,
-            types=types,
+            types=types.split(","),
             following_ids=following_ids,
         ).get_activity()
 
