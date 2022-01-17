@@ -10,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from src.accounts.models import AdvUser, VerificationForm
+from src.accounts.models import AdvUser, VerificationForm, Email
 from src.accounts.serializers import (
     CoverSerializer,
     EmailSerializer,
@@ -397,3 +397,10 @@ class GetRandomCoverView(APIView):
 
 class SaveEmail(generics.CreateAPIView):
     serializer_class = EmailSerializer
+
+    def create(self, request, *args, **kwargs):
+        address = request.data.get('address')
+        if Email.objects.filter(address__iexact=address).exists():
+            return Response('address already registered', status = status.HTTP_400_BAD_REQUEST)
+        response = super(generics.CreateAPIView, self).create(request, *args, **kwargs)
+        return response
