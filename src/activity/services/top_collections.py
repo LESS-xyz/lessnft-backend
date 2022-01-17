@@ -13,6 +13,7 @@ from src.utilities import RedisClient, get_periods
 def update_collection_stat():
     filter_day = date.today() - timedelta(days=1)
     token_history = TokenHistory.objects.filter(
+        deleted=False,
         date__year=filter_day.year,
         date__month=filter_day.month,
         date__day=filter_day.day,

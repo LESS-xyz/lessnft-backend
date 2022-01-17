@@ -1,6 +1,5 @@
 import json
 import logging
-import random
 import secrets
 from datetime import datetime
 from decimal import Decimal
@@ -10,12 +9,11 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.db import models
 from django.db.models import Exists, OuterRef, Q, Sum
-from django.db.models.signals import post_save, pre_save
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 
-from src.accounts.models import AdvUser, DefaultAvatar
+from src.accounts.models import AdvUser
 from src.consts import (
     COLLECTION_CREATION_GAS_LIMIT,
     MAX_AMOUNT_LEN,
@@ -40,12 +38,11 @@ class Status(models.TextChoices):
     COMMITTED = "Committed"
     BURNED = "Burned"
     EXPIRED = "Expired"
-    DELETED = "Deleted"
 
 
 class CollectionQuerySet(models.QuerySet):
     def committed(self):
-        return self.filter(status=Status.COMMITTED)
+        return self.filter(deleted=False, status=Status.COMMITTED)
 
     def get_by_short_url(self, short_url):
         collection_id = None
@@ -64,6 +61,7 @@ class CollectionQuerySet(models.QuerySet):
             )
         return self.filter(
             status=Status.COMMITTED,
+            deleted=False,
             network__name__icontains=network,
         ).filter(Q(is_default=True) | Q(creator=user))
 
@@ -166,6 +164,7 @@ class Collection(models.Model):
     network = models.ForeignKey("networks.Network", on_delete=models.CASCADE)
     is_default = models.BooleanField(default=False)
     is_nsfw = models.BooleanField(default=False)
+    deleted = models.BooleanField(default=False)
     display_theme = models.CharField(
         max_length=10, choices=DISPLAY_THEMES, default="Padded"
     )
@@ -339,17 +338,6 @@ class Collection(models.Model):
         return self.network.get_erc1155main_contract(self.address)
 
 
-def collection_created_dispatcher(sender, instance, created, **kwargs):
-    if created and not instance.avatar_ipfs:
-        default_avatars = DefaultAvatar.objects.all().values_list("image", flat=True)
-        if default_avatars:
-            instance.avatar_ipfs = random.choice(default_avatars)
-            instance.save()
-
-
-post_save.connect(collection_created_dispatcher, sender=Collection)
-
-
 class NotableDrop(models.Model):
     image = models.CharField(max_length=200, null=True, default=None, blank=True)
     description = models.CharField(max_length=500, null=True, default=None, blank=True)
@@ -372,7 +360,7 @@ def validate_nonzero(value):
 
 class TokenQuerySet(models.QuerySet):
     def committed(self):
-        return self.filter(status=Status.COMMITTED)
+        return self.filter(deleted=False, status=Status.COMMITTED)
 
     def network(self, network):
         if network is None or network == "undefined":
@@ -446,6 +434,7 @@ class Token(models.Model):
     _rankings = models.JSONField(blank=True, null=True, default=None)
     _stats = models.JSONField(blank=True, null=True, default=None)
     selling = models.BooleanField(default=False)
+    deleted = models.BooleanField(default=False)
     status = models.CharField(
         max_length=50,
         choices=Status.choices,
@@ -513,7 +502,7 @@ class Token(models.Model):
 
     @property
     def animation(self):
-        if not self.animation_file and self.format != 'image':
+        if not self.animation_file and self.format != "image":
             try:
                 self.animation_file = get_ipfs_by_hash(self.ipfs).get("animation_url")
                 self.save(update_fields=["animation_file"])
@@ -1014,42 +1003,6 @@ class Token(models.Model):
         return owners_auction_info
 
 
-def ownership_save_dispatcher(sender, instance, **kwargs):
-    """
-    Recalculate 1155 token fields: selling, currency, currency_price.
-    """
-    token = instance.token
-    if not token.ownership_set.filter(selling=True).exists():
-        token.selling = False
-        token.currency_price = None
-        token.currency = None
-    else:
-        token.selling = True
-        ownerships = token.ownership_set.filter(
-            selling=True,
-            currency_price__isnull=False,
-        )
-        ownerships = list(ownerships)
-        ownerships.sort(key=lambda owner: owner.usd_price)
-        if ownerships:
-            token.currency_price = ownerships[0].currency_price
-            token.currency = ownerships[0].currency
-    token.save(update_fields=["selling", "currency_price", "currency"])
-
-
-def default_token_validators(sender, instance, **kwargs):
-    matching_token = Token.objects.filter(
-        name=instance.name, collection__network=instance.collection.network
-    )
-    if instance.id:
-        matching_token = matching_token.exclude(id=instance.id)
-    if matching_token.exists():
-        raise ValidationError("Name is occupied")
-
-
-pre_save.connect(default_token_validators, sender=Token)
-
-
 class Ownership(models.Model):
     token = models.ForeignKey("Token", on_delete=models.CASCADE)
     owner = models.ForeignKey("accounts.AdvUser", on_delete=models.CASCADE)
@@ -1101,9 +1054,6 @@ class Ownership(models.Model):
             return calculate_amount(self.price, self.token.currency.symbol)[0]
         if self.minimal_bid:
             return calculate_amount(self.minimal_bid, self.token.currency.symbol)[0]
-
-
-post_save.connect(ownership_save_dispatcher, sender=Ownership)
 
 
 class Tags(models.Model):

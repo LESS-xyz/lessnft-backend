@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from src.activity.serializers import ActivitySerializer, UserStatSerializer
+from src.activity.services.activity import Activity, FollowingActivity, UserActivity
 from src.activity.services.price_history import PriceHistory
 from src.activity.services.top_collections import get_top_collections
 from src.activity.services.top_users import get_top_users
@@ -36,73 +37,7 @@ class ActivityView(APIView, PaginateMixin):
         network = request.query_params.get("network", config.DEFAULT_NETWORK)
         types = request.query_params.get("type")
 
-        history_methods = {
-            "purchase": "Buy",
-            "sale": "Buy",
-            "transfer": "Transfer",
-            "mint": "Mint",
-            "burn": "Burn",
-            "list": "Listing",
-        }
-        action_methods = {
-            "like": "like",
-            "follow": "follow",
-        }
-        bids_methods = {
-            "bids": "Bet",
-        }
-
-        activities = list()
-
-        total_items = 0
-        if types:
-            for param, method in history_methods.items():
-                if param in types:
-                    items = TokenHistory.objects.filter(
-                        method=method,
-                        token__collection__network__name__icontains=network,
-                    ).order_by("-date")
-                    total_items += items.count()
-                    activities.extend(items)
-            for param, method in action_methods.items():
-                if param in types:
-                    items = UserAction.objects.filter(
-                        Q(token__collection__network__name__icontains=network)
-                        | Q(token__isnull=True),
-                        method=method,
-                    ).order_by("-date")
-                    total_items += items.count()
-                    activities.extend(items)
-            for param, method in bids_methods.items():
-                if param in types:
-                    items = BidsHistory.objects.filter(
-                        method=method,
-                        token__collection__network__name__icontains=network,
-                    ).order_by("-date")
-                    total_items += items.count()
-                    activities.extend(items)
-
-        else:
-            actions = UserAction.objects.filter(
-                Q(token__collection__network__name__icontains=network)
-                | Q(token__isnull=True),
-            ).order_by("-date")
-            history = (
-                TokenHistory.objects.filter(
-                    token__collection__network__name__icontains=network,
-                )
-                .exclude(method="Burn")
-                .order_by("-date")
-            )
-            bids = BidsHistory.objects.filter(
-                token__collection__network__name__icontains=network,
-            ).order_by("-date")
-
-            activities.extend(actions)
-            activities.extend(history)
-            activities.extend(bids)
-
-        quick_sort(activities)
+        activities = Activity(network=network, types=types).get_activity()
         items = ActivitySerializer(activities, many=True).data
         return Response(self.paginate(request, items), status=status.HTTP_200_OK)
 
@@ -250,108 +185,12 @@ class UserActivityView(APIView, PaginateMixin):
         network = request.query_params.get("network", config.DEFAULT_NETWORK)
         types = request.query_params.get("type")
 
-        old_owner_methods = {
-            "sale": "Buy",
-            "listing": "Listing",
-        }
-        action_methods = {
-            "like": "like",
-            "follow": "follow",
-        }
-        token_methods = {
-            "purchase": "Buy",
-            "mint": "Mint",
-            "burn": "Burn",
-            "transfer": "Transfer",
-        }
-        bids_methods = {
-            "bids": "Bet",
-        }
+        activities = UserActivity(
+            network=network,
+            types=types,
+            user=address,
+        ).get_activity()
 
-        activities = list()
-
-        if types:
-            for param, method in old_owner_methods.items():
-                if param in types:
-                    items = TokenHistory.objects.filter(
-                        token__collection__network__name__icontains=network,
-                        old_owner__username=address,
-                        method=method,
-                        is_viewed=False,
-                    ).order_by("-date")
-                    activities.extend(items)
-            for param, method in token_methods.items():
-                if param in types:
-                    items = TokenHistory.objects.filter(
-                        new_owner__username=address,
-                        token__collection__network__name__icontains=network,
-                        method=method,
-                        is_viewed=False,
-                    ).order_by("-date")
-                    activities.extend(items)
-            for param, method in action_methods.items():
-                if param in types:
-                    items = UserAction.objects.filter(
-                        Q(user__username=address) | Q(whom_follow__username=address),
-                        Q(token__collection__network__name__icontains=network)
-                        | Q(token__isnull=True),
-                        method=method,
-                        is_viewed=False,
-                    ).order_by("-date")
-                    activities.extend(items)
-            for param, method in bids_methods.items():
-                if param in types:
-                    items = BidsHistory.objects.filter(
-                        token__collection__network__name__icontains=network,
-                        user__username=address,
-                        is_viewed=False,
-                        method=method,
-                    ).order_by("-date")
-                    activities.extend(items)
-
-        else:
-            new_owner_methods = [
-                "Transfer",
-                "Mint",
-                "Burn",
-            ]
-
-            old_owner_methods = [
-                "Buy",
-                "Listing",
-            ]
-
-            items = TokenHistory.objects.filter(
-                token__collection__network__name__icontains=network,
-                new_owner__username=address,
-                method__in=new_owner_methods,
-                is_viewed=False,
-            ).order_by("-date")
-            activities.extend(items)
-
-            buy = TokenHistory.objects.filter(
-                token__collection__network__name__icontains=network,
-                old_owner__username=address,
-                method__in=old_owner_methods,
-                is_viewed=False,
-            ).order_by("-date")
-            activities.extend(buy)
-
-            user_actions = UserAction.objects.filter(
-                Q(token__collection__network__name__icontains=network)
-                | Q(token__isnull=True),
-                whom_follow__username=address,
-                is_viewed=False,
-            ).order_by("-date")
-            activities.extend(user_actions)
-
-            bids = BidsHistory.objects.filter(
-                user__username=address,
-                token__collection__network__name__icontains=network,
-            ).order_by("-date")
-            activities.extend(bids)
-
-        quick_sort(activities)
         items = ActivitySerializer(activities, many=True).data
         return Response(self.paginate(request, items), status=status.HTTP_200_OK)
 
@@ -373,26 +212,6 @@ class FollowingActivityView(APIView, PaginateMixin):
         network = request.query_params.get("network", config.DEFAULT_NETWORK)
         types = request.query_params.get("type")
 
-        token_transfer_methods = {
-            "purchase": "Buy",
-            "sale": "Buy",
-            "transfer": "Transfer",
-            "list": "Listing",
-        }
-        action_methods = {
-            "like": "like",
-            "follow": "follow",
-        }
-        token_methods = {
-            "mint": "Mint",
-            "burn": "Burn",
-        }
-        bids_methods = {
-            "bids": "Bet",
-        }
-
-        activities = list()
-
         following_ids = UserAction.objects.filter(
             Q(token__collection__network__name__icontains=network)
             | Q(token__isnull=True),
@@ -400,66 +219,12 @@ class FollowingActivityView(APIView, PaginateMixin):
             user__username=address,
         ).values_list("whom_follow_id", flat=True)
 
-        if types:
-            for param, method in token_transfer_methods.items():
-                if param in types:
-                    items = TokenHistory.objects.filter(
-                        Q(new_owner__id__in=following_ids)
-                        | Q(old_owner__id__in=following_ids),
-                        token__collection__network__name__icontains=network,
-                        method=method,
-                    ).order_by("-date")
-                    activities.extend(items)
-            for param, method in action_methods.items():
-                if param in types:
-                    items = UserAction.objects.filter(
-                        Q(token__collection__network__name__icontains=network)
-                        | Q(token__isnull=True),
-                        Q(user__id__in=following_ids)
-                        | Q(whom_follow__id__in=following_ids),
-                        method=method,
-                    ).order_by("-date")
-                    activities.extend(items)
-            for param, method in token_methods.items():
-                if param in types:
-                    items = TokenHistory.objects.filter(
-                        Q(new_owner__id__in=following_ids),
-                        method=method,
-                    ).order_by("-date")
-                    activities.extend(items)
-            for param, method in bids_methods.items():
-                if param in types:
-                    items = BidsHistory.objects.filter(
-                        user__id__in=following_ids,
-                        method=method,
-                        token__collection__network__name__icontains=network,
-                    ).order_by("-date")
-                    activities.extend(items)
+        activities = FollowingActivity(
+            network=network,
+            types=types,
+            following_ids=following_ids,
+        ).get_activity()
 
-        else:
-            actions = UserAction.objects.filter(
-                Q(user__id__in=following_ids) | Q(whom_follow__id__in=following_ids),
-                Q(token__collection__network__name__icontains=network)
-                | Q(token__isnull=True),
-            ).order_by("-date")
-            activities.extend(actions)
-            history = (
-                TokenHistory.objects.filter(
-                    Q(new_owner__id__in=following_ids)
-                    | Q(old_owner__id__in=following_ids),
-                    token__collection__network__name__icontains=network,
-                )
-                # .exclude(Q(method="Burn") | Q(method="Transfer"))
-                .exclude(method="Burn").order_by("-date")
-            )
-            activities.extend(history)
-            bids = BidsHistory.objects.filter(
-                user__id__in=following_ids,
-                token__collection__network__name__icontains=network,
-            ).order_by("-date")
-            activities.extend(bids)
-
-        quick_sort(activities)
         items = ActivitySerializer(activities, many=True).data
         return Response(self.paginate(request, items), status=status.HTTP_200_OK)
 

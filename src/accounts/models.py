@@ -1,9 +1,6 @@
-import random
-
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 from django.db.models import Q
-from django.db.models.signals import post_save
 
 from src.utilities import get_media_from_ipfs
 
@@ -66,17 +63,6 @@ class AdvUser(AbstractUser):
     @property
     def url(self):
         return self.custom_url if self.custom_url else self.id
-
-
-def user_registrated_dispatcher(sender, instance, created, **kwargs):
-    if created:
-        default_avatars = DefaultAvatar.objects.all().values_list("image", flat=True)
-        if default_avatars:
-            instance.avatar_ipfs = random.choice(default_avatars)
-            instance.save()
-
-
-post_save.connect(user_registrated_dispatcher, sender=AdvUser)
 
 
 class VerificationForm(models.Model):

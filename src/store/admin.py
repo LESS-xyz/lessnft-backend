@@ -116,9 +116,17 @@ class TokenAdmin(admin.ModelAdmin):
             return "(No image)"
 
     image_preview.short_description = "Preview"
-    list_display = ("name", "collection", "status", "standart", "is_favorite", "get_network")
-    list_editable = ("is_favorite",)
-    list_filter = ("is_favorite", TokenStandartFilter, "status")
+    list_display = (
+        "name",
+        "collection",
+        "status",
+        "standart",
+        "get_network",
+        "is_favorite",
+        "deleted",
+    )
+    list_editable = ("is_favorite", "deleted")
+    list_filter = ("is_favorite", TokenStandartFilter, "status", "deleted")
     search_fields = [
         "name",
     ]
@@ -160,7 +168,7 @@ class CollectionAdmin(admin.ModelAdmin):
     inlines = (TokenInline,)
     readonly_fields = ("id",)
     list_display = ("name", "address", "standart", "creator", "get_network")
-    list_filter = ("standart",)
+    list_filter = ("standart", "deleted")
     search_fields = [
         "name",
     ]
@@ -173,6 +181,9 @@ class CollectionAdmin(admin.ModelAdmin):
     get_network.admin_order_field = "collection__network__name"
 
     def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
         return False
 
 

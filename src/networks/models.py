@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 
 import requests
 from django.db import models
-from django.db.models.signals import post_save
 from eth_abi import decode_abi, encode_abi
 from tronapi import HttpProvider, Tron
 from tronapi.common.account import Address as TronAddress
@@ -19,7 +18,6 @@ from contracts import (
     EXCHANGE,
     WETH_ABI,
 )
-from src.accounts.models import MasterUser
 from src.networks.utils import tron_function_selector
 from src.settings import config
 
@@ -70,9 +68,7 @@ class Network(models.Model):
             web3.middleware_onion.inject(geth_poa_middleware, layer=0)
         return web3
 
-    def _get_contract_by_abi(
-        self, abi: "ABI", address: str = None
-    ) -> ("Web3", "Contract"):
+    def _get_contract_by_abi(self, abi: "ABI", address: str = None) -> "Contract":
         web3 = self.get_web3_connection()
         if address:
             address = self.wrap_in_checksum(address)
@@ -328,13 +324,3 @@ class Network(models.Model):
     @property
     def check_timeout(self) -> int:
         return 6
-
-
-def collection_created_dispatcher(sender, instance, created, **kwargs):
-    if created:
-        MasterUser.objects.create(
-            network=instance, commission=config.DEFAULT_COMMISSION
-        )
-
-
-post_save.connect(collection_created_dispatcher, sender=Network)

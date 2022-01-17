@@ -28,6 +28,7 @@ def update_users_stat(network):
 
             for period, time_delta in periods.items():
                 filter_data = {
+                    "deleted": False,
                     "token__currency__network": network,
                     "date__gte": time_delta,
                     "method": "Buy",

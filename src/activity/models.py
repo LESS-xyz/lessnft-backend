@@ -1,8 +1,6 @@
 from django.db import models
-from django.db.models.signals import post_save
 
 from src.consts import MAX_AMOUNT_LEN
-from src.rates.api import calculate_amount
 
 
 class UserAction(models.Model):
@@ -80,25 +78,6 @@ class TokenHistory(models.Model):
     currency = models.ForeignKey(
         "rates.UsdRate", on_delete=models.PROTECT, null=True, default=None, blank=True
     )
-
-
-def token_history_dispatcher(sender, instance, created, **kwargs):
-    if instance.price and instance.token:
-        price = instance.price * instance.token.currency.get_decimals
-        instance.USD_price = calculate_amount(
-            price,
-            instance.token.currency.symbol,
-        )[0]
-        post_save.disconnect(token_history_dispatcher, sender=sender)
-        instance.save(
-            update_fields=[
-                "USD_price",
-            ]
-        )
-        post_save.connect(token_history_dispatcher, sender=sender)
-
-
-post_save.connect(token_history_dispatcher, sender=TokenHistory)
 
 
 class BidsHistory(models.Model):
