@@ -54,6 +54,8 @@ services:
     image: celery:3.1
     entrypoint: ''
     command: "celery -A src worker -l info"
+    env_file:
+      - ./.env
     depends_on:
       - redis
     restart: always
@@ -68,6 +70,8 @@ services:
     image: celery:3.1
     entrypoint: ''
     command: "celery -A src beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    env_file:
+      - ./.env
     depends_on:
       - redis
     restart: always
