@@ -667,7 +667,9 @@ class Token(models.Model):
         self.creator = request.user
         collection = request.data.get("collection")
         self.collection = Collection.objects.committed().get_by_short_url(collection)
-        self.total_supply = request.data.get("total_supply")
+        self.total_supply = 1
+        if self.collection.standart=='ERC1155':
+            self.total_supply = request.data.get("total_supply")
         self.digital_key = request.data.get("digital_key")
         self.external_link = request.data.get("external_link")
 
@@ -1050,6 +1052,8 @@ class Ownership(models.Model):
 
     @property
     def usd_price(self):
+        if not self.token.currency:
+            return None
         if self.price:
             return calculate_amount(self.price, self.token.currency.symbol)[0]
         if self.minimal_bid:

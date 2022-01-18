@@ -463,7 +463,7 @@ class GetView(APIView):
             request_data.pop("price", None)
             price = Decimal(str(price))
         elif (
-            currency != f"w{token.collection.network.native_symbol}".lower() and selling
+            currency == "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" and selling
         ):  # auction sale
             return Response(
                 {"error": "Invalid currency"}, status=status.HTTP_400_BAD_REQUEST
@@ -493,8 +493,12 @@ class GetView(APIView):
                 request_data["start_auction"] = datetime.fromtimestamp(
                     int(start_auction)
                 )
+            else:
+                request_data.pop("start_auction", None)
             if end_auction:
                 request_data["end_auction"] = datetime.fromtimestamp(int(end_auction))
+            else:
+                request_data.pop("end_auction", None)
             serializer = TokenPatchSerializer(token, data=request_data, partial=True)
 
             logging.info(f"PatchSerializer valid - {serializer.is_valid()}")
@@ -1441,7 +1445,7 @@ class RemoveRejectView(APIView):
 
 @api_view(http_method_names=["GET"])
 def get_total_count(request):
-    tokens_count = Token.token_objects.committed().count()
+    tokens_count = Token.objects.committed().count()
     verified_users_count = AdvUser.objects.filter(is_verificated=True).count()
     collections_count = Collection.objects.filter(is_default=False).count()
     time_delta = timezone.now() - timedelta(days=1)
