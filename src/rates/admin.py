@@ -5,7 +5,7 @@ from src.rates.models import UsdRate
 
 class UsdRateAdmin(admin.ModelAdmin):
     model = UsdRate
-    list_display = ("name", "symbol", "rate", "coin_node")
+    list_display = ("name", "symbol", "rate", "network")
     list_filter = ("coin_node", "network")
 
     def has_delete_permission(self, request, obj=None):
