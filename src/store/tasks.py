@@ -1,9 +1,9 @@
 import logging
 from datetime import datetime, timedelta
+from typing import Optional
 
 from django.utils import timezone
 from tronapi import HttpProvider, Tron
-from web3.exceptions import TransactionNotFound
 
 from celery import shared_task
 from src.celery import app
@@ -92,19 +92,14 @@ def incorrect_bid_checker():
             bid.save()
 
 
-def check_ethereum_transactions(tx):
+def check_ethereum_transactions(tx) -> bool:
     w3 = tx.token.collection.network.get_web3_connection()
-    try:
-        transaction = w3.eth.getTransactionReceipt(tx.tx_hash)
-        logger.info(f"Transaction status success - {bool(transaction.get('status'))}")
-        return bool(transaction.get("status"))
-
-    except TransactionNotFound:
-        logger.info("Transaction not yet mined")
-        return "not found"
+    transaction = w3.eth.getTransactionReceipt(tx.tx_hash)
+    logger.info(f"Transaction status success - {bool(transaction.get('status'))}")
+    return bool(transaction.get("status"))
 
 
-def check_tron_transactions(tx):
+def check_tron_transactions(tx) -> bool:
     provider = HttpProvider(tx.token.collection.network.endpoint)
     tron = Tron(
         full_node=provider,
@@ -112,16 +107,20 @@ def check_tron_transactions(tx):
         event_server=provider,
         private_key=config.PRIV_KEY,
     )
-    try:
-        transaction = tron.trx.get_transaction(tx.tx_hash)
-        logger.info(
-            f"Transaction status success - {transaction['ret'][0]['contractRet']}"
-        )
-        return transaction["ret"][0]["contractRet"]
+    transaction = tron.trx.get_transaction(tx.tx_hash)
+    logger.info(f"Transaction status success - {transaction['ret'][0]['contractRet']}")
+    return str(transaction["ret"][0]["contractRet"]).lower() in ["0", "revert"]
 
-    except ValueError:
-        logger.info("Transaction not yet mined")
-        return "not found"
+
+def check_transaction_status(tx, network_type) -> Optional[bool]:
+    try:
+        if network_type == "ethereum":
+            return check_ethereum_transactions(tx)
+        elif network_type == "tron":
+            return check_tron_transactions(tx)
+    except Exception as e:
+        logger.warning("Transaction not yet mined. Error: ", e)
+        return None
 
 
 @shared_task(name="transaction_tracker")
@@ -138,17 +137,14 @@ def transaction_tracker():
     expired_tx_list.delete()
 
     # check transactions
-    for type in Types._member_names_:
+    for network_type in Types._member_names_:
         tx_list = TransactionTracker.objects.filter(
-            token__collection__network__network_type=type
+            token__collection__network__network_type=network_type
         )
         for tx in tx_list:
-            if type == "ethereum":
-                tx = check_ethereum_transactions(tx)
-            elif type == "tron":
-                tx = check_tron_transactions(tx)
-            if tx != "not found":
-                if tx == 0 or tx == "REVERT":
+            is_success = check_transaction_status(tx, network_type)
+            if is_success is not None:
+                if not is_success:
                     tx.item.selling = True
                     tx.item.save()
                 tx.delete()
