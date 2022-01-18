@@ -18,7 +18,7 @@ def calculate_usd_price(token_history, sender):
         price = token_history.price * token_history.currency.get_decimals
         token_history.USD_price, _ = calculate_amount(
             price,
-            token_history.token.currency.symbol,
+            token_history.currency.symbol,
         )
         post_save.disconnect(token_history_post_save_dispatcher, sender=sender)
         token_history.save(

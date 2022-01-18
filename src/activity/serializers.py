@@ -5,12 +5,13 @@ from rest_framework import serializers
 from src.accounts.serializers import BaseAdvUserSerializer, UserSlimSerializer
 from src.activity.models import BidsHistory, TokenHistory, UserStat
 from src.rates.api import get_decimals
+from src.rates.serializers import CurrencySerializer
 
 
 class TokenHistorySerializer(serializers.ModelSerializer):
     new_owner = UserSlimSerializer()
     old_owner = UserSlimSerializer()
-    currency = serializers.CharField(source="token.currency")
+    currency = CurrencySerializer()
 
     class Meta:
         model = TokenHistory
