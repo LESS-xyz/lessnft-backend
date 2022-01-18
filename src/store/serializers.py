@@ -6,7 +6,7 @@ from django.db.models import Count, Sum
 from rest_framework import serializers
 
 from src.accounts.serializers import CreatorSerializer, UserOwnerSerializer
-from src.activity.models import UserAction
+from src.activity.models import UserAction, TokenHistory
 from src.activity.serializers import TokenHistorySerializer
 from src.networks.serializers import NetworkSerializer
 from src.rates.api import calculate_amount
@@ -473,6 +473,9 @@ class CollectionSerializer(CollectionSlimSerializer):
     properties = serializers.SerializerMethodField()
     rankings = serializers.SerializerMethodField()
     stats = serializers.SerializerMethodField()
+    floor_price = serializers.SerializerMethodField()
+    owners = serializers.SerializerMethodField()
+    volume_traded = serializers.SerializerMethodField()
 
     class Meta(CollectionSlimSerializer.Meta):
         read_only_fields = CollectionSlimSerializer.Meta.read_only_fields + ("cover",)
@@ -484,10 +487,33 @@ class CollectionSerializer(CollectionSlimSerializer):
             "properties",
             "rankings",
             "stats",
+            "floor_price",
+            "owners",
+            "volume_traded",
         )
 
     def get_tokens_count(self, obj):
         return obj.token_set.committed().count()
+
+    def get_floor_price(self, obj):
+        tokens = list(obj.token_set.committed())
+        if not tokens:
+            return 0
+        tokens = [token.usd_price for token in tokens if token.usd_price]
+        return min(tokens)
+
+    def get_owners(self, obj):
+        if obj.standart=="ERC721":
+            return obj.token_set.committed().aggregate(
+                count=Count("owner", distinct=True),
+            ).get("count")
+        return obj.token_set.committed().aggregate(count=Count("ownership__owner")).get("count")
+
+    def get_volume_traded(self, obj):
+        return TokenHistory.objects.filter(
+            token__collection=obj, 
+            method="Buy",
+        ).aggregate(sum=Sum("USD_price")).get("sum")
 
     def get_properties(self, obj):
         props = (
