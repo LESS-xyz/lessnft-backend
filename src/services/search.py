@@ -72,6 +72,19 @@ class SearchToken(SearchABC):
             for word in words:
                 self.items = self.items.filter(name__icontains=word)
 
+    def stats(self, stats):
+        if stats and stats[0]:
+            stats = json.loads(stats[0])
+            for stat, value in stats.items():
+                min_data = value.get("min")
+                max_data = value.get("max")
+                stat_filters = {}
+                if min_data:
+                    stat_filters[f"_stats__{stat}__value__gte"] = float(min_data)
+                if max_data:
+                    stat_filters[f"_stats__{stat}__value__lte"] = float(max_data)
+                self.items = self.items.filter(**stat_filters)
+
     def rankings(self, rankings):
         if rankings and rankings[0]:
             rankings = json.loads(rankings[0])
