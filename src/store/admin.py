@@ -97,8 +97,17 @@ class BidAdmin(admin.ModelAdmin):
         return False
 
 
+class TokenForm(forms.ModelForm):
+    def clean(self):
+        data = self.cleaned_data
+        if not data.get("deleted") and data.get("collection").deleted:
+            raise forms.ValidationError("Can't restore token in deleted collection.")
+        return self.cleaned_data
+
+
 class TokenAdmin(admin.ModelAdmin):
     model = Token
+    form = TokenForm
     readonly_fields = ("id", "image_preview", "updated_at")
     formfield_overrides = {
         models.ManyToManyField: {"widget": CheckboxSelectMultiple},
@@ -125,7 +134,7 @@ class TokenAdmin(admin.ModelAdmin):
         "is_favorite",
         "deleted",
     )
-    list_editable = ("is_favorite", "deleted")
+    list_editable = ("is_favorite",)
     list_filter = ("is_favorite", TokenStandartFilter, "status", "deleted")
     search_fields = [
         "name",
@@ -167,7 +176,7 @@ class CollectionAdmin(admin.ModelAdmin):
     model = Collection
     inlines = (TokenInline,)
     readonly_fields = ("id",)
-    list_display = ("name", "address", "standart", "creator", "get_network")
+    list_display = ("name", "address", "standart", "creator", "get_network", "deleted")
     list_filter = ("standart", "deleted")
     search_fields = [
         "name",
