@@ -31,6 +31,7 @@ class Config:
     DEBUG: bool
 
     IPFS_CLIENT: str
+    IPFS_DOMAIN: str
     SCANNER_SLEEP: int
     ORACLE_ADDRESS: str
 
