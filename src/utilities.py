@@ -38,7 +38,7 @@ def sign_message(type, message):
 def get_media_from_ipfs(hash):
     if not hash:
         return None
-    return "https://dev3-ipfs.rocknblock.io/ipfs/{ipfs}".format(ipfs=hash)
+    return f"https://{config.IPFS_DOMAIN}/ipfs/{hash}"
 
 
 def get_page_slice(
