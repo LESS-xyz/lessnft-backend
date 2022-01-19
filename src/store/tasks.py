@@ -10,7 +10,7 @@ from src.celery import app
 from src.networks.models import Network, Types
 from src.settings import config
 from src.store.models import Bid, Status, Tags, Token, TransactionTracker
-from src.store.services.auction import end_auction
+from src.store.services.auction import check_auction_tx, end_auction
 from src.store.services.collection_import import OpenSeaImport
 
 logger = logging.getLogger("celery")
@@ -47,13 +47,13 @@ def end_auction_checker():
     )
     for token in tokens:
         if token.bid_set.count():
-            end_auction(token)
-        else:
-            token.start_auction = None
-            token.end_auction = None
-            token.selling = False
-            token.currency_minimal_bid = None
-            token.save()
+            tx_hash, network = end_auction(token)
+            check_auction_tx(tx_hash, network)
+        token.start_auction = None
+        token.end_auction = None
+        token.selling = False
+        token.currency_minimal_bid = None
+        token.save()
 
 
 @shared_task(name="incorrect_bid_checker")
