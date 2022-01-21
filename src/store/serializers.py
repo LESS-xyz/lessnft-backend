@@ -245,6 +245,7 @@ class TokenSerializer(serializers.ModelSerializer):
     start_auction = serializers.SerializerMethodField()
     end_auction = serializers.SerializerMethodField()
     multiple_currency = serializers.SerializerMethodField()
+    properties = serializers.SerializerMethodField()
 
     class Meta:
         model = Token
@@ -411,6 +412,21 @@ class TokenSerializer(serializers.ModelSerializer):
             return obj.digital_key
         return None
 
+    def get_properties(self, obj):
+        props = obj._properties
+        collection = obj.collection
+        if not props:
+            return None
+        for attr in props.keys():
+            filter = {
+                f'_properties__{attr}__value': props[attr]["value"]
+            }
+            props[attr]["frequency"] = (
+                int(float(Token.objects.filter(collection=collection).filter(**filter).count())
+                / float(Token.objects.filter(collection=collection).count()) * 100)
+            )
+        return props
+
 
 class HotCollectionSerializer(CollectionSlimSerializer):
     tokens = serializers.SerializerMethodField()
@@ -500,7 +516,9 @@ class CollectionSerializer(CollectionSlimSerializer):
         if not tokens:
             return 0
         tokens = [token.usd_price for token in tokens if token.usd_price]
-        return min(tokens)
+        if tokens:
+            return min(tokens)
+        return 0
 
     def get_owners(self, obj):
         if obj.standart=="ERC721":

@@ -478,7 +478,7 @@ class GetView(APIView):
 
         if currency:
             currency = UsdRate.objects.filter(
-                symbol=currency, network=token.collection.network
+                symbol__iexact=currency, network=token.collection.network
             ).first()
             if not currency:
                 return Response(
@@ -777,6 +777,7 @@ class MakeBid(APIView):
                 "token_id": openapi.Schema(type=openapi.TYPE_NUMBER),
                 "amount": openapi.Schema(type=openapi.TYPE_NUMBER),
                 "quantity": openapi.Schema(type=openapi.TYPE_NUMBER),
+                "currency": openapi.Schema(type=openapi.TYPE_NUMBER),
             },
         ),
         responses={
@@ -789,6 +790,7 @@ class MakeBid(APIView):
         token_id = request_data.get("token_id")
         amount = Decimal(str(request_data.get("amount")))
         quantity = int(request_data.get("quantity"))
+        currency = request_data.get("currency")
         try:
             token = Token.objects.get(id=token_id)
         except ObjectDoesNotExist:
@@ -800,7 +802,7 @@ class MakeBid(APIView):
 
         network = token.collection.network
         currency = UsdRate.objects.filter(
-            symbol=f"w{network.native_symbol}".lower(),
+            symbol__iexact=currency,
             network=network,
         ).first()
         if not currency:
@@ -1423,6 +1425,7 @@ class RemoveRejectView(APIView):
             properties={
                 "id": openapi.Schema(type=openapi.TYPE_NUMBER),
                 "type": openapi.Schema(type=openapi.TYPE_STRING),
+                "owner": openapi.Schema(type=openapi.TYPE_STRING),
             },
         ),
         responses={200: "success"},
@@ -1434,12 +1437,19 @@ class RemoveRejectView(APIView):
         }
         item_id = request.data.get("id")
         item_type = request.data.get("type")
+        owner = request.data.get("owner")
         if item_type not in ["token", "collection"]:
             return Response(
                 {"error": "Item type should be 'token' or 'collection'"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         items[item_type].objects.filter(status=Status.PENDING, id=item_id).delete()
+        if owner:
+            owner = AdvUser.objects.get_by_custom_url(owner)
+            owner = Ownership.objects.filter(token__id=item_id, owner=owner).first()
+            TransactionTracker.objects.filter(
+                token__id=item_id, ownership=owner
+            ).delete()
         return Response("success", status=status.HTTP_200_OK)
 
 

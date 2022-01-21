@@ -547,8 +547,9 @@ class Token(models.Model):
                 selling=True,
                 currency_price__isnull=True,
                 currency_minimal_bid__isnull=False,
+                token__end_auction__isnull=True,
             ).exists()
-        return bool(self.selling and self.minimal_bid and self.currency)
+        return bool(self.selling and self.minimal_bid and self.currency and not self.end_auction)
 
     @property
     def is_timed_auc_selling(self):
