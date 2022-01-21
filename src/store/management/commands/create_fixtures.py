@@ -1,16 +1,17 @@
-from src.accounts.models import MasterUser
-from src.networks.models import Network
-from src.settings import config
-from src.store.models import UsdRate
 from django.core.management.base import BaseCommand
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
+
+from src.accounts.models import MasterUser
+from src.networks.models import Network, Provider
+from src.settings import config
+from src.store.models import UsdRate
 
 
 class Command(BaseCommand):
     """Provide initial db fixtures from config with 'manage.py create_fixtures.py'"""
 
     def handle(self, *args, **options):
-        help = "Create initial fixtures for Networks, Usd rates and Master user"
+        help = "Create initial fixtures for Networks, Usd rates and Master user"  # noqa F841
 
         """Create Network objects"""
         for network in config.NETWORKS:
@@ -18,16 +19,22 @@ class Command(BaseCommand):
                 name=network.name,
                 needs_middleware=network.needs_middleware,
                 native_symbol=network.native_symbol,
-                endpoint=network.endpoint,
                 fabric721_address=network.fabric721_address,
                 fabric1155_address=network.fabric1155_address,
                 exchange_address=network.exchange_address,
                 network_type=network.network_type,
             )
 
+        """Create Provider objects"""
+        for provider in config.PROVIDERS:
+            Provider.objects.get_or_create(
+                endpoint=provider.endpoint,
+                network=Network.objects.get(name__iexact=provider.network),
+            )
+
         """Create UsdRates objects"""
         for usd_rate in config.USD_RATES:
-            obj, created = UsdRate.objects.get_or_create(
+            UsdRate.objects.get_or_create(
                 coin_node=usd_rate.coin_node,
                 symbol=usd_rate.symbol,
                 name=usd_rate.name,

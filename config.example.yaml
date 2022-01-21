@@ -54,11 +54,14 @@ NETWORKS:
   - name: Ethereum #3
     needs_middleware: false
     native_symbol: ETH
-    endpoint: "RPC url"
     fabric721_address: "0x111222233333444455556666777788889999"
     fabric1155_address: "0x111222233333444455556666777788889999"
     exchange_address: "0x111222233333444455556666777788889999"
     network_type: Ethereum
+
+PROVIDERS:
+  - endpoint: "RPC endpoint"
+    network: ethereum 
 
 USD_RATES:
   - coin_node: ethereum

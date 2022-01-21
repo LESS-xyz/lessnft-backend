@@ -8,7 +8,6 @@ from tronapi import HttpProvider, Tron
 from tronapi.common.account import Address as TronAddress
 from trx_utils import decode_hex
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
 
 from contracts import (
     ERC721_FABRIC,
@@ -46,12 +45,13 @@ class Network(models.Model):
     name = models.CharField(max_length=100)
     needs_middleware = models.BooleanField(default=False)
     native_symbol = models.CharField(max_length=10, blank=True, null=True, default=None)
-    endpoint = models.CharField(max_length=256)
     fabric721_address = models.CharField(max_length=128)
     fabric1155_address = models.CharField(max_length=128)
     exchange_address = models.CharField(max_length=128)
     network_type = models.CharField(
-        max_length=20, choices=Types.choices, default=Types.ethereum
+        max_length=20,
+        choices=Types.choices,
+        default=Types.ethereum,
     )
 
     def __str__(self):
@@ -62,17 +62,20 @@ class Network(models.Model):
         if self.icon:
             return "https://ipfs.io/ipfs/{ipfs}".format(ipfs=self.icon)
 
-    def get_web3_connection(self) -> "Web3":
-        web3 = Web3(Web3.HTTPProvider(self.endpoint))
-        if self.needs_middleware:
-            web3.middleware_onion.inject(geth_poa_middleware, layer=0)
-        return web3
+    @property
+    def web3(self):
+        return Web3(
+            Web3.HTTPProvider(self.providers.all().values_list("endpoint", flat=True))
+        )
+
+    def endpoint(self) -> str:
+        """Need for TRON methods"""
+        return self.providers.first().endpoint
 
     def _get_contract_by_abi(self, abi: "ABI", address: str = None) -> "Contract":
-        web3 = self.get_web3_connection()
         if address:
             address = self.wrap_in_checksum(address)
-        contract = web3.eth.contract(address=address, abi=abi)
+        contract = self.web3.eth.contract(address=address, abi=abi)
         return contract
 
     def get_exchange_contract(self) -> "Contract":
@@ -100,17 +103,17 @@ class Network(models.Model):
         return Address(address)
 
     def get_last_block(self) -> int:
-        return self.get_web3_connection().eth.block_number
+        return self.web3.eth.block_number
 
     def get_ethereum_address(self, address):
         if self.network_type == Types.tron:
-            return Web3.toChecksumAddress("0x" + TronAddress.to_hex(address)[2:])
-        return Web3.toChecksumAddress(address)
+            return self.web3.toChecksumAddress("0x" + TronAddress.to_hex(address)[2:])
+        return self.web3.toChecksumAddress(address)
 
     def wrap_in_checksum(self, address: str) -> str:
         """Wrap address to checksum because calling web3 for tron will return an error"""
         if self.network_type == Types.ethereum:
-            return Web3.toChecksumAddress(address)
+            return self.web3.toChecksumAddress(address)
         return address
 
     def contract_call(self, method_type: str, **kwargs):
@@ -150,7 +153,6 @@ class Network(models.Model):
         contract_type = kwargs.get("contract_type")
         address = kwargs.get("address")
         send = kwargs.get("send", False)
-        web3 = self.get_web3_connection()
         if address:
             contract = getattr(self, f"get_{contract_type}_contract")(address)
         else:
@@ -165,12 +167,12 @@ class Network(models.Model):
         assert nonce_username is not None
 
         tx_params = {
-            "chainId": web3.eth.chainId,
+            "chainId": self.web3.eth.chainId,
             "gas": gas_limit,
-            "nonce": web3.eth.getTransactionCount(
+            "nonce": self.web3.eth.getTransactionCount(
                 self.wrap_in_checksum(nonce_username), "pending"
             ),
-            "gasPrice": web3.eth.gasPrice,
+            "gasPrice": self.web3.eth.gasPrice,
         }
         if tx_value is not None:
             tx_params["value"] = tx_value
@@ -187,8 +189,10 @@ class Network(models.Model):
                 tx_params
             )
         if send:
-            signed_tx = web3.eth.account.sign_transaction(initial_tx, config.PRIV_KEY)
-            tx_hash = web3.eth.sendRawTransaction(signed_tx.rawTransaction)
+            signed_tx = self.web3.eth.account.sign_transaction(
+                initial_tx, config.PRIV_KEY
+            )
+            tx_hash = self.web3.eth.sendRawTransaction(signed_tx.rawTransaction)
             return tx_hash.hex()
         return initial_tx
 
@@ -226,7 +230,7 @@ class Network(models.Model):
         }
         logging.info(payload)
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
-        url = self.endpoint + "/wallet/triggerconstantcontract"
+        url = self.endpoint() + "/wallet/triggerconstantcontract"
         response = requests.post(url, json=payload, headers=headers)
         logging.info(response.json())
         constant_result = response.json()["constant_result"][0]
@@ -258,7 +262,7 @@ class Network(models.Model):
                     f"could not get contract address for {contract_type} in {self.name}"
                 )
                 raise "backend didn't found contract address"
-        provider = HttpProvider(self.endpoint)
+        provider = HttpProvider(self.endpoint())
         tron = Tron(
             full_node=provider,
             solidity_node=provider,
@@ -324,3 +328,25 @@ class Network(models.Model):
     @property
     def check_timeout(self) -> int:
         return 6
+
+
+class Provider(models.Model):
+    endpoint = models.CharField(max_length=256)
+    network = models.ForeignKey(
+        Network,
+        on_delete=models.CASCADE,
+        related_name="providers",
+    )
+
+    def __str__(self):
+        return self.endpoint
+
+
+def collection_created_dispatcher(sender, instance, created, **kwargs):
+    if created:
+        MasterUser.objects.create(
+            network=instance, commission=config.DEFAULT_COMMISSION
+        )
+
+
+post_save.connect(collection_created_dispatcher, sender=Network)

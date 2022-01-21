@@ -11,11 +11,16 @@ class Network:
     name: str
     needs_middleware: bool
     native_symbol: str
-    endpoint: str
     fabric721_address: str
     fabric1155_address: str
     exchange_address: str
     network_type: str
+
+
+@dataclass
+class Provider:
+    endpoint: str
+    network: str
 
 
 @dataclass
@@ -103,6 +108,7 @@ class Config:
     ITEMS_PER_PAGE: int
 
     NETWORKS: List[Network]
+    PROVIDERS: List[Provider]
     USD_RATES: List[UsdRate]
     MASTER_USER: List[MasterUser]
 

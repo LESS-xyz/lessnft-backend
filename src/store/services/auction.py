@@ -11,7 +11,7 @@ def end_auction(token):
     tx = token.buy_token(
         token_amount=0, buyer=bet.user, seller=token.owner, price=bet.amount, auc=True
     )
-    web3 = token.collection.network.get_web3_connection()
+    web3 = token.collection.network.web3
 
     # TODO rework for tron
     signed_tx = web3.eth.account.sign_transaction(tx, config.PRIV_KEY)
