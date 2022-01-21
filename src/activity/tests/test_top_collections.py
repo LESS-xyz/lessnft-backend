@@ -2,13 +2,13 @@ from datetime import date, timedelta
 
 import pytest
 
-from src.utilities import RedisClient
-from src.store.models import Status
-from src.activity.services.top_collections import (
-    update_collection_stat,
-    get_top_collections,
-)
 from src.activity.models import CollectionStat
+from src.activity.services.top_collections import (
+    get_top_collections,
+    update_collection_stat,
+)
+from src.store.models import Status
+from src.utilities import RedisClient
 
 
 @pytest.mark.django_db
@@ -31,9 +31,9 @@ def test_collection_redis_save(mixer):
 
     redis.connection.flushall()
     update_collection_stat()
-    get_top_collections("Ethereum", "week")
+    get_top_collections("Ethereum", "week", "price")
 
-    key = f"top_collection__week__{date.today().strftime('%Y-%m-%d')}__Ethereum"
+    key = f"top_collection__week__price__{date.today().strftime('%Y-%m-%d')}__Ethereum"
     assert redis.connection.get(key) is not None
 
 
