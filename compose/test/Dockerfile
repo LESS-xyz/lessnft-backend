@@ -14,4 +14,8 @@ COPY . /code/
 
 COPY ./entrypoint.sh /
 RUN chmod +x /entrypoint.sh
+
+COPY ./compose/test/start /start
+RUN chmod +x /start
+
 ENTRYPOINT ["/entrypoint.sh"]
