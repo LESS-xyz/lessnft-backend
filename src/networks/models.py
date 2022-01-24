@@ -340,13 +340,3 @@ class Provider(models.Model):
 
     def __str__(self):
         return self.endpoint
-
-
-def collection_created_dispatcher(sender, instance, created, **kwargs):
-    if created:
-        MasterUser.objects.create(
-            network=instance, commission=config.DEFAULT_COMMISSION
-        )
-
-
-post_save.connect(collection_created_dispatcher, sender=Network)
