@@ -46,6 +46,7 @@ def end_auction_checker():
         end_auction__lte=datetime.today(),
     )
     for token in tokens:
+        incorrect_bid_checker()
         if token.bid_set.count():
             tx_hash, network = end_auction(token)
             check_auction_tx(tx_hash, network)
@@ -90,22 +91,17 @@ def incorrect_bid_checker():
         ):
             bid.state = Status.EXPIRED
             bid.save()
-            
-            
-def check_ethereum_transactions(tx)-> bool:
-    w3 = tx.token.collection.network.web3
-    try:
-        transaction = w3.eth.getTransactionReceipt(tx.tx_hash)
-        logger.info(f"Transaction status success - {bool(transaction.get('status'))}")
-        return bool(transaction.get("status"))
-
-    except TransactionNotFound:
-        logger.info("Transaction not yet mined")
-        return "not found"
 
 
-def check_tron_transactions(tx)-> bool:
-    provider = HttpProvider(tx.token.collection.network.endpoint())
+def check_ethereum_transactions(tx) -> bool:
+    w3 = tx.token.collection.network.get_web3_connection()
+    transaction = w3.eth.getTransactionReceipt(tx.tx_hash)
+    logger.info(f"Transaction status success - {bool(transaction.get('status'))}")
+    return bool(transaction.get("status"))
+
+
+def check_tron_transactions(tx) -> bool:
+    provider = HttpProvider(tx.token.collection.network.endpoint)
     tron = Tron(
         full_node=provider,
         solidity_node=provider,
