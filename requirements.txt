@@ -15,7 +15,7 @@ pillow==8.1.1
 psycopg2-binary==2.8.6
 eth-rlp==0.2.1
 rlp==0.6.0
-web3 @ git+https://github.com/Rock-n-Block/web3.py.git@NBA-39
+web3 @ git+https://github.com/Rock-n-Block/web3.py.git
 ipfshttpclient==0.7.0
 celery==5.1.2
 django-celery-beat==2.2.1
