@@ -35,6 +35,7 @@ class NetworkAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "name",
+                    "short_name",
                     "set_icon",
                     "native_symbol",
                     "needs_middleware",

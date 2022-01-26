@@ -43,6 +43,7 @@ class Network(models.Model):
 
     icon = models.CharField(max_length=200, blank=True, null=True, default=None)
     name = models.CharField(max_length=100)
+    short_name = models.CharField(max_length=10, null=True, blank=True, default=None)
     needs_middleware = models.BooleanField(default=False)
     native_symbol = models.CharField(max_length=10, blank=True, null=True, default=None)
     fabric721_address = models.CharField(max_length=128)
