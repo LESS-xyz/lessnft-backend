@@ -956,7 +956,7 @@ class Token(models.Model):
             TransactionTracker.objects.create(token=self, bid=bid)
         else:
             ownership = Ownership.objects.filter(
-                token_id=self.id, owner__username__iexact=seller_address
+                token_id=self.id, owner__username__iexact=seller.username
             ).first()
             owner_amount = TransactionTracker.objects.aggregate(
                 total_amount=Sum("amount")

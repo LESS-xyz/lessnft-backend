@@ -53,6 +53,7 @@ class BuyMixin:
             seller=self.to_tron_address(event["result"]["seller"]).lower(),
             price=event["result"]["buyAmount"],
             amount=event["result"]["sellAmount"],
+            currency_address=event["result"]["buyTokenAddress"],
             tx_hash=event["transaction_id"],
             token_id=event["result"]["sellId"],
             collection_address=self.to_tron_address(
@@ -79,7 +80,7 @@ class ApproveMixin:
         return ApproveData(
             exchange=self.to_tron_address(event["result"]["guy"]).lower(),
             user=self.to_tron_address(event["result"]["src"]).lower(),
-            wad=event["result"]["wad"],
+            wad=event["result"]["sad"], #TODO: sad????
         )
 
 
