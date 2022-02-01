@@ -65,9 +65,9 @@ def incorrect_bid_checker():
         user_balance = network.contract_call(
             method_type="read",
             contract_type="token",
-            address=bid.token.currency.address,
+            address=network.get_ethereum_address(bid.token.currency.address),
             function_name="balanceOf",
-            input_params=(bid.user.username,),
+            input_params=(network.get_ethereum_address(bid.user.username),),
             input_type=("address",),
             output_types=("uint256",),
         )
@@ -75,11 +75,11 @@ def incorrect_bid_checker():
         allowance = network.contract_call(
             method_type="read",
             contract_type="token",
-            address=bid.token.currency.address,
+            address=network.get_ethereum_address(bid.token.currency.address),
             function_name="allowance",
             input_params=(
-                bid.user.username,
-                network.exchange_address,
+                network.get_ethereum_address(bid.user.username),
+                network.get_ethereum_address(network.exchange_address),
             ),
             input_type=("address", "address"),
             output_types=("uint256",),
