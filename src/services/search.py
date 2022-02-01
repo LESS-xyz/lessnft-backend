@@ -341,7 +341,6 @@ class SearchCollection(SearchABC):
                 self.items = self.items.filter(name__icontains=word)
 
     def network(self, network):
-        return
         if network and network[0]:
             if not network[0].lower() == "undefined":
                 networks = network[0].split(",")
