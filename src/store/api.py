@@ -14,8 +14,8 @@ def validate_bid(user, token_id, amount, quantity):
     except ObjectDoesNotExist:
         return "Token not found"
     amount = amount * token.currency.get_decimals
-    if not token.is_auc_selling:
-        return "token is not set on action"
+    if not token.is_auc_selling and not token.is_timed_auc_selling:
+        return "token is not set on auction"
     if token.standart=="ERC721" and token.currency_minimal_bid > amount:
         return "Your bid is too low"
     if (

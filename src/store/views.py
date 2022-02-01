@@ -492,11 +492,13 @@ class GetView(APIView):
             if start_auction:
                 request_data["start_auction"] = datetime.fromtimestamp(
                     int(start_auction)
-                )
+                ) if selling else None
             else:
                 request_data.pop("start_auction", None)
             if end_auction:
-                request_data["end_auction"] = datetime.fromtimestamp(int(end_auction))
+                request_data["end_auction"] = datetime.fromtimestamp(
+                    int(end_auction)
+                ) if selling else None
             else:
                 request_data.pop("end_auction", None)
             serializer = TokenPatchSerializer(token, data=request_data, partial=True)

@@ -8,6 +8,10 @@ from src.utilities import get_media_from_ipfs
 class DefaultAvatar(models.Model):
     image = models.CharField(max_length=200, blank=True, null=True, default=None)
 
+    @property
+    def ipfs_image(self):
+        return f"https://ipfs.io/ipfs/{self.image}/"
+
 
 class MasterUser(models.Model):
     address = models.CharField(max_length=42, default=None, null=True, blank=True)

@@ -3,6 +3,7 @@ from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
 from django import forms
 from django.contrib import admin
 from django.contrib.auth.models import Group
+from django.utils.safestring import mark_safe
 from rest_framework.authtoken.models import TokenProxy
 
 from src.accounts.models import AdvUser, DefaultAvatar, MasterUser, VerificationForm
@@ -33,10 +34,23 @@ class DefaultAvatarAdmin(admin.ModelAdmin):
                 "fields": (
                     "avatar",
                     "image",
+                    "avatar_preview",
                 ),
             },
         ),
     )
+    readonly_fields = ("avatar_preview",)
+
+    def avatar_preview(self, obj):
+        if obj.image:
+            return mark_safe(
+                '<img src="{0}" width="400" height="400" style="object-fit:contain" />'.format(
+                    obj.ipfs_image
+                )
+            )
+        return "(No image)"
+
+    avatar_preview.short_description = "Preview"
 
 
 class VerificationInline(admin.StackedInline):

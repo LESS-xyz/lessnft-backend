@@ -23,8 +23,7 @@ def end_auction(token):
 def check_auction_tx(tx_hash, network):
     while True:
         try:
-            web3 = network.get_web3_connection()
-            receipt = web3.eth.getTransactionReceipt(tx_hash)
+            receipt = network.web3.eth.getTransactionReceipt(tx_hash)
         except TransactionNotFound:
             logging.info(f"Transaction with hash {tx_hash} not found")
             continue
