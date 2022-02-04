@@ -10,7 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from src.accounts.models import AdvUser, VerificationForm, Email
+from src.accounts.models import AdvUser, Email, VerificationForm
 from src.accounts.serializers import (
     CoverSerializer,
     EmailSerializer,
@@ -242,7 +242,7 @@ class GetUserCollections(APIView, PaginateMixin):
         resposnes={200: UserCollectionSerializer},
     )
     def get(self, request):
-        network = request.query_params.get("network", config.DEFAULT_NETWORK)
+        network = request.query_params.get("network")
         collections = Collection.objects.committed().user_collections(
             request.user, network=network
         )
@@ -399,8 +399,11 @@ class SaveEmail(generics.CreateAPIView):
     serializer_class = EmailSerializer
 
     def create(self, request, *args, **kwargs):
-        address = request.data.get('address')
+        address = request.data.get("address")
         if Email.objects.filter(address__iexact=address).exists():
-            return Response('address already registered', status = status.HTTP_400_BAD_REQUEST)
+            return Response(
+                "address already registered",
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         response = super(generics.CreateAPIView, self).create(request, *args, **kwargs)
         return response
