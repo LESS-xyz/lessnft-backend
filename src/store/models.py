@@ -547,8 +547,9 @@ class Token(models.Model):
                 selling=True,
                 currency_price__isnull=True,
                 currency_minimal_bid__isnull=False,
+                token__end_auction__isnull=True,
             ).exists()
-        return bool(self.selling and self.minimal_bid and self.currency)
+        return bool(self.selling and self.minimal_bid and self.currency and not self.end_auction)
 
     @property
     def is_timed_auc_selling(self):
@@ -953,9 +954,11 @@ class Token(models.Model):
         # create tx tracker instance
         if self.standart == "ERC721":
             TransactionTracker.objects.create(token=self, bid=bid)
+            self.selling = False
+            self.save()
         else:
             ownership = Ownership.objects.filter(
-                token_id=self.id, owner__username__iexact=seller_address
+                token_id=self.id, owner__username__iexact=seller.username
             ).first()
             owner_amount = TransactionTracker.objects.aggregate(
                 total_amount=Sum("amount")
@@ -967,8 +970,6 @@ class Token(models.Model):
             TransactionTracker.objects.create(
                 token=self, ownership=ownership, amount=token_amount, bid=bid
             )
-        self.selling = False
-        self.save()
 
         return self.collection.network.contract_call(
             method_type="write",

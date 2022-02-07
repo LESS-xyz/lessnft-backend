@@ -11,6 +11,6 @@ class Client(APIClient):
             self.auth()
 
     def auth(self):
-        self.user = mixer.blend("accounts.AdvUser")
+        self.user = mixer.blend("accounts.AdvUser", display_name="Rodion")
         token, _ = Token.objects.get_or_create(user=self.user)
         self.credentials(HTTP_AUTHORIZATION=f"Token {token}")

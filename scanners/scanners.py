@@ -225,7 +225,7 @@ class HandlerMintTransferBurn(HandlerABC):
                 price = token.ownership_set.first().minimal_bid
         if price:
             price = price / token.currency.get_decimals
-        if token.is_selling or token.is_auc_selling and price:
+        if token.selling and price:
             TokenHistory.objects.create(
                 token=token,
                 old_owner=token.creator,
@@ -389,7 +389,7 @@ class HandlerBuy(HandlerABC):
                     f"Ownership not found owner {old_owner}, token {token}"
                 )
                 return
-            owner.quantity = max(owner.quantity - data.amount, 0)
+            owner.quantity = max(int(owner.quantity) - int(data.amount), 0)
             if owner.quantity:
                 owner.save()
             if not owner.quantity:

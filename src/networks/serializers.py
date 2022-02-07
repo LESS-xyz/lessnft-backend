@@ -12,6 +12,7 @@ class NetworkSerializer(serializers.ModelSerializer):
         fields = (
             "ipfs_icon",
             "name",
+            "short_name",
             "native_symbol",
             "currencies",
         )

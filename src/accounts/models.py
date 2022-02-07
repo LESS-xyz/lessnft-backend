@@ -1,12 +1,18 @@
 from django.contrib.auth.models import AbstractUser, UserManager
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.db.models import Q
 
 from src.utilities import get_media_from_ipfs
+from src.settings import config
 
 
 class DefaultAvatar(models.Model):
     image = models.CharField(max_length=200, blank=True, null=True, default=None)
+
+    @property
+    def ipfs_image(self):
+        return f"https://{config.IPFS_DOMAIN}/ipfs/{self.image}/"
 
 
 class MasterUser(models.Model):
@@ -23,6 +29,8 @@ class AdvUserManager(UserManager):
         Convert param to int() if it contains only digitts, because string params are not allowed
         in searching by id field. Numeric custom_urls should be prohibited on frontend
         """
+        if custom_url is None:
+            raise ObjectDoesNotExist
         user_id = None
         if isinstance(custom_url, int) or custom_url.isdigit():
             user_id = int(custom_url)

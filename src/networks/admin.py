@@ -1,8 +1,14 @@
 from django import forms
 from django.contrib import admin
+from django_admin_inline_paginator.admin import TabularInlinePaginated
 
-from src.networks.models import Network
+from src.networks.models import Network, Provider
 from src.store.services.ipfs import send_to_ipfs
+
+
+class ProviderInline(TabularInlinePaginated):
+    model = Provider
+    extra = 0
 
 
 class NetworkIconForm(forms.ModelForm):
@@ -22,15 +28,16 @@ class NetworkIconForm(forms.ModelForm):
 
 class NetworkAdmin(admin.ModelAdmin):
     form = NetworkIconForm
+    inlines = (ProviderInline,)
     fieldsets = (
         (
             None,
             {
                 "fields": (
                     "name",
+                    "short_name",
                     "set_icon",
                     "native_symbol",
-                    "endpoint",
                     "needs_middleware",
                     "fabric721_address",
                     "fabric1155_address",

@@ -267,8 +267,8 @@ admin.site.register(NotableDrop, NotableDropAdmin)
 
 admin.site.unregister(SolarSchedule)
 admin.site.unregister(ClockedSchedule)
-admin.site.unregister(PeriodicTask)
-admin.site.unregister(IntervalSchedule)
+# admin.site.unregister(PeriodicTask)
+# admin.site.unregister(IntervalSchedule)
 admin.site.unregister(CrontabSchedule)
 
 admin.site.unregister(Site)

@@ -14,7 +14,7 @@ class Scanner(
     EMPTY_ADDRESS = "t9yd14nj9j7xab4dbgeix9h8unkkhxuwwb"
 
     def get_tron_instance(self):
-        provider = HttpProvider(self.network.endpoint)
+        provider = HttpProvider(self.network.endpoint())
         return Tron(
             full_node=provider,
             solidity_node=provider,
@@ -27,7 +27,7 @@ class Scanner(
         last_checked_block_timestamp = self.get_block_timestamp(last_checked_block)
         last_network_block_timestamp = self.get_block_timestamp(last_network_block)
         url = (
-            f"{self.network.endpoint}/v1/contracts/{collection_address}/events?event_name={event_name}"
+            f"{self.network.endpoint()}/v1/contracts/{collection_address}/events?event_name={event_name}"
             f"&min_block_timestamp={last_checked_block_timestamp}"
             f"&max_block_timestamp={last_network_block_timestamp}"
         )

@@ -10,7 +10,7 @@ from src.celery import app
 from src.networks.models import Network, Types
 from src.settings import config
 from src.store.models import Bid, Status, Tags, Token, TransactionTracker
-from src.store.services.auction import end_auction
+from src.store.services.auction import check_auction_tx, end_auction
 from src.store.services.collection_import import OpenSeaImport
 
 logger = logging.getLogger("celery")
@@ -46,14 +46,15 @@ def end_auction_checker():
         end_auction__lte=datetime.today(),
     )
     for token in tokens:
+        incorrect_bid_checker()
         if token.bid_set.count():
-            end_auction(token)
-        else:
-            token.start_auction = None
-            token.end_auction = None
-            token.selling = False
-            token.currency_minimal_bid = None
-            token.save()
+            tx_hash, network = end_auction(token)
+            check_auction_tx(tx_hash, network)
+        token.start_auction = None
+        token.end_auction = None
+        token.selling = False
+        token.currency_minimal_bid = None
+        token.save()
 
 
 @shared_task(name="incorrect_bid_checker")
@@ -64,9 +65,9 @@ def incorrect_bid_checker():
         user_balance = network.contract_call(
             method_type="read",
             contract_type="token",
-            address=bid.token.currency.address,
+            address=network.get_ethereum_address(bid.token.currency.address),
             function_name="balanceOf",
-            input_params=(bid.user.username,),
+            input_params=(network.get_ethereum_address(bid.user.username),),
             input_type=("address",),
             output_types=("uint256",),
         )
@@ -74,11 +75,11 @@ def incorrect_bid_checker():
         allowance = network.contract_call(
             method_type="read",
             contract_type="token",
-            address=bid.token.currency.address,
+            address=network.get_ethereum_address(bid.token.currency.address),
             function_name="allowance",
             input_params=(
-                bid.user.username,
-                network.exchange_address,
+                network.get_ethereum_address(bid.user.username),
+                network.get_ethereum_address(network.exchange_address),
             ),
             input_type=("address", "address"),
             output_types=("uint256",),
