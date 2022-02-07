@@ -1,8 +1,8 @@
 import json
 import logging
 import operator
-from datetime import datetime
 from abc import ABC, abstractmethod
+from datetime import datetime
 from decimal import Decimal
 
 from django.core.exceptions import ObjectDoesNotExist
@@ -120,7 +120,7 @@ class SearchToken(SearchABC):
         if type_ == "max_price":
             relate = operator.lt
 
-        if price and price[0]:
+        if price and price[0] and str(price[0]).isdigit():
             min_price = Decimal(price[0])
 
             tokens = self.items
@@ -152,8 +152,8 @@ class SearchToken(SearchABC):
             collection_ids = [col for col in collections if str(col).isdigit()]
             collection_short = [col for col in collections if col not in collection_ids]
             self.items = self.items.filter(
-                Q(collection__id__in=collection_ids)|
-                Q(collection__short_url__in=collection_short)
+                Q(collection__id__in=collection_ids)
+                | Q(collection__short_url__in=collection_short)
             )
 
     def owner(self, owner):
@@ -170,9 +170,9 @@ class SearchToken(SearchABC):
         if creator:
             try:
                 creator = AdvUser.objects.get_by_custom_url(creator[0])
+                self.items = self.items.filter(creator=creator).order_by("-id")
             except ObjectDoesNotExist:
-                creator = None
-            self.items = self.items.filter(creator=creator).order_by("-id")
+                self.items = Token.objects.none()
 
     def currency(self, currency):
         if currency and currency[0]:
@@ -180,7 +180,7 @@ class SearchToken(SearchABC):
             self.items = self.items.filter(currency__symbol__in=currencies)
 
     def on_sale(self, on_sale):
-        if on_sale and on_sale[0] != "":
+        if on_sale and on_sale[0]:
             filter = "filter" if on_sale[0].lower() == "true" else "exclude"
             self.items = getattr(self.items, filter)(
                 Q(selling=True, currency_price__isnull=False, currency__isnull=False)
@@ -196,7 +196,7 @@ class SearchToken(SearchABC):
             )
 
     def on_auc_sale(self, on_sale):
-        if on_sale and on_sale[0] != "":
+        if on_sale and on_sale[0]:
             filter = "filter" if on_sale[0].lower() == "true" else "exclude"
             self.items = getattr(self.items, filter)(
                 Q(
@@ -278,7 +278,7 @@ class SearchToken(SearchABC):
         history = token.tokenhistory_set.filter(method="Buy").order_by("date").last()
         if history and history.date:
             return history.date
-        return datetime.fromtimestamp(0)
+        return timezone.make_aware(datetime.fromtimestamp(0))
 
     def order_by_transfer(self, token):
         history = (
@@ -286,10 +286,10 @@ class SearchToken(SearchABC):
         )
         if history and history.date:
             return history.date
-        return datetime.fromtimestamp(0)
+        return timezone.make_aware(datetime.fromtimestamp(0))
 
     def order_by_auction_end(self, token):
-        default_value = datetime.fromtimestamp(0)
+        default_value = timezone.make_aware(datetime.fromtimestamp(0))
         if token.is_timed_auc_selling:
             return token.end_auction
         return default_value
@@ -327,12 +327,22 @@ class SearchCollection(SearchABC):
     def tags(self, tags):
         if tags and tags[0]:
             tags = tags[0].split(",")
-            self.items = self.items.filter(tags__name__in=tags).distinct()
+            self.items = self.items.filter(
+                Exists(
+                    Token.objects.committed().filter(
+                        tags__name__in=tags,
+                        collection__id=OuterRef("id"),
+                    )
+                )
+            )
 
     def creator(self, user):
         if user and user[0]:
-            user = AdvUser.objects.get_by_custom_url(user[0])
-            self.items = self.items.filter(creator=user)
+            try:
+                user = AdvUser.objects.get_by_custom_url(user[0])
+                self.items = self.items.filter(creator=user)
+            except ObjectDoesNotExist:
+                self.items = Collection.objects.none()
 
     def text(self, words):
         if words and words[0]:
@@ -354,7 +364,7 @@ class SearchUser(SearchABC):
 
     def text(self, words):
         if words and words[0]:
-            words = words.split(" ")
+            words = words[0].split(" ")
             for word in words:
                 self.items = self.items.filter(display_name__icontains=word)
 
@@ -370,12 +380,13 @@ class SearchUser(SearchABC):
         )
 
     def order_by_tokens_created(self, reverse):
-        return self.items.annotate(Count("token_creator")).order_by(
-            f"{reverse}token_creator"
+        return self.items.annotate(creators=Count("token_creator")).order_by(
+            f"{reverse}creators"
         )
 
     def order_by(self, order_by):
         reverse = "-" if order_by[0] == "-" else ""
+        order_by = order_by.strip("-")
         try:
             users = getattr(self, f"order_by_{order_by}")(reverse)
         except AttributeError:
