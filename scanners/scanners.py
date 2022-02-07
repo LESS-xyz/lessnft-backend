@@ -389,7 +389,7 @@ class HandlerBuy(HandlerABC):
                     f"Ownership not found owner {old_owner}, token {token}"
                 )
                 return
-            owner.quantity = max(owner.quantity - data.amount, 0)
+            owner.quantity = max(int(owner.quantity) - int(data.amount), 0)
             if owner.quantity:
                 owner.save()
             if not owner.quantity:
