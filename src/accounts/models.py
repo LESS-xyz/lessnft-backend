@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser, UserManager
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.db.models import Q
 
@@ -27,6 +28,8 @@ class AdvUserManager(UserManager):
         Convert param to int() if it contains only digitts, because string params are not allowed
         in searching by id field. Numeric custom_urls should be prohibited on frontend
         """
+        if custom_url is None:
+            raise ObjectDoesNotExist
         user_id = None
         if isinstance(custom_url, int) or custom_url.isdigit():
             user_id = int(custom_url)
