@@ -473,7 +473,6 @@ class GetView(APIView):
         if minimal_bid:
             request_data.pop("minimal_bid")
             minimal_bid = Decimal(str(minimal_bid))
-            price = minimal_bid
         request_data["currency_minimal_bid"] = minimal_bid
 
         if currency:
@@ -487,6 +486,8 @@ class GetView(APIView):
 
         if token.standart == "ERC721":
             old_price = token.currency_price
+            if selling:
+                request_data["currency"] = currency.id
             amount = 1
 
             if start_auction:

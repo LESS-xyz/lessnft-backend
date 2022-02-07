@@ -45,18 +45,18 @@ def recalculate_token_sell_status(ownership):
     token = ownership.token
     if not token.ownership_set.filter(selling=True).exists():
         token.selling = False
+        token.currency_minimal_bid = None
         token.currency_price = None
         token.currency = None
     else:
         token.selling = True
         ownerships = token.ownership_set.filter(
             selling=True,
-            currency_price__isnull=False,
         )
         ownerships = list(ownerships)
         ownerships.sort(key=lambda owner: owner.usd_price)
         if ownerships:
-            token.currency_price = ownerships[0].currency_price
+            token.currency_price = ownerships[0].currency_price or ownerships[0].currency_minimal_bid
             token.currency = ownerships[0].currency
     token.save(update_fields=["selling", "currency_price", "currency"])
 

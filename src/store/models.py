@@ -954,6 +954,8 @@ class Token(models.Model):
         # create tx tracker instance
         if self.standart == "ERC721":
             TransactionTracker.objects.create(token=self, bid=bid)
+            self.selling = False
+            self.save()
         else:
             ownership = Ownership.objects.filter(
                 token_id=self.id, owner__username__iexact=seller.username
@@ -968,8 +970,6 @@ class Token(models.Model):
             TransactionTracker.objects.create(
                 token=self, ownership=ownership, amount=token_amount, bid=bid
             )
-        self.selling = False
-        self.save()
 
         return self.collection.network.contract_call(
             method_type="write",

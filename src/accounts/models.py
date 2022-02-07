@@ -3,6 +3,7 @@ from django.db import models
 from django.db.models import Q
 
 from src.utilities import get_media_from_ipfs
+from src.settings import config
 
 
 class DefaultAvatar(models.Model):
@@ -10,7 +11,7 @@ class DefaultAvatar(models.Model):
 
     @property
     def ipfs_image(self):
-        return f"https://ipfs.io/ipfs/{self.image}/"
+        return f"https://{config.IPFS_DOMAIN}/ipfs/{self.image}/"
 
 
 class MasterUser(models.Model):

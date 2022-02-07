@@ -35,6 +35,7 @@ class TokenPatchSerializer(serializers.ModelSerializer):
         model = Token
         fields = (
             "currency_price",
+            "currency",
             "selling",
             "currency_minimal_bid",
             "start_auction",
