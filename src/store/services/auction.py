@@ -7,7 +7,7 @@ from src.store.models import Bid
 
 
 def end_auction(token):
-    bet = Bid.objects.committed().filter(token=token).order_by("-amount").last()
+    bet = Bid.objects.committed().filter(token=token).order_by("-amount").first()
     tx = token.buy_token(
         token_amount=0,
         buyer=bet.user,
