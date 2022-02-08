@@ -549,7 +549,9 @@ class Token(models.Model):
                 currency_minimal_bid__isnull=False,
                 token__end_auction__isnull=True,
             ).exists()
-        return bool(self.selling and self.minimal_bid and self.currency and not self.end_auction)
+        return bool(
+            self.selling and self.minimal_bid and self.currency and not self.end_auction
+        )
 
     @property
     def is_timed_auc_selling(self):
@@ -669,7 +671,7 @@ class Token(models.Model):
         collection = request.data.get("collection")
         self.collection = Collection.objects.committed().get_by_short_url(collection)
         self.total_supply = 1
-        if self.collection.standart=='ERC1155':
+        if self.collection.standart == "ERC1155":
             self.total_supply = request.data.get("total_supply")
         self.digital_key = request.data.get("digital_key")
         self.external_link = request.data.get("external_link")
@@ -819,9 +821,12 @@ class Token(models.Model):
     def buy_token(
         self, token_amount, buyer, seller=None, price=None, auc=False, bid=None
     ):
-        currency = self.currency
-        if self.standart == "ERC1155":
-            currency = self.ownership_set.filter(owner=seller).first().currency
+        if bid:
+            currency = bid.currency
+        else:
+            currency = self.currency
+            if self.standart == "ERC1155":
+                currency = self.ownership_set.filter(owner=seller).first().currency
         fee_address = self.collection.network.get_ethereum_address(currency.fee_address)
 
         id_order = "0x%s" % secrets.token_hex(32)

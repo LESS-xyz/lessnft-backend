@@ -248,7 +248,8 @@ class CreateView(APIView):
         if standart == "ERC1155":
             if not amount:
                 return Response(
-                    {"amount": "supply not specified "}, status=status.HTTP_400_BAD_REQUEST
+                    {"amount": "supply not specified "},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             type_.append("uint256")
             msg.append(int(amount))
@@ -491,15 +492,15 @@ class GetView(APIView):
             amount = 1
 
             if start_auction:
-                request_data["start_auction"] = datetime.fromtimestamp(
-                    int(start_auction)
-                ) if selling else None
+                request_data["start_auction"] = (
+                    datetime.fromtimestamp(int(start_auction)) if selling else None
+                )
             else:
                 request_data.pop("start_auction", None)
             if end_auction:
-                request_data["end_auction"] = datetime.fromtimestamp(
-                    int(end_auction)
-                ) if selling else None
+                request_data["end_auction"] = (
+                    datetime.fromtimestamp(int(end_auction)) if selling else None
+                )
             else:
                 request_data.pop("end_auction", None)
             serializer = TokenPatchSerializer(token, data=request_data, partial=True)
@@ -831,6 +832,7 @@ class MakeBid(APIView):
 
         bid.amount = amount
         bid.quantity = quantity
+        bid.currency = currency
         bid.full_clean()
         bid.save()
 
@@ -1000,7 +1002,7 @@ class AuctionEndView(APIView):
 
         token = bet.token
         buyer = bet.user
-        price = bet.amount * bet.token.currency.get_decimals
+        price = bet.amount * bet.currency.get_decimals
 
         seller = request.user
         if token.standart == "ERC721":

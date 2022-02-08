@@ -9,7 +9,12 @@ from src.store.models import Bid
 def end_auction(token):
     bet = Bid.objects.committed().filter(token=token).order_by("-amount").last()
     tx = token.buy_token(
-        token_amount=0, buyer=bet.user, seller=token.owner, price=bet.amount, auc=True
+        token_amount=0,
+        buyer=bet.user,
+        seller=token.owner,
+        price=bet.amount,
+        auc=True,
+        bid=bet,
     )
     web3 = token.collection.network.web3
 
