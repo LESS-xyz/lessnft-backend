@@ -31,6 +31,13 @@ CAPTCHA_SECRET: ''
 CAPTCHA_URL: ''
 PRIV_KEY: '' #Signer private key
 IPFS_DOMAIN: ''
+BOTS:
+  DEV:
+    TOKEN: ''
+    GROUP_ID: ''
+  TRADE:
+    TOKEN: ''
+    GROUP_ID: ''
 
 TX_TRACKER_TIMEOUT: 300
 RATES_CHECKER_TIMEOUT: 300
@@ -112,6 +119,14 @@ PERIODIC_TASKS:
     enabled: true
   - name: transaction_tracker
     task: transaction_tracker
+    interval: 3
+    enabled: true
+  - name: balance_checker
+    task: balance_checker
+    interval: 3
+    enabled: true
+  - name: end_auction_checker
+    task: end_auction_checker
     interval: 3
     enabled: true
 

@@ -12,6 +12,7 @@ from src.settings import config
 from src.store.models import Bid, Status, Tags, Token, TransactionTracker
 from src.store.services.auction import check_auction_tx, end_auction
 from src.store.services.collection_import import OpenSeaImport
+from src.utilities import alert_bot
 
 logger = logging.getLogger("celery")
 
@@ -41,6 +42,7 @@ def remove_token_tag_new():
 
 
 @shared_task(name="end_auction_checker")
+@alert_bot
 def end_auction_checker():
     tokens = Token.objects.committed().filter(
         end_auction__lte=datetime.today(),
@@ -58,6 +60,7 @@ def end_auction_checker():
 
 
 @shared_task(name="incorrect_bid_checker")
+@alert_bot
 def incorrect_bid_checker():
     bids = Bid.objects.committed()
     for bid in bids:
@@ -125,6 +128,7 @@ def check_transaction_status(tx, network_type) -> Optional[bool]:
 
 
 @shared_task(name="transaction_tracker")
+@alert_bot
 def transaction_tracker():
     # delete expired blockers
     now = timezone.now()

@@ -7,6 +7,7 @@ import requests
 from celery import shared_task
 from src.rates.models import UsdRate
 from src.settings import config
+from src.utilities import alert_bot
 
 QUERY_FSYM = "usd"
 logger = logging.getLogger("celery")
@@ -21,6 +22,7 @@ def get_rate(coin_code):
 
 
 @shared_task(name="rates_checker")
+@alert_bot
 def rates_checker():
     logger.info("celery is working")
     coin_nodes = UsdRate.objects.all().values_list("coin_node", flat=True)

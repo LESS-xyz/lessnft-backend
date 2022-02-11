@@ -1,11 +1,12 @@
-import os
+import logging
 import sys
 import time
 import traceback
 
 from scanners.eth.scanner import Scanner as EthereumScanner
 from scanners.tron.scanner import Scanner as TronScanner
-from src.networks.models import Network, Types
+from src.bot.services import send_message
+from src.networks.models import Types
 
 
 def get_scanner(network, contract_type=None, contract=None):
@@ -25,11 +26,11 @@ def never_fall(func):
         while True:
             try:
                 func(*args, **kwargs)
-            except Exception as e:
-                print(
-                    "\n".join(traceback.format_exception(*sys.exc_info())),
-                    flush=True,
-                )
+            except Exception:
+                error = "\n".join(traceback.format_exception(*sys.exc_info()))
+                logging.error(error)
+                message = f"Scanner error: {error}"
+                send_message(message, ["dev"])
                 time.sleep(60)
 
     return wrapper

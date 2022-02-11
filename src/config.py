@@ -90,6 +90,7 @@ class Config:
     CAPTCHA_SECRET: Optional[str]
     CAPTCHA_URL: Optional[str]
     PRIV_KEY: str
+    BOTS: dict
 
     DEFAULT_NETWORK: Optional[str]
     TX_TRACKER_TIMEOUT: int

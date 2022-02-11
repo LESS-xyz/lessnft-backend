@@ -49,6 +49,7 @@ class Network(models.Model):
     fabric721_address = models.CharField(max_length=128)
     fabric1155_address = models.CharField(max_length=128)
     exchange_address = models.CharField(max_length=128)
+    minimal_balance = models.FloatField(default=1)
     network_type = models.CharField(
         max_length=20,
         choices=Types.choices,
@@ -102,6 +103,9 @@ class Network(models.Model):
         if self.network_type == Types.ethereum:
             return self._get_contract_by_abi(WETH_ABI, address)
         return Address(address)
+
+    def get_signer_balance(self):
+        return self.web3.eth.get_balance(config.SIGNER_ADDRESS)
 
     def get_last_block(self) -> int:
         return self.web3.eth.block_number
@@ -341,4 +345,3 @@ class Provider(models.Model):
 
     def __str__(self):
         return self.endpoint
-

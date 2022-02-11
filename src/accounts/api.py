@@ -1,4 +1,3 @@
-import logging
 from random import choice
 from string import ascii_letters
 
@@ -11,7 +10,6 @@ from src.activity.models import UserAction
 
 @api_view(http_method_names=["GET"])
 def generate_metamask_message(request):
-
     generated_message = "".join(choice(ascii_letters) for _ in range(30))
     request.session["metamask_message"] = generated_message
     return Response(generated_message)

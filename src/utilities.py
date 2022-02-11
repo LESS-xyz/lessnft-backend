@@ -1,4 +1,6 @@
 import logging
+import sys
+import traceback
 from datetime import timedelta
 from math import ceil
 from typing import Tuple
@@ -8,6 +10,7 @@ from django.utils import timezone
 from eth_account import Account
 from web3 import Web3
 
+from src.bot.services import send_message
 from src.settings import config
 
 
@@ -104,3 +107,19 @@ class PaginateMixin:
             "total_pages": ceil(pages),
             "results": items[start:end],
         }
+
+
+def alert_bot(func):
+    def wrapper(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except Exception:
+            error = "\n".join(traceback.format_exception(*sys.exc_info()))
+            print(
+                error,
+                flush=True,
+            )
+            message = f"Celery error in task {func.__name__}: {error}"
+            send_message(message, ["dev"])
+
+    return wrapper

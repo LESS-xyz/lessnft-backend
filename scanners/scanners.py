@@ -67,14 +67,10 @@ class ScannerAbsolute(threading.Thread):
 
             handler = self.handler(self.network, scanner, self.contract)
 
-            try:
-                event_list = getattr(scanner, f"get_events_{handler.TYPE}")(
-                    last_checked_block,
-                    last_network_block,
-                )
-            except Exception as e:
-                print(f"error {e}")
-                event_list = []
+            event_list = getattr(scanner, f"get_events_{handler.TYPE}")(
+                last_checked_block,
+                last_network_block,
+            )
 
             if event_list:
                 list(map(handler.save_event, event_list))

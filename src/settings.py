@@ -2,7 +2,7 @@ import os
 
 # from .config import *
 from .config import config
-from .logging_settings import LOGGING
+from .logging_settings import LOGGING  # noqa F401
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -56,6 +56,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "src.middleware.bot_middleware.BotMiddleware",
 ]
 
 ROOT_URLCONF = "src.urls"

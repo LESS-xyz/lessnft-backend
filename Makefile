@@ -14,7 +14,16 @@ web-build:
 web-logs:
 	sudo docker-compose logs -f --tail=$(lines) web
 
+createsuperuser:
+	sudo docker-compose exec web ./manage.py createsuperuser
+
+bot-build:
+	sudo docker-compose up --build -d bot
+bot-logs:
+	sudo docker-compose logs -f --tail=$(lines) bot
+
 full_migrate: makemigrations migrate
+
 makemigrations:
 	sudo docker-compose exec web ./manage.py makemigrations
 migrate:
