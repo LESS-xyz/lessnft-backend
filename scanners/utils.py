@@ -26,11 +26,17 @@ def never_fall(func):
         while True:
             try:
                 func(*args, **kwargs)
-            except Exception:
-                error = "\n".join(traceback.format_exception(*sys.exc_info()))
+            except Exception as e:
+                _, _, stacktrace = sys.exc_info()
+                error = (
+                   f"\n {''.join(traceback.format_tb(stacktrace)[-2:])}"
+                   f"{type(e).__name__} {e}"
+                )
+
                 logging.error(error)
-                message = f"Scanner error: {error}"
-                send_message(message, ["dev"])
-                time.sleep(60)
+                if str(e) != "{'code': -32000, 'message': 'filter not found'}":
+                    message = f"Scanner error in {args[0].network}: {error}"
+                    send_message(message, ["dev"])
+                    time.sleep(60)
 
     return wrapper
