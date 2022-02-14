@@ -7,6 +7,7 @@ from scanners.eth.scanner import Scanner as EthereumScanner
 from scanners.tron.scanner import Scanner as TronScanner
 from src.bot.services import send_message
 from src.networks.models import Types
+from src.utilities import RedisClient
 
 
 def get_scanner(network, contract_type=None, contract=None):
@@ -27,16 +28,30 @@ def never_fall(func):
             try:
                 func(*args, **kwargs)
             except Exception as e:
-                _, _, stacktrace = sys.exc_info()
+                exc_type, _, stacktrace = sys.exc_info()
                 error = (
-                   f"\n {''.join(traceback.format_tb(stacktrace)[-2:])}"
-                   f"{type(e).__name__} {e}"
+                    f"\n {''.join(traceback.format_tb(stacktrace)[-2:])}"
+                    f"{type(e).__name__} {e}"
                 )
-
                 logging.error(error)
-                if str(e) != "{'code': -32000, 'message': 'filter not found'}":
+                alert = check_exception_counter(args[0].network, exc_type)
+                if (
+                    alert
+                    and str(e) != "{'code': -32000, 'message': 'filter not found'}"
+                    and str(exc_type) != "BadResponseFormat"
+                ):
                     message = f"Scanner error in {args[0].network}: {error}"
                     send_message(message, ["dev"])
                     time.sleep(60)
 
     return wrapper
+
+
+def check_exception_counter(network, exc_type):
+    name = f"{network}_{exc_type}"
+    redis_ = RedisClient()
+    current = redis_.connection.incrby(name, 1)
+    if current == 1:
+        redis_.connection.expire(name, 1800)
+    if current > 4:
+        return True
