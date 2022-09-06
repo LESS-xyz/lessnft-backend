@@ -1,0 +1,93 @@
+services:
+  db:
+    image: postgres:14.0
+    env_file:
+      - ./.env
+    volumes:
+      - ./.docker/postgres-data:/var/lib/postgresql/data
+    networks:
+      nft-net:
+  web:
+    build:
+      context: .
+      dockerfile: compose/stage/Dockerfile
+    env_file:
+      - ./.env
+    ports:
+      - "${DOCKER_EXPOSE_PORT?8000}:8000"
+    depends_on:
+      - db
+    volumes:
+      - ./src/:/code/src/
+      - ./static/:/code/static/
+      - ./logs:/code/logs/
+    command: python manage.py runserver 0.0.0.0:8000
+    restart: unless-stopped
+    networks:
+      nft-net:
+  scanner:
+    build:
+      context: .
+      dockerfile: compose/stage/Dockerfile
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    volumes:
+      - ./logs:/code/logs/
+    command: ["python", "scanners/start.py"]
+    networks:
+      nft-net:
+  redis:
+    image: redis:5.0
+    restart: unless-stopped
+    volumes:
+      - ./.docker/redis-data:/data
+    networks:
+      nft-net:
+  celery:
+    build:
+      context: .
+      dockerfile: compose/stage/Dockerfile
+    image: celery:3.1
+    entrypoint: ''
+    command: "celery -A src worker -l info"
+    env_file:
+      - ./.env
+    depends_on:
+      - redis
+    restart: always
+    volumes:
+      - ./logs:/code/logs/
+    networks:
+      nft-net:
+  celery_beat:
+    build:
+      context: .
+      dockerfile: compose/stage/Dockerfile
+    image: celery:3.1
+    entrypoint: ''
+    command: "celery -A src beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    env_file:
+      - ./.env
+    depends_on:
+      - redis
+    restart: always
+    networks:
+      nft-net:
+  bot:
+    build:
+      context: .
+      dockerfile: compose/stage/Dockerfile
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+    command: python start_bot_polling.py
+    restart: unless-stopped
+    networks:
+      nft-net:
+networks:
+  nft-net:
