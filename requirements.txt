@@ -16,7 +16,7 @@ psycopg2-binary==2.8.6
 eth-rlp==0.2.1
 rlp==1.0.0
 web3 @ git+https://github.com/Rock-n-Block/web3.py.git
-ipfshttpclient==0.7.0
+ipfshttpclient==0.8.0a2
 celery==5.1.2
 django-celery-beat==2.2.1
 ptpython
