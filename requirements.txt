@@ -6,7 +6,7 @@ django-rest-auth==0.9.1
 django-cors-headers==3.7.0
 django-extensions
 drf-yasg==1.20
-eth-account==0.4.0
+eth-account==0.5.7
 eth-utils==1.10.0
 ethereum==2.0.4
 gunicorn==20.0.4
